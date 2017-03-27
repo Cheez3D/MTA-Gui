@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<meta>
+	<info author="Cheez" name="Gui" description="" type="resource" version="1"/>
+	
+	<min_mta_version client="1.3.5-9.06178.0" server="1.3.5-9.06178.0"/>
+	
+	<file src="GaussianBlur.fx"/>
+	<file src="Negative.fx"/>
+	
+	<file src="Testers/aliendance.ani"/>
+	
+	<file src="Testers/photoshop.gif"/>
+	<file src="Testers/sample_1.gif"/>
+	<file src="Testers/87a.gif"/>
+	
+	<file src="Testers/4bpp-24x14-Transparent.ico"/>
+	
+	<file src="PointerSchemes/arrow_i.cur"/>
+	<file src="PointerSchemes/arrow_r.cur"/>
+	
+	<file src="PointerSchemes/PulseGlass/Arrow.ani"/>
+	<file src="PointerSchemes/PulseGlass/Busy.ani"/>
+	<file src="PointerSchemes/PulseGlass/Help.cur"/>
+	<file src="PointerSchemes/PulseGlass/Link.ani"/>
+	<file src="PointerSchemes/PulseGlass/Move.cur"/>
+	<file src="PointerSchemes/PulseGlass/Precision.cur"/>
+	<file src="PointerSchemes/PulseGlass/Resize_ew.cur"/>
+	<file src="PointerSchemes/PulseGlass/Resize_nesw.cur"/>
+	<file src="PointerSchemes/PulseGlass/Resize_ns.cur"/>
+	<file src="PointerSchemes/PulseGlass/Resize_nwse.cur"/>
+	<file src="PointerSchemes/PulseGlass/Text.cur"/>
+	<file src="PointerSchemes/PulseGlass/Unavailable.cur"/>
+	<file src="PointerSchemes/PulseGlass/Working.ani"/>
+	
+	<script src="Dependencies.lua" type="shared"/>
+	
+	<script src="Enum.lua" type="shared"/>
+	
+	<script src="Signal.lua" type="client"/>
+	<script src="Stream.lua" type="client"/>
+	<script src="Color3.lua" type="client"/>
+	<script src="UDim.lua" type="client"/>
+	<script src="UDim2.lua" type="client"/>
+	<script src="Vector2.lua" type="client"/>
+	
+	<script src="Decoders.lua" type="client"/>
+	
+	
+	<!-- <script src="Gui_Test.lua" type="client"/> -->
+	
+	<script src="Instance.lua" type="client"/>
+	
+	<script src="Mouse.lua" type="client"/>
+	
+	<script src="GuiBase2D.lua" type="client"/>
+	<script src="GuiObject.lua" type="client"/>
+	<script src="ScreenGui.lua" type="client"/>
+	<script src="Frame.lua" type="client"/>
+	<script src="Image.lua" type="client"/>
+	
+	<script src="GaussianBlur.lua" type="client"/>
+	
+	<!-- <script src="Initialization.lua" type="client"/>
+	
+	<script src="Testing.lua" type="client"/> -->
+</meta>
