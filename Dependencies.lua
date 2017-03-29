@@ -16,10 +16,7 @@ end
 
 -- [========================================[
 -- PROJECT:		Gui
--- LICENSE:		?
 -- FILE:		Dependencies.lua
--- PURPOSE:		?
--- DEVELOPERS:	Cheez <andrei.st03@gmail.com>
 -- ]========================================]
 
 setmetatable(_G,{
