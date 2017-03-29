@@ -679,7 +679,7 @@ local TRAILER = 0x3b; -- signals EOF
 local BLOCK_TERMINATOR = 0x00; -- signals end of block
 
 -- [ FUNCTION ] --
-
+local FILE_OUT = fileOpen("Testers/out.txt");
 function decode_gif(bytes)
 	-- [ ASSERTION ] --
 	
@@ -738,7 +738,7 @@ function decode_gif(bytes)
 		
 		lsd.fields = {
 			gctFlag = bitExtract(fields, 7, 1), -- global color table flag, denotes wether a global color table exists
-			gctSize = bitExtract(fields, 0, 3), -- number of entries is 2^(gctSize + 1)
+			gctSize = bitExtract(fields, 0, 3), -- number of entries in table is 2^(gctSize + 1)
 			
 			sortFlag = bitExtract(fields, 3, 1),
 			
@@ -818,7 +818,7 @@ function decode_gif(bytes)
 			
 			descriptor.fields = {
 				lctFlag = bitExtract(fields, 7, 1), -- local color table flag, denotes wether a local color table exists
-				lctSize = bitExtract(fields, 0, 3),
+				lctSize = bitExtract(fields, 0, 3), -- number of entries in table is 2^(lctSize + 1)
 				
 				interlaceFlag = bitExtract(fields, 6, 1),
 				sortFlag = bitExtract(fields, 5, 1),
@@ -837,101 +837,201 @@ function decode_gif(bytes)
 			end
 			
 			
-			-- Image Data Block
+			-- IMAGE DATA BLOCK
 			
 			local lzwMinCodeSize = stream:Read_uchar();
 			
+			
+			
 			-- number of bytes contained by the image data sub-block
 			local bytesCount = stream:Read_uchar();
+			print("bytesCount =", bytesCount);
+			print("pos = ", stream.Position);
 			
 			
 			local colorTable = lct or gct; -- if lct does not exist fall back to gct
-			local colorsCount = #colorTable;
 			
-			local CLEAR_CODE = colorsCount;
-			local EOI_CODE = colorsCount + 1;
-			
-			local codeTable = {}
+			local CLEAR_CODE = #colorTable;
+			local EOI_CODE = #colorTable + 1;
 			
 			
-			local indexStream = {}
+			local codes = {}
+			
+			for i = 1, #colorTable do codes[i] = { i } end
+			
+			table.insert(codes, CLEAR_CODE);
+			table.insert(codes, EOI_CODE);
+			
+			local biggerCodesOffset = #codes + 1;
 			
 			
 			
+			local output = {}
+			
+			
+			-- variable keeping track of starting point
+			-- for reading from currentByte
 			local bitOffset = 0;
 			
-			local currentCodeSize = lzwMinCodeSize + 1;
+			local codeSize = lzwMinCodeSize + 1;
+			print("codeSize =", codeSize);
 			
-			local lastCode, currentCode;
+			local lastCode, code;
 			
-			-- using while loop here because
-			-- you cannot modify for loop variable in Lua (see below [*])
+			-- dummy variable for testing, simulates increase in codeSize as we are reading codes
+			local codesOffset = #codes-1; print("codesOffset = ", codesOffset);
+			
+			
 			local i = 1;
 			
 			while (i <= bytesCount) do
 				local currentByte = stream:Read_uchar();
 				
-				-- number of codes (including partial ones) after bitOffset bits residing in currentByte
-				local codesInByte = math.ceil((8 - bitOffset) / currentCodeSize);
+				-- number of codes (including partial ones)
+				-- after bitOffset bits residing in currentByte
+				local codesInByte = math.ceil((8 - bitOffset) / codeSize);
+				print_file(FILE_OUT, "codesInByte = ", codesInByte);
 				
-				for j = 1, codesInByte do
-					lastCode = currentCode;
-					
-					-- if current code is a partial code
-					if ( (8 - bitOffset) < currentCodeSize ) then
+				
+				local j = 1;
+				
+				while (j <= codesInByte) do
+					if (i == bytesCount) then
+						i = 0;
 						
-						-- back up 1 and read ushort instead of uchar for extracting the partial code
-						stream.Position = stream.Position - 1;
-						currentByte = stream:Read_ushort();
-						
-						currentCode = bitExtract(currentByte, bitOffset, currentCodeSize);
-						
-						-- if reading from the ushort actually gets us to the end of it then we jump to the next byte
-						if ((bitOffset + currentCodeSize)%8 == 0) then
-							i = i + 1; -- [*]
-							
-						-- otherwise we back up 1 byte
-						else
-							stream.Position = stream.Position - 1;
-						end
-						
-					-- if it is not a partial code
-					else
-						currentCode = bitExtract(currentByte, bitOffset, currentCodeSize);
+						bytesCount = stream:Read_uchar(); print_file(FILE_OUT, "BLOCK_END", "NEW_BLOCK_SIZE = ", bytesCount);
 					end
 					
-					bitOffset = (bitOffset + currentCodeSize)%8; -- wrap around 8
+					print_file(FILE_OUT, "currentByte = ", i, "bitOffset = ", bitOffset, "codeSize = ", codeSize);
+					print_file(FILE_OUT, "codesInByte = ", codesInByte);
 					
-					
-					print(lastCode, " -> ", currentCode);
-					
-					-- TODO:
-					-- decompression algorithm
-					-- USE TABLES!!!! easier!!
-					
-					-- if (currentCode == CLEAR_CODE) then
-						-- codeTable = {}
-					
-					-- -- if code actually represents a color index
-					-- elseif (currentCode < colorsCount) then
-						-- indexStream[#indexStream] = currentCode;
+					-- if current code is a partial code
+					if ((8-bitOffset) < codeSize) then
 						
-						-- if (lastCode < colorsCount) then
-							-- codeTable[colorsCount + 2 + #codeTable] = {lastCode, currentCode}
-						-- elseif (lastCode > EOI_CODE) then
-							-- local x = copy(codeTable[lastCode]);
-							
-							-- x[#x] = currentCode;
-							
-							-- codeTable[colorsCount + 2 + #codeTable] = x;
-						-- end
-					-- elseif (currentCode > EOI_CODE) then
+						-- read from bytes separately and then add in base 2 to form the code
 						
-					-- end
+						
+						-- number of bytes occupied by the code
+						-- can span across up to 3 bytes (max codeSize is 12 bits)
+						
+						-- e.g. 12 bit code starting at bit 7 of one byte spans across 3 bytes
+						-- | 1xxx xxxx | 1101 0111 | xxxx x110 |
+						-- |  BYTE 1   |  BYTE 2   |  BYTE 3   |
+						
+						-- bits are read from right to left!
+						local bytesOccupied = math.ceil((bitOffset+codeSize) / 8);
+						
+						-- we substract 2 from bytesCount because we exclude first and last bytes
+						local middleBytes = bytesOccupied-2;
+						
+						-- how many bits are occupied in the first byte by the code
+						local firstByteBitSpan = 8-bitOffset;
+						
+						-- how many bits are occupied in the last byte by the code
+						local lastByteBitSpan = codeSize - (firstByteBitSpan + 8*middleBytes);
+						
+						
+						-- reading from first byte
+						code = bitExtract(currentByte, bitOffset, firstByteBitSpan);
+						
+						-- reading from fully occupied bytes
+						for b = 1, middleBytes do
+							currentByte = stream:Read_uchar();
+							code = 2^(firstByteBitSpan + 8*(b-1)) * currentByte + code;
+							
+							-- increment i as there are not going to be any other codes left
+							-- to be read from these fully occupied bytes
+							i = i+1;
+							
+							-- ???
+							if (i == bytesCount) then
+								i = 0;
+								
+								bytesCount = stream:Read_uchar(); print_file(FILE_OUT, "BLOCK_END", "NEW_BLOCK_SIZE = ", bytesCount);
+							end
+						end
+						
+						-- reading from last byte
+						currentByte = stream:Read_uchar();
+						code = 2^(firstByteBitSpan + 8*middleBytes) * bitExtract(currentByte, 0, lastByteBitSpan) + code;
+						
+						-- if last byte is also fully occupied increment i
+						if (lastByteBitSpan == 8) then
+							i = i+1;
+							
+							-- ???
+							if (i == bytesCount) then
+								i = 0;
+								
+								bytesCount = stream:Read_uchar(); print_file(FILE_OUT, "BLOCK_END", "NEW_BLOCK_SIZE = ", bytesCount);
+							end
+							
+						-- otherwise back up as there are still codes left to read
+						-- from the byte
+						else
+							stream.Position = stream.Position-1;
+						end
+						
+					-- if it is not a partial code then reading is straight forward
+					else
+						code = bitExtract(currentByte, bitOffset, codeSize);
+					end
+					
+					-- advance bitOffset for reading next code (wrapping around 8)
+					bitOffset = (bitOffset+codeSize)%8;
+					
+					
+					print_file(FILE_OUT, "c = ", code);
+					
+					
+					if (code == CLEAR_CODE) then
+						-- reset code size
+						codeSize = lzwMinCodeSize + 1;
+						
+						-- clear all codes bigger than those in color table
+						for k = biggerCodesOffset, #codes do codes[k] = nil end
+						
+						codesOffset = #codes-1;
+						
+						print_file(FILE_OUT, "CLEAR_CODE");
+					elseif (code == EOI_CODE) then
+						print_file(FILE_OUT, "EOI_CODE REACHED");
+						
+						break;
+					else
+						-- for testing:
+						codesOffset = codesOffset + 1;
+						
+						-- investigate why not -1
+						if (2^codeSize == codesOffset) then
+							codeSize = codeSize + 1; print_file(FILE_OUT, "INC");
+							
+							-- if incrementing the codeSize lowers codesInByte for current byte by 1
+							-- (i.e. if advancing with the new codeSize gets us to the end of the byte)
+							if (bitOffset + codeSize == 8) then
+								codesInByte = codesInByte - 1;
+							end
+						end
+						
+						
+						-- TODO: stuff with lzw decompression
+						
+						
+						-- in this branch so that CLEAR_CODE
+						-- and EOI_CODE are not taken into consideration for lastCode
+						lastCode = code;
+						
+						-- TODO
+					end
+					
+					
+					j = j+1;
 				end
 				
-				i = i + 1;
+				i = i+1;
 			end
+			
+			print(stream.Position);
 		end
 		
 		identifier = stream:Read_uchar();
@@ -940,7 +1040,9 @@ function decode_gif(bytes)
 	return;
 end
 
-decode_gif("Testers/sample_1.gif");
+decode_gif("Testers/87a.gif");
+
+fileClose(FILE_OUT);
 
 
 -- local ico = decode_ico("Testers/4bpp-24x14-Transparent.ico")[1];
@@ -948,21 +1050,3 @@ decode_gif("Testers/sample_1.gif");
 -- addEventHandler("onClientRender", root, function()
 	-- dxDrawImage(200, 200, ico.width, ico.height, ico.texture);
 -- end);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

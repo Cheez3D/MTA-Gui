@@ -5,38 +5,37 @@ if (triggerServerEvent ~= nil) then ScreenSizeX,ScreenSizeY = guiGetScreenSize()
 ObjectToProxy = setmetatable({},{__mode = "v"});
 ProxyToObject = setmetatable({},{__mode = "k"});
 
-if (triggerServerEvent ~= nil) then
-	addCommandHandler("r",function(Command,...)
-		local Code = table.concat({...}," ");
+if (triggerServerEvent) then
+	addCommandHandler("r", function(cmd, ...)
+		local code = table.concat({ ... }, " ");
 		
-		local Function = loadstring(Code);
-		Function();
+		local f = loadstring(code);
+		f();
 	end);
 end
 
+addCommandHandler("cls", function()
+	for i = 1, 100 do outputConsole("\n") end
+end);
+
 -- [========================================[
 -- PROJECT:		Gui
--- LICENSE:		?
 -- FILE:		Dependencies.lua
--- PURPOSE:		?
--- DEVELOPERS:	Cheez <andrei.st03@gmail.com>
 -- ]========================================]
 
-setmetatable(_G,{
-	__index = function(_Table,Key)
-		if (Key == "__FILE__") then
-			return debug.getinfo(2,"S").short_src;
-		elseif (Key == "__func__") then
-			return debug.getinfo(2,"n").name or "?";
-		elseif (Key == "__LINE__") then
-			return debug.getinfo(2,"l").currentline;
+
+setmetatable(_G, {
+	__index = function(_t, key)
+		if     (key == "__FILE__") then return debug.getinfo(2, "S").short_src;
+		elseif (key == "__func__") then return debug.getinfo(2, "n").name or "?";
+		elseif (key == "__LINE__") then return debug.getinfo(2, "l").currentline;
 		end
 	end
 });
 
 
 
-local error_,type_ = error,type;
+local error_, type_ = error,type;
 
 function assert(Condition,Message,Level,...)
 	if (not Condition) then
@@ -95,6 +94,25 @@ end
 	-- error_(Message,Level);
 -- end
 
+function type(arg)
+	local argType = type_(arg);
+	
+	if (argType == "table") then
+		argType = getmetatable(arg);
+		
+		-- for use with Vector2, UDim, etc.
+		if (type_(argType) == "string") then
+			return argType;
+		else
+			return "table";
+		end
+	else
+		return argType;
+	end
+end
+
+
+
 -- formats error message, for use with pcall
 function format_pcall_error(Message,ArgumentOffset)
 	local MessageType = type(Message);
@@ -117,22 +135,38 @@ function format_pcall_error(Message,ArgumentOffset)
 	return Message;
 end
 
-function print(...)
-	local Strings = {...}
-	for i = 1,#Strings do
-		Strings[i] = tostring(Strings[i]);
+
+
+-- [ DEBUGGING FUNCTIONS ]
+
+function print_f(f, ...)
+	local strings = { ... }
+	
+	for i = 1, #strings do
+		strings[i] = tostring(strings[i]);
 	end
 
-	outputConsole(table.concat(Strings," "));
+	f(table.concat(strings, " "));
+end
+
+function print(...)
+	print_f(outputConsole, ...);
 end
 
 function print_debug(...)
-	local Strings = {...}
-	for i = 1,#Strings do
-		Strings[i] = tostring(Strings[i]);
-	end
+	print_f(outputDebug, ...);
+end
 
-	outputDebugString(table.concat(Strings," "));
+function print_file(file, ...)
+	local strings = { ... }
+	
+	for i = 1, #strings do
+		strings[i] = tostring(strings[i]);
+	end
+	
+	fileWrite(file, table.concat(strings, ' '));
+	
+	fileWrite(file, '\n');
 end
 
 function print_table(t, f, d)
@@ -148,21 +182,5 @@ function print_table(t, f, d)
 		else
 			f(string.rep(" ", d), k, " -> ", v);
 		end
-	end
-end
-
-function type(Argument)
-	local ArgumentType = type_(Argument);
-	
-	if (ArgumentType == "table") then
-		ArgumentType = getmetatable(Argument);
-		
-		if (type_(ArgumentType) == "string") then
-			return ArgumentType;
-		else
-			return "table";
-		end
-	else
-		return ArgumentType;
 	end
 end
