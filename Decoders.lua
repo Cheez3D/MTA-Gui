@@ -842,6 +842,24 @@ function decode_gif(bytes)
 			local lzwMinCodeSize = stream:Read_uchar();
 			
 			
+			-- !!!!!!!!!!!!!!!!!!!!!!!!
+			 local start = stream.Position;
+			
+			local blockSizes = {}
+			
+			local blockSize = stream:Read_uchar();
+			while (blockSize ~= BLOCK_TERMINATOR) do
+				blockSizes[#blockSizes+1] = blockSize;
+				
+				print_file(FILE_OUT, blockSize);
+				
+				stream.Position = stream.Position + blockSize;
+				
+				blockSize = stream:Read_uchar();
+			end
+			
+			stream.Position = start;
+			-- !!!!!!!!!!!!!!!!!!!!!!!!
 			
 			-- number of bytes contained by the image data sub-block
 			local bytesCount = stream:Read_uchar();
@@ -887,6 +905,10 @@ function decode_gif(bytes)
 			while (i <= bytesCount) do
 				local currentByte = stream:Read_uchar();
 				
+				if (i == bytesCount) then i = 0;
+					bytesCount = stream:Read_uchar();
+				end
+				
 				-- number of codes (including partial ones)
 				-- after bitOffset bits residing in currentByte
 				local codesInByte = math.ceil((8 - bitOffset) / codeSize);
@@ -896,11 +918,7 @@ function decode_gif(bytes)
 				local j = 1;
 				
 				while (j <= codesInByte) do
-					if (i == bytesCount) then
-						i = 0;
-						
-						bytesCount = stream:Read_uchar(); print_file(FILE_OUT, "BLOCK_END", "NEW_BLOCK_SIZE = ", bytesCount);
-					end
+					
 					
 					print_file(FILE_OUT, "currentByte = ", i, "bitOffset = ", bitOffset, "codeSize = ", codeSize);
 					print_file(FILE_OUT, "codesInByte = ", codesInByte);
@@ -943,11 +961,8 @@ function decode_gif(bytes)
 							-- to be read from these fully occupied bytes
 							i = i+1;
 							
-							-- ???
-							if (i == bytesCount) then
-								i = 0;
-								
-								bytesCount = stream:Read_uchar(); print_file(FILE_OUT, "BLOCK_END", "NEW_BLOCK_SIZE = ", bytesCount);
+							if (i == bytesCount) then i = 0;
+								bytesCount = stream:Read_uchar();
 							end
 						end
 						
@@ -959,11 +974,8 @@ function decode_gif(bytes)
 						if (lastByteBitSpan == 8) then
 							i = i+1;
 							
-							-- ???
-							if (i == bytesCount) then
-								i = 0;
-								
-								bytesCount = stream:Read_uchar(); print_file(FILE_OUT, "BLOCK_END", "NEW_BLOCK_SIZE = ", bytesCount);
+							if (i == bytesCount) then i = 0;
+								bytesCount = stream:Read_uchar();
 							end
 							
 						-- otherwise back up as there are still codes left to read
