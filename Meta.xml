@@ -13,6 +13,8 @@
 	<file src="Testers/sample_1.gif"/>
 	<file src="Testers/87a.gif"/>
 	<file src="Testers/uncompressed.gif"/>
+	<file src="Testers/cradle.gif"/>
+	<file src="Testers/globe.gif"/>
 	<file src="Testers/1.gif"/>
 	<file src="Testers/2.gif"/>
 	<file src="Testers/2_orig.gif"/>
@@ -50,7 +52,9 @@
 	<script src="UDim2.lua" type="client"/>
 	<script src="Vector2.lua" type="client"/>
 	
-	<script src="Decoders.lua" type="client"/>
+	<script src="decoders/ico.lua" type="client"/>
+	<script src="decoders/ani.lua" type="client"/>
+	<script src="decoders/gif.lua" type="client"/>
 	
 	
 	<!-- <script src="Gui_Test.lua" type="client"/> -->

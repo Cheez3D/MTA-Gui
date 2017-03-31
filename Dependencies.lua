@@ -183,24 +183,4 @@ function print_table(t, f, d)
 			f(string.rep(" ", d), k, " -> ", v);
 		end
 	end
-<<<<<<< HEAD
 end
-=======
-end
-
-function type(Argument)
-	local ArgumentType = type_(Argument);
-	
-	if (ArgumentType == "table") then
-		ArgumentType = getmetatable(Argument);
-		
-		if (type_(ArgumentType) == "string") then
-			return ArgumentType;
-		else
-			return "table";
-		end
-	else
-		return ArgumentType;
-	end
-end
->>>>>>> 2638636052849e753f618dca04edca96c2ae3058

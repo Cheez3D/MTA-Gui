@@ -110,7 +110,7 @@ do
 	function Class.Functions.Read_uchar(Proxy)
 		local Success,Result = pcall(Class.Functions.Read,Proxy);
 		if (Success == false) then error(format_pcall_error(Result),2)
-		elseif (Result == "") then error("bad argument #1 to '"..__func__.."' (EOF)",2) end
+		--[[elseif (Result == "") then error("bad argument #1 to '"..__func__.."' (EOF)",2)]] end
 		
 		return Result:byte();
 	end
@@ -154,7 +154,7 @@ end
 do
 	function Class.IndexFunctions.BOF(Object) return (Object.Position == 0) end
 
-	function Class.IndexFunctions.EOF(Object) return (Object.Position == Object.Size) end
+	function Class.IndexFunctions.EOF(Object) return (Object.Position >= Object.Size) end
 end
 
 do
