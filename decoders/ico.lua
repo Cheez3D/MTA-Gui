@@ -48,7 +48,7 @@ local BI_RGB = 0;
 
 local ALPHA255_BYTE = string.char(0xff);
 
-local TRANSPARENT_PIXEL = string.char(0, 0, 0, 0);
+local TRANSPARENT_PIXEL = string.char(0x00, 0x00, 0x00, 0x00);
 
 -- [ FUNCTION ] --
 

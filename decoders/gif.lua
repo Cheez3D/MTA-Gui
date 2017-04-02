@@ -9,23 +9,34 @@
         
     }
     
-    REFERENCES: https://en.wikipedia.org/wiki/GIF
+    REFERENCES: https://www.w3.org/Graphics/GIF/spec-gif89a.txt
+                
+                https://en.wikipedia.org/wiki/GIF
+                
                 http://commandlinefanatic.com/cgi-bin/showarticle.cgi?article=art011
                 http://commandlinefanatic.com/cgi-bin/showarticle.cgi?article=art010
+                
                 http://giflib.sourceforge.net/whatsinagif/bits_and_bytes.html
                 http://giflib.sourceforge.net/whatsinagif/lzw_image_data.html
                 http://giflib.sourceforge.net/whatsinagif/animation_and_transparency.html
+                
                 http://www.onicos.com/staff/iz/formats/gif.html
                 http://www.martinreddy.net/gfx/2d/GIF87a.txt
                 http://www.fileformat.info/format/gif/egff.htm
                 https://brianbondy.com/downloads/articles/gif.doc
                 http://www.daubnet.com/en/file-format-gif
+                
+                https://stackoverflow.com/questions/26894809/gif-lzw-decompression
 
 [=============================================================================================] ]]
 
--- [ CONSTANTS ]
+-- [ CONSTANTS ] --
 
 local function copy(t)
+    if (t == nil) then
+        error("caught nil", 2);
+    end
+    
     local t_copy = {}
     
     for k, v in pairs(t) do
@@ -48,14 +59,29 @@ local TRAILER = 0x3b; -- signals EOF
 
 local BLOCK_TERMINATOR = 0x00; -- signals end of block
 
+local ALPHA255_BYTE = string.char(0xff);
+
+local TRANSPARENT_PIXEL = string.char(0x00, 0x00, 0x00, 0x00);
+
 -- [ FUNCTION ] --
-local FILE_OUT = fileOpen("Testers/out.txt");
-function decode_gif(bytes)
+local OUT = fileOpen("Testers/out.txt");
+local FILE = fileOpen("Testers/file.txt");
+function decode_gif(bytes, powerOfTwo)
+    
     -- [ ASSERTION ] --
     
     local bytesType = type(bytes);
     if (bytesType ~= "string") then
         error("bad argument #1 to '" .. __func__ .. "' (string expected, got " .. bytesType .. ")", 2);
+    end
+    
+    if (powerOfTwo ~= nil) then
+        local powerOfTwoType = type(powerOfTwo);
+        if (powerOfTwoType ~= "boolean") then
+            error("bad argument #2 to '" .. __func__ .. "' (boolean expected, got " .. powerOfTwoType .. ")", 2);
+        end
+    else
+        powerOfTwo = true;
     end
     
     -- [ ACTUAL CODE ] --
@@ -207,79 +233,86 @@ function decode_gif(bytes)
             end
             
             
-            -- IMAGE DATA BLOCK
+            -- [ Image Data Block ]
             
+            -- the minimum LZW code size from which we compute
+            -- the starting code size for reading the codes
+            -- from the image data (by adding 1 to it)
             local lzwMinCodeSize = stream:Read_uchar();
             
             
-            
-            local block = {}
+            -- reading all the sub blocks and converting them into a stream
+            -- to avoid having to deal with reading the sizes of the subblocks
+            local blockData = {}
             
             local subBlockSize = stream:Read_uchar();
             
             while (subBlockSize ~= BLOCK_TERMINATOR) do
-                block[#block + 1] = stream:Read(subBlockSize);
+                blockData[#blockData+1] = stream:Read(subBlockSize);
                 
                 subBlockSize = stream:Read_uchar();
             end
             
-            block = table.concat(block);
+            blockData = table.concat(blockData);
             
-            local success, blockReader = pcall(Stream.New, block);
-            if (not success) then error(format_pcall_error(stream), 2) end
+            local success, blockReader = pcall(Stream.New, blockData);
+            if (not success) then error(format_pcall_error(blockReader), 2) end
             
             
             
             local pixels = {}
             
-            local colorTable = lct or gct; -- if lct does not exist fall back to gct
+            -- color table to use for this image block
+            -- if lct does not exist fall back to gct
+            local colorTable = lct or gct;
             
-            local codes = {}
+            -- initialize the dictionary for storing the LZW codes
+            local dict = {}
             
-            for i = 1, #colorTable do codes[i] = { i } end
+            -- insert all colors into dictionary
+            for i = 1, #colorTable do dict[i] = { i } end
             
-            local CLEAR_CODE = #colorTable;   codes[#codes+1] = {}
-            local EOI_CODE   = #colorTable+1; codes[#codes+1] = {}
+            -- insert CLEAR_CODE and EOI_CODE into dictionary
+            local CLEAR_CODE = #colorTable; dict[#dict+1] = {}
+            local EOI_CODE = CLEAR_CODE+1;  dict[#dict+1] = {}
             
-            -- index from which lzw compression codes start
-            local lzwCodesOffset = #codes + 1;
+            -- index from which LZW compression codes start
+            local lzwCodesOffset = #dict+1;
             
-            
-            
-            local lastCode, code;
-            local codeSize = lzwMinCodeSize + 1;
-            
-            -- dummy variable for testing, simulates increase in codeSize as we are reading codes
-            local codesOffset = #codes-1;
-            
-            
-            local byte = blockReader:Read_uchar();
-            
+            local previousCode, code;
+            local codeSize = lzwMinCodeSize+1;
+
             -- variable keeping track of starting point
             -- for reading from byte
             local bitOffset = 0;
             
+            local byte = blockReader:Read_uchar();
+            
+            -- while we haven't reached the EOI_CODE or the end of the blockReader
             while ( (code ~= EOI_CODE) and (not blockReader.EOF) ) do
                 
                 -- number of codes (including partial ones)
                 -- after bitOffset bits residing in byte
-                local codesInByte = math.ceil((8 - bitOffset) / codeSize);
+                local codesInByte = math.ceil((8-bitOffset) / codeSize);
+                
                 
                 local i = 1;
                 
                 while (i <= codesInByte) do
+                    
                     -- if current code is a partial code
                     if ((8-bitOffset) < codeSize) then
                         
-                        -- read from bytes separately and then add in base 2 to form the code
-                        
+                        -- reading from bytes separately and then adding the results in base 2 to form the code
                         
                         -- number of bytes occupied by the code
                         -- can span across up to 3 bytes (max codeSize is 12 bits)
                         
-                        -- e.g. 12 bit code starting at bit 7 of one byte spans across 3 bytes
+                        -- e.g. 12 bit code starting at bit 7 of a first byte spans across 3 bytes
+                        -- +-----------------------------------+
                         -- | 1xxx xxxx | 1101 0111 | xxxx x110 |
                         -- |  BYTE 1   |  BYTE 2   |  BYTE 3   |
+                        -- +-----------------------------------+
                         
                         -- bits are read from right to left!
                         local bytesOccupied = math.ceil((bitOffset+codeSize) / 8);
@@ -297,7 +330,7 @@ function decode_gif(bytes)
                         -- reading from first byte
                         code = bitExtract(byte, bitOffset, firstByteBitSpan);
                         
-                        -- reading from fully occupied bytes
+                        -- reading from fully occupied intermediate bytes
                         for j = 1, middleBytes do
                             byte = blockReader:Read_uchar();
                             
@@ -323,23 +356,78 @@ function decode_gif(bytes)
                     -- advance bitOffset for reading next code (wrapping around 8)
                     bitOffset = (bitOffset+codeSize)%8;
                     
+                    -- print_file(OUT, code);
+                    
                     if (code == CLEAR_CODE) then
+                        -- clear all dictionary entries created during the decoding process
+                        -- (i.e. all entries > EOI_CODE)
+                        for j = lzwCodesOffset, #dict do dict[j] = nil end
+                        
+                        -- it is necessary to reset previousCode
+                        -- because otherwise it might get picked up at [*] (see below)
+                        previousCode = nil;
+                        
                         -- reset code size
-                        codeSize = lzwMinCodeSize + 1;
+                        codeSize = lzwMinCodeSize+1;
                         
-                        -- clear all codes bigger than those in color table
-                        for j = lzwCodesOffset, #codes do codes[j] = nil end
-                        
-                        codesOffset = #codes-1;
-                    elseif (code == EOI_CODE) then
-                        -- ?
+                        codesOffset = #dict;
                     else
-                        -- TODO: get rid of this!
-                        codesOffset = codesOffset + 1;
+                        -- accomodate Lua indexing which starts from 1
+                        code = code+1;
                         
-                        -- investigate why not -1
-                        if (2^codeSize == codesOffset) then
-                            codeSize = codeSize + 1;
+                        -- output of the decoding of the LZW code
+                        local colorIndexes;
+                        
+                        -- Initialize code table
+                        -- let CODE be the first code in the code stream
+                        -- output {CODE} to index stream
+                        -- <LOOP POINT>
+                        -- let CODE be the next code in the code stream
+                        -- is CODE in the code table?
+                        -- Yes:
+                            -- output {CODE} to index stream
+                            -- let K be the first index in {CODE}
+                            -- add {CODE-1}+K to the code table
+                        -- No:
+                            -- let K be the first index of {CODE-1}
+                            -- output {CODE-1}+K to index stream
+                            -- add {CODE-1}+K to code table
+                        -- return to LOOP POINT
+                        
+                        local dictEntry = dict[code];
+                        
+                        if (dictEntry) then
+                            colorIndexes = dictEntry;
+                            
+                            local K = dictEntry[1];
+                            
+                            if (previousCode and dict[previousCode]) then -- [*]
+                                local v = copy(dict[previousCode]);
+                                v[#v+1] = K;
+                                
+                                dict[#dict+1] = v;
+                            end
+                        else
+                            local v = copy(dict[previousCode]);
+                            
+                            local K = v[1];
+                            
+                            v[#v+1] = K;
+                            
+                            colorIndexes = v;
+                            
+                            
+                            dict[#dict+1] = v;
+                        end
+                        
+                        for j = 1, #colorIndexes do
+                            pixels[#pixels+1] = colorTable[colorIndexes[j]] .. ALPHA255_BYTE;
+                        end
+                        
+                        
+                        -- if inserting into dictionary increased codeSize by 1 bit
+                        if (#dict == 2^codeSize) and (codeSize < 12) then
+                            codeSize = codeSize+1;
                             
                             -- if incrementing the codeSize lowers codesInByte for current byte by 1 (max code size is 12 bits)
                             -- (i.e. if advancing with the new codeSize gets us to the end of the byte)
@@ -348,40 +436,9 @@ function decode_gif(bytes)
                             end
                         end
                         
-                        
-                        if (codes[code+1]) then
-                            local codeValue = codes[code+1];
-                            output = codeValue;
-                            
-                            if (lastCode and codes[lastCode+1]) then
-                                local K = codeValue[1];
-                                
-                                local toAdd = copy(codes[lastCode+1]);
-                                toAdd[#toAdd+1] = K;
-                                
-                                codes[#codes+1] = toAdd;
-                            end
-                        else
-                            if (lastCode and codes[lastCode+1]) then
-                                local toAdd = copy(codes[lastCode+1]);
-                                toAdd[#toAdd+1] = toAdd[1];
-                                
-                                output = toAdd;
-                                
-                                codes[#codes+1] = toAdd;
-                            end
-                        end
-                        
-                        for j = 1, #output do
-                            if (#pixels < descriptor.imageWidth*descriptor.imageHeight) then
-                            pixels[#pixels+1] = colorTable[output[j]] .. string.char(0xFF);
-                            end
-                        end
-                        
-                        
-                        -- update lastCode here so that CLEAR_CODE and EOI_CODE
-                        -- are not taken into consideration
-                        lastCode = code;
+                        -- update lastCode on this branch so that
+                        -- CLEAR_CODE and EOI_CODE are not taken into consideration
+                        previousCode = code;
                     end
                     
                     i = i+1;
@@ -395,12 +452,9 @@ function decode_gif(bytes)
                 bitExtract(descriptor.imageHeight, 0, 8), bitExtract(descriptor.imageHeight, 8, 8)
             );
             
-            print(descriptor.imageWidth, descriptor.imageHeight);
-            
             pixels = table.concat(pixels);
-            print_file(FILE_OUT, pixels);
             
-            return dxCreateTexture(pixels, "argb", false, "clamp");
+            return dxCreateTexture(pixels, "argb", false, "clamp"), descriptor.imageWidth, descriptor.imageHeight;
         end
         
         identifier = stream:Read_uchar();
@@ -409,10 +463,20 @@ function decode_gif(bytes)
     return;
 end
 
-local tex = decode_gif("Testers/cradle.gif"); -- corrupted?
+local h1, h2, h3 = debug.gethook();
+debug.sethook();
+
+local s = getTickCount();
+
+local tex, w, h = decode_gif("Testers/globe.gif");
+
+print(getTickCount() - s);
+
+debug.sethook(nil, h1, h2, h3);
 
 addEventHandler("onClientRender", root, function()
-    dxDrawImage(200, 200, 480, 360, tex);
+    dxDrawImage(200, 200, w, h, tex);
 end);
 
-fileClose(FILE_OUT);
+fileClose(OUT);
+fileClose(FILE);
