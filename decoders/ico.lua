@@ -123,17 +123,17 @@ function decode_ico(bytes)
     end
     
     
-    local iconVariants = {}
+    local icoVariants = {}
     
     for i = 1, ICONDIR.idCount do
-        local icon = {}
+        local ico = {}
         
         local ICONDIRENTRY = ICONDIR.idEntries[i];
         
         -- if file type is CUR then add hotspot data
         if (ICONDIR.idType == CUR) then
-            icon.hotspotX = ICONDIRENTRY.wPlanes;
-            icon.hotspotY = ICONDIRENTRY.wBitCount;
+            ico.hotspotX = ICONDIRENTRY.wPlanes;
+            ico.hotspotY = ICONDIRENTRY.wBitCount;
         end
         
         -- set cursor to image data
@@ -145,8 +145,8 @@ function decode_ico(bytes)
         if (stream:Read(8) == PNG_SIGNATURE) then -- png
             stream.Position = stream.Position+8;
             
-            icon.width  = stream:Read_uint(Enum.Endianness.BigEndian);
-            icon.height = stream:Read_uint(Enum.Endianness.BigEndian);
+            ico.width  = stream:Read_uint(Enum.Endianness.BigEndian);
+            ico.height = stream:Read_uint(Enum.Endianness.BigEndian);
             
             stream.Position = stream.Position-24;
             
@@ -199,8 +199,8 @@ function decode_ico(bytes)
                 height = height/2;
             end
             
-            icon.width  = width;
-            icon.height = height;
+            ico.width  = width;
+            ico.height = height;
             
             local bitsPerPixel  = BITMAPINFOHEADER.biBitCount;
             local pixelsPerByte = 8/bitsPerPixel;
@@ -333,18 +333,18 @@ function decode_ico(bytes)
             error("bad argument #1 to '" .. __func__ .. "' (invalid image data)", 2);
         end
         
-        icon.texture = texture;
+        ico.texture = texture;
         
-        iconVariants[i] = icon;
+        icoVariants[i] = ico;
     end
     
-    if (#iconVariants > 1) then
-        table.sort(iconVariants, function(first, second)
+    if (#icoVariants > 1) then
+        table.sort(icoVariants, function(first, second)
             return (first.height < second.height) or (first.width < second.width);
         end);
     end
     
-    return iconVariants;
+    return icoVariants;
 end
 
 

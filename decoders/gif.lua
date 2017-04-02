@@ -30,21 +30,10 @@
 
 [=============================================================================================] ]]
 
--- [ CONSTANTS ] --
+local OUT = fileOpen("Testers/out.txt");
+local FILE = fileOpen("Testers/file.txt");
 
-local function copy(t)
-    if (t == nil) then
-        error("caught nil", 2);
-    end
-    
-    local t_copy = {}
-    
-    for k, v in pairs(t) do
-        t_copy[k] = v;
-    end
-    
-    return t_copy;
-end
+-- [ CONSTANTS ] --
 
 local EXTENSION_INTRODUCER = 0x21;
 
@@ -64,8 +53,7 @@ local ALPHA255_BYTE = string.char(0xff);
 local TRANSPARENT_PIXEL = string.char(0x00, 0x00, 0x00, 0x00);
 
 -- [ FUNCTION ] --
-local OUT = fileOpen("Testers/out.txt");
-local FILE = fileOpen("Testers/file.txt");
+
 function decode_gif(bytes, powerOfTwo)
     
     -- [ ASSERTION ] --
@@ -117,7 +105,8 @@ function decode_gif(bytes, powerOfTwo)
     end
     
     
-    local lsd = { -- logical screen descriptor
+    -- [ Logical Screen Descriptor ]
+    local lsd = {
         canvasWidth  = stream:Read_ushort(),
         canvasHeight = stream:Read_ushort(),
         
@@ -142,22 +131,24 @@ function decode_gif(bytes, powerOfTwo)
         }
     end
     
-    local gct; -- global color table
+    
+    -- [ Global Color Table ]
+    local gct;
     
     if (lsd.fields.gctFlag == 1) then
         gct = {}
         
         for i = 1, 2^(lsd.fields.gctSize+1) do
-            gct[i] = string.reverse(stream:Read(3));
+            gct[i] = string.reverse(stream:Read(3)) .. ALPHA255_BYTE;
         end
     end
     
     
+    local current_gce;
+    
     local identifier = stream:Read_uchar();
     
     while (identifier ~= TRAILER) do
-        
-        local current_gce;
         
         if (identifier == EXTENSION_INTRODUCER) then
             
@@ -165,7 +156,8 @@ function decode_gif(bytes, powerOfTwo)
             
             if (label == GRAPHIC_CONTROL_LABEL) then
                 
-                local gce = { -- graphics control extension
+                -- [ Graphics Control Extension]
+                local gce = {
                     size = stream:Read_uchar(),
                     
                     fields = stream:Read_uchar(),
@@ -194,7 +186,7 @@ function decode_gif(bytes, powerOfTwo)
             -- elseif (label == PLAIN_TEXT_LABEL) then
             end
             
-            -- continue reading possible left data until block terminator is reached
+            -- continue reading possible left data until BLOCK_TERMINATOR is reached
             repeat local byte = stream:Read_uchar();
             until (byte == BLOCK_TERMINATOR);
             
@@ -222,13 +214,15 @@ function decode_gif(bytes, powerOfTwo)
                 reserved = bitExtract(fields, 3, 2),
             }
             
-            local lct; -- local color table
+            
+            -- [ Local Color Table ]
+            local lct;
             
             if (descriptor.fields.lctFlag == 1) then
                 lct = {}
                 
                 for i = 1, 2^(descriptor.fields.lctSize+1) do
-                    lct[i] = string.reverse(stream:Read(3));
+                    lct[i] = string.reverse(stream:Read(3)) .. ALPHA255_BYTE;
                 end
             end
             
@@ -270,11 +264,14 @@ function decode_gif(bytes, powerOfTwo)
             local dict = {}
             
             -- insert all colors into dictionary
-            for i = 1, #colorTable do dict[i] = { i } end
+            -- (using strings to represent indexes in color table
+            --  this works because GIF max color table size conicides
+            --  with number of ASCII characters, i.e. 256)
+            for i = 1, #colorTable do dict[i] = string.char(i-1) end
             
             -- insert CLEAR_CODE and EOI_CODE into dictionary
-            local CLEAR_CODE = #colorTable; dict[#dict+1] = {}
-            local EOI_CODE = CLEAR_CODE+1;  dict[#dict+1] = {}
+            local CLEAR_CODE = #colorTable; dict[#dict+1] = string.char();
+            local EOI_CODE = CLEAR_CODE+1;  dict[#dict+1] = string.char();
             
             -- index from which LZW compression codes start
             local lzwCodesOffset = #dict+1;
@@ -310,8 +307,9 @@ function decode_gif(bytes, powerOfTwo)
                         
                         -- e.g. 12 bit code starting at bit 7 of a first byte spans across 3 bytes
                         -- +-----------------------------------+
+                        -- |  BYTE 01  |  BYTE 02  |  BYTE 03  |
+                        -- +-----------------------------------+
                         -- | 1xxx xxxx | 1101 0111 | xxxx x110 |
-                        -- |  BYTE 1   |  BYTE 2   |  BYTE 3   |
                         -- +-----------------------------------+
                         
                         -- bits are read from right to left!
@@ -369,59 +367,70 @@ function decode_gif(bytes, powerOfTwo)
                         
                         -- reset code size
                         codeSize = lzwMinCodeSize+1;
-                        
-                        codesOffset = #dict;
                     else
                         -- accomodate Lua indexing which starts from 1
                         code = code+1;
                         
-                        -- output of the decoding of the LZW code
-                        local colorIndexes;
+                        -- +----------------------------------------------------+
+                        -- | LZW GIF DECOMPRESSION ALGORITHM                    |
+                        -- +----------------------------------------------------+
+                        -- | {CODE}   = indexes stored by CODE                  |
+                        -- | {CODE-1} = indexes stored by CODE-1 (prevous code) |
+                        -- +----------------------------------------------------+
+                        -- | <LOOP POINT>                                       |
+                        -- | let CODE be the next code in the code stream       |
+                        -- | is CODE in the code table?                         |
+                        -- | Yes:                                               |
+                        -- |     output {CODE} to index stream                  |
+                        -- |     let K be the first index in {CODE}             |
+                        -- |     add {CODE-1} .. K to the code table            |
+                        -- | No:                                                |
+                        -- |     let K be the first index of {CODE-1}           |
+                        -- |     output {CODE-1} .. K to index stream           |
+                        -- |     add {CODE-1} .. K to code table                |
+                        -- | return to <LOOP POINT>                             |
+                        -- +----------------------------------------------------+
                         
-                        -- Initialize code table
-                        -- let CODE be the first code in the code stream
-                        -- output {CODE} to index stream
-                        -- <LOOP POINT>
-                        -- let CODE be the next code in the code stream
-                        -- is CODE in the code table?
-                        -- Yes:
-                            -- output {CODE} to index stream
-                            -- let K be the first index in {CODE}
-                            -- add {CODE-1}+K to the code table
-                        -- No:
-                            -- let K be the first index of {CODE-1}
-                            -- output {CODE-1}+K to index stream
-                            -- add {CODE-1}+K to code table
-                        -- return to LOOP POINT
+                        -- indexes output of the decompression of the LZW code
+                        -- stored as a string of bytes
+                        local indexes;
                         
-                        local dictEntry = dict[code];
-                        
-                        if (dictEntry) then
-                            colorIndexes = dictEntry;
+                        if (dict[code]) then
+                            local v = dict[code];
                             
-                            local K = dictEntry[1];
+                            indexes = v;
                             
-                            if (previousCode and dict[previousCode]) then -- [*]
-                                local v = copy(dict[previousCode]);
-                                v[#v+1] = K;
-                                
-                                dict[#dict+1] = v;
+                            local K = string.sub(v, 1, 1);
+                            if (previousCode and dict[previousCode]) then
+                                dict[#dict+1] = dict[previousCode] .. K;
                             end
                         else
-                            local v = copy(dict[previousCode]);
+                            local v = dict[previousCode];
                             
-                            local K = v[1];
+                            local K = string.sub(v, 1, 1);
+                            v = v .. K;
                             
-                            v[#v+1] = K;
-                            
-                            colorIndexes = v;
-                            
+                            indexes = v;
                             
                             dict[#dict+1] = v;
                         end
                         
-                        for j = 1, #colorIndexes do
-                            pixels[#pixels+1] = colorTable[colorIndexes[j]] .. ALPHA255_BYTE;
+                        -- add colors coressponding to the decompressed color indexes to pixel data
+                        if (current_gce and (current_gce.fields.transparentColorFlag == 1)) then
+                            for j = 1, string.len(indexes) do
+                                local s = string.sub(indexes, j, j);
+                                
+                                local index = string.byte(s);
+                                
+                                pixels[#pixels+1] = (index == current_gce.transparentColorIndex) and TRANSPARENT_PIXEL
+                                    or colorTable[index+1];
+                            end
+                        else
+                            for j = 1, string.len(indexes) do
+                                local s = string.sub(indexes, j, j);
+                                
+                                pixels[#pixels+1] = colorTable[string.byte(s)+1];
+                            end
                         end
                         
                         
@@ -429,15 +438,15 @@ function decode_gif(bytes, powerOfTwo)
                         if (#dict == 2^codeSize) and (codeSize < 12) then
                             codeSize = codeSize+1;
                             
-                            -- if incrementing the codeSize lowers codesInByte for current byte by 1 (max code size is 12 bits)
-                            -- (i.e. if advancing with the new codeSize gets us to the end of the byte)
+                            -- if incrementing the codeSize lowers codesInByte for current byte by 1,
+                            -- i.e. if advancing with the new codeSize gets us to the end of the byte
+                            -- (codesInByte cannot be lowered by more than 1 because max code size is 12 bits)
                             if (bitOffset + codeSize == 8) then
                                 codesInByte = codesInByte-1;
                             end
                         end
                         
-                        -- update lastCode on this branch so that
-                        -- CLEAR_CODE and EOI_CODE are not taken into consideration
+                        
                         previousCode = code;
                     end
                     
@@ -447,6 +456,7 @@ function decode_gif(bytes, powerOfTwo)
                 byte = blockReader:Read_uchar();
             end
             
+            -- append size to accomodate MTA pixel data format
             pixels[#pixels+1] = string.char(
                 bitExtract(descriptor.imageWidth,  0, 8), bitExtract(descriptor.imageWidth,  8, 8),
                 bitExtract(descriptor.imageHeight, 0, 8), bitExtract(descriptor.imageHeight, 8, 8)
@@ -463,14 +473,20 @@ function decode_gif(bytes, powerOfTwo)
     return;
 end
 
+
+
+
+
+
+
 local h1, h2, h3 = debug.gethook();
 debug.sethook();
 
 local s = getTickCount();
 
-local tex, w, h = decode_gif("Testers/globe.gif");
+local tex, w, h = decode_gif("Testers/interlaced.gif");
 
-print(getTickCount() - s);
+print("elapsed = ", getTickCount() - s, "ms");
 
 debug.sethook(nil, h1, h2, h3);
 

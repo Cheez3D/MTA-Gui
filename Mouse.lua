@@ -175,12 +175,12 @@ local Mouse = Instance.New("Mouse");
 
 -- local start = getTickCount();
 
--- local pow = math.pow;
--- local x = 2;
+-- local bitLShift = bitLShift;
+
 -- for i = 1,10000000 do
-	-- local n = pow(x,2);
+	-- local x = bitLShift(1, 12);
 -- end
 
--- print(getTickCount()-start);
+-- print("elapsed:", getTickCount()-start);
 
 -- debug.sethook(nil,h1,h2,h3);
