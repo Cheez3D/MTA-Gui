@@ -1,5 +1,4 @@
 --[[ [===========================================================================================]
-
     NAME:    table decode_gif(string bytes)
     PURPOSE: Convert .gif files into drawable MTA:SA textures
     
@@ -27,13 +26,16 @@
                 http://www.daubnet.com/en/file-format-gif
                 
                 https://stackoverflow.com/questions/26894809/gif-lzw-decompression
-
 [=============================================================================================] ]]
 
 local OUT = fileOpen("Testers/out.txt");
 local FILE = fileOpen("Testers/file.txt");
 
--- [ CONSTANTS ] --
+local ln2 = math.log(2);
+
+local string = string;
+
+
 
 local EXTENSION_INTRODUCER = 0x21;
 
@@ -51,6 +53,13 @@ local BLOCK_TERMINATOR = 0x00; -- signals end of block
 local ALPHA255_BYTE = string.char(0xff);
 
 local TRANSPARENT_PIXEL = string.char(0x00, 0x00, 0x00, 0x00);
+
+local DEINTERLACE_PASSES = {
+    [1] = { y = 1, step = 8 },
+    [2] = { y = 5, step = 8 },
+    [3] = { y = 3, step = 4 },
+    [4] = { y = 2, step = 2 },
+}
 
 -- [ FUNCTION ] --
 
@@ -144,6 +153,7 @@ function decode_gif(bytes, powerOfTwo)
     end
     
     
+    local transparency;
     local current_gce;
     
     local identifier = stream:Read_uchar();
@@ -178,6 +188,7 @@ function decode_gif(bytes, powerOfTwo)
                     reserved = bitExtract(fields, 5, 3),
                 }
                 
+                transparency = (gce.fields.transparentColorFlag == 1);
                 current_gce = gce;
                 
             -- TODO:
@@ -193,14 +204,20 @@ function decode_gif(bytes, powerOfTwo)
         elseif (identifier == IMAGE_SEPARATOR) then
         
             local descriptor = {
-                imageX = stream:Read_ushort(),
-                imageY = stream:Read_ushort(),
+                x = stream:Read_ushort(),
+                y = stream:Read_ushort(),
                 
-                imageWidth  = stream:Read_ushort(),
-                imageHeight = stream:Read_ushort(),
+                width  = stream:Read_ushort(),
+                height = stream:Read_ushort(),
                 
                 fields = stream:Read_uchar(),
             }
+            
+            -- calculate nearest power of two size which fits image
+            if (powerOfTwo) then
+                descriptor.roundedWidth  = 2^math.ceil(math.log(descriptor.width)/ln2);
+                descriptor.roundedHeight = 2^math.ceil(math.log(descriptor.height)/ln2);
+            end
             
             local fields = descriptor.fields;
             
@@ -255,6 +272,27 @@ function decode_gif(bytes, powerOfTwo)
             
             
             local pixels = {}
+            
+            -- deinterlace parameters
+            local pass; -- pass of deinterlacing process
+            local y, x; -- x and y coordinate of current pixel
+            local step; -- how many rows to skip
+            
+            if (powerOfTwo) then x = 1 end
+            
+            if (descriptor.fields.interlaceFlag == 1) then
+                pass = 1;
+                
+                y = DEINTERLACE_PASSES[pass].y;
+                x = 1;
+                
+                step = DEINTERLACE_PASSES[pass].step;
+                
+                for i = 1, descriptor.height do
+                    pixels[i] = {}
+                end
+            end
+            
             
             -- color table to use for this image block
             -- if lct does not exist fall back to gct
@@ -416,23 +454,58 @@ function decode_gif(bytes, powerOfTwo)
                         end
                         
                         -- add colors coressponding to the decompressed color indexes to pixel data
-                        if (current_gce and (current_gce.fields.transparentColorFlag == 1)) then
-                            for j = 1, string.len(indexes) do
-                                local s = string.sub(indexes, j, j);
+                        local pixelsCount = string.len(indexes);
+                        
+                        for j = 1, pixelsCount do
+                            local s = string.sub(indexes, j, j);
+                            local index = string.byte(s);
+                            
+                            local pixel = (transparency and (index == current_gce.transparentColorIndex)) and TRANSPARENT_PIXEL
+                                or colorTable[index+1];
                                 
-                                local index = string.byte(s);
+                            if (descriptor.fields.interlaceFlag == 1) then
+                                pixels[y][x] = pixel;
                                 
-                                pixels[#pixels+1] = (index == current_gce.transparentColorIndex) and TRANSPARENT_PIXEL
-                                    or colorTable[index+1];
-                            end
-                        else
-                            for j = 1, string.len(indexes) do
-                                local s = string.sub(indexes, j, j);
+                                x = x+1;
                                 
-                                pixels[#pixels+1] = colorTable[string.byte(s)+1];
+                                if (x > descriptor.width) then
+                                    if (powerOfTwo) then
+                                        -- pad with transparent pixels
+                                        pixels[y][x] = string.rep(
+                                            TRANSPARENT_PIXEL,
+                                            descriptor.roundedWidth-x+1
+                                        );
+                                    end
+                                    
+                                    pixels[y] = table.concat(pixels[y]);
+                                    
+                                    y = y+step;
+                                    if ( (y > descriptor.height) and (pass < #DEINTERLACE_PASSES) ) then
+                                        pass = pass+1;
+                                        
+                                        y    = DEINTERLACE_PASSES[pass].y;
+                                        step = DEINTERLACE_PASSES[pass].step;
+                                    end
+                                    
+                                    x = 1;
+                                end
+                            else
+                                pixels[#pixels+1] = pixel;
+                                
+                                if (powerOfTwo) then
+                                    x = x+1;
+                                    
+                                    if (x > descriptor.width) then
+                                        pixels[#pixels+1] = string.rep(
+                                            TRANSPARENT_PIXEL,
+                                            descriptor.roundedWidth-x+1
+                                        );
+                                        
+                                        x = 1;
+                                    end
+                                end
                             end
                         end
-                        
                         
                         -- if inserting into dictionary increased codeSize by 1 bit
                         if (#dict == 2^codeSize) and (codeSize < 12) then
@@ -446,7 +519,6 @@ function decode_gif(bytes, powerOfTwo)
                             end
                         end
                         
-                        
                         previousCode = code;
                     end
                     
@@ -456,15 +528,28 @@ function decode_gif(bytes, powerOfTwo)
                 byte = blockReader:Read_uchar();
             end
             
+            if (powerOfTwo) then
+                -- pad with transparent pixels
+                pixels[#pixels+1] = string.rep(
+                    TRANSPARENT_PIXEL,
+                    (descriptor.roundedHeight-descriptor.height)*descriptor.roundedWidth
+                );
+            end
+            
             -- append size to accomodate MTA pixel data format
+            local width  = powerOfTwo and descriptor.roundedWidth  or descriptor.width;
+            local height = powerOfTwo and descriptor.roundedHeight or descriptor.height;
+            
             pixels[#pixels+1] = string.char(
-                bitExtract(descriptor.imageWidth,  0, 8), bitExtract(descriptor.imageWidth,  8, 8),
-                bitExtract(descriptor.imageHeight, 0, 8), bitExtract(descriptor.imageHeight, 8, 8)
+                bitExtract(width,  0, 8), bitExtract(width,  8, 8),
+                bitExtract(height, 0, 8), bitExtract(height, 8, 8)
             );
             
             pixels = table.concat(pixels);
             
-            return dxCreateTexture(pixels, "argb", false, "clamp"), descriptor.imageWidth, descriptor.imageHeight;
+            local texture = dxCreateTexture(pixels, "argb", false, "clamp");
+            
+            -- TODO: insert into a table of frames
         end
         
         identifier = stream:Read_uchar();
@@ -480,11 +565,11 @@ end
 
 
 local h1, h2, h3 = debug.gethook();
-debug.sethook();
+-- debug.sethook();
 
 local s = getTickCount();
 
-local tex, w, h = decode_gif("Testers/interlaced.gif");
+local tex, w, h = decode_gif("Testers/solid2.gif");
 
 print("elapsed = ", getTickCount() - s, "ms");
 

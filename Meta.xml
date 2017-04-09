@@ -12,6 +12,7 @@
 	<file src="Testers/photoshop.gif"/>
 	<file src="Testers/sample_1.gif"/>
 	<file src="Testers/87a.gif"/>
+	<file src="Testers/87a2.gif"/>
 	<file src="Testers/uncompressed.gif"/>
 	<file src="Testers/cradle.gif"/>
 	<file src="Testers/globe.gif"/>
@@ -26,6 +27,9 @@
 	<file src="Testers/test-trans.gif"/>
 	<file src="Testers/lol.gif"/>
 	<file src="Testers/interlaced.gif"/>
+	<file src="Testers/starpulse.gif"/>
+	<file src="Testers/corn.gif"/>
+	<file src="Testers/Animhorse.gif"/>
 	
 	<file src="Testers/out.txt"/>
 	<file src="Testers/file.txt"/>
