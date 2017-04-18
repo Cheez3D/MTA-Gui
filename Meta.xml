@@ -30,11 +30,13 @@
 	<file src="Testers/starpulse.gif"/>
 	<file src="Testers/corn.gif"/>
 	<file src="Testers/Animhorse.gif"/>
+	<file src="Testers/huge.gif"/>
+	<file src="Testers/jupiter.gif"/>
 	
 	<file src="Testers/out.txt"/>
 	<file src="Testers/file.txt"/>
 	
-	<file src="Testers/4bpp-24x14-Transparent.ico"/>
+    <file src="Testers/4bpp-24x14-Transparent.ico"/>
 	
 	<file src="PointerSchemes/arrow_i.cur"/>
 	<file src="PointerSchemes/arrow_r.cur"/>
