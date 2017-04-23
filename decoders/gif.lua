@@ -35,7 +35,18 @@ local FILE = fileOpen("Testers/file.txt");
 
 local log2 = math.log(2);
 
+local math = math;
 local string = string;
+
+local function table_copy(t)
+    local copy = {}
+    
+    for i = 1, #t do
+        copy[i] = (type(t[i]) == "table") and table_copy(t[i]) or t[i];
+    end
+    
+    return copy;
+end
 
 
 
@@ -54,26 +65,19 @@ local BLOCK_TERMINATOR = 0x00; -- signals end of block
 
 local ALPHA255_BYTE = string.char(0xff);
 
+local TRANSPARENT_PIXEL = string.char(0x00, 0x00, 0x00, 0x00);
+
 -- [ FUNCTION ] --
 
-local decode_lzw_data;
+local decode_image_data;
 
-function decode_gif(bytes, powerOfTwo)
+function decode_gif(bytes)
     
     -- [ ASSERTION ] --
     
     local bytesType = type(bytes);
     if (bytesType ~= "string") then
         error("bad argument #1 to '" .. __func__ .. "' (string expected, got " .. bytesType .. ")", 2);
-    end
-    
-    if (powerOfTwo ~= nil) then
-        local powerOfTwoType = type(powerOfTwo);
-        if (powerOfTwoType ~= "boolean") then
-            error("bad argument #2 to '" .. __func__ .. "' (boolean expected, got " .. powerOfTwoType .. ")", 2);
-        end
-    else
-        powerOfTwo = true;
     end
     
     -- [ ACTUAL CODE ] --
@@ -156,6 +160,8 @@ function decode_gif(bytes, powerOfTwo)
     local current_gce;
     local isAnimation, loopCount;
     
+    local canvas = dxCreateRenderTarget(lsd.canvasWidth, lsd.canvasHeight, true);
+    
     
     local identifier = stream:Read_uchar();
     
@@ -194,7 +200,7 @@ function decode_gif(bytes, powerOfTwo)
                 
             elseif (label == APPLICATION_LABEL) then
                 
-                -- application block begins with 11 (fixed size) bytes
+                -- application block begins with 11 bytes (fixed size)
                 if (stream:Read_uchar() ~= 11) then
                     error("bad argument #1 to '" .. __func__ .. "' (invalid application block)", 2);
                 end
@@ -216,13 +222,19 @@ function decode_gif(bytes, powerOfTwo)
                 
             -- TODO:
             -- elseif (label == COMMENT_LABEL) then
-            -- elseif (label == PLAIN_TEXT_LABEL) then
             
+            -- IGNORED:
+            -- elseif (label == PLAIN_TEXT_LABEL) then
+                
             end
             
-            -- TO CHANGE THIS!
+            -- print_file(OUT, "BEFORE:", stream.Position);
+            
+            -- TODO: CHANGE THIS!!!
             repeat local byte = stream:Read_uchar();
             until (byte == BLOCK_TERMINATOR);
+            
+            -- print_file(OUT, "AFTER:", stream.Position, '\n');
             
         elseif (identifier == IMAGE_SEPARATOR) then
             
@@ -266,50 +278,38 @@ function decode_gif(bytes, powerOfTwo)
             
             -- [ Image Data Block ]
             
-            -- the minimum LZW code size from which we compute
-            -- the starting code size for reading the codes
-            -- from the image data (by adding 1 to it)
-            local lzwMinCodeSize = stream:Read_uchar();
+            -- if lct is not present fall back to gct
+            local colorTable = lct or gct;
+            
+            local texture, width, height = decode_image_data(stream, current_gce, descriptor, colorTable, powerOfTwo);
             
             
-            -- reading all the sub blocks and converting them into a stream
-            -- to avoid having to deal with reading the sizes of the subblocks
-            local blockData = {}
+            dxSetRenderTarget(canvas);
+            dxSetBlendMode("add");
             
-            local subBlockSize = stream:Read_uchar();
-            
-            while (subBlockSize ~= BLOCK_TERMINATOR) do
-                blockData[#blockData+1] = stream:Read(subBlockSize);
-                
-                subBlockSize = stream:Read_uchar();
-            end
-            
-            blockData = table.concat(blockData);
-            
-            local success, blockReader = pcall(Stream.New, blockData);
-            if (not success) then error(format_pcall_error(blockReader), 2) end
+            dxDrawImage(descriptor.x, descriptor.y, width, height, texture);
             
             
-            local pixels, width, height = decode_lzw_data(
-                blockReader, lzwMinCodeSize, current_gce,
-                descriptor, powerOfTwo,
-                
-                lct or gct -- if lct is not present fall back to gct
-            );
+            local copy = dxCreateRenderTarget(lsd.canvasWidth, lsd.canvasHeight, true);
             
+            dxSetRenderTarget(copy);
+            dxDrawImage(0, 0, lsd.canvasWidth, lsd.canvasHeight, canvas);
             
+            dxSetBlendMode("blend");
+            dxSetRenderTarget();
             
-            for y = 1, descriptor.height do
-                pixels[y] = table.concat(pixels[y]);
-            end
+            -- TODO:
+            -- if (current_gce.fields.disposalMethod == 0) or (current_gce.fields.disposalMethod == 1) then
             
-            pixels = table.concat(pixels);
+            -- elseif (current_gce.fields.disposalMethod == 2) then -- restore to background color
+            
+            -- end
             
             images[#images+1] = {
-                texture = dxCreateTexture(pixels, "argb", false, "clamp"),
+                texture = copy,
                 
-                width  = width,
-                height = height,
+                width  = lsd.canvasWidth,
+                height = lsd.canvasHeight,
             }
         end
         
@@ -321,38 +321,37 @@ end
 
 
 
-local TRANSPARENT_PIXEL = string.char(0x00, 0x00, 0x00, 0x00);
-
 local DEINTERLACE_PASSES = {
-    [1] = { y = 1, step = 8 },
-    [2] = { y = 5, step = 8 },
-    [3] = { y = 3, step = 4 },
-    [4] = { y = 2, step = 2 },
+    [1] = { y = 0, step = 8 },
+    [2] = { y = 4, step = 8 },
+    [3] = { y = 2, step = 4 },
+    [4] = { y = 1, step = 2 },
 }
 
-function decode_lzw_data(blockReader, lzwMinCodeSize, gce, descriptor, powerOfTwo, colorTable)
+function decode_image_data(stream, gce, descriptor, colorTable, powerOfTwo)
     
-    local roundedWidth, roundedHeight;
+     -- the minimum LZW code size from which we compute
+    -- the starting code size for reading the codes
+    -- from the image data (by adding 1 to it)
+    local lzwMinCodeSize = stream:Read_uchar();
     
-    if (powerOfTwo) then
-        -- calculate nearest power of two size which fits the image inside it
-        roundedWidth  = 2^math.ceil(math.log(descriptor.width)/log2);
-        roundedHeight = 2^math.ceil(math.log(descriptor.height)/log2);
-    end
     
     local isInterlaced = (descriptor.fields.interlaceFlag == 1);
     
     local transparencySupport;
     if (gce) then transparencySupport = (gce.fields.transparentColorFlag == 1) end
     
+    -- round image width and height to the nearest powers of two
+    -- for avoiding bulrring when creating texture
+    local textureWidth  = 2^math.ceil(math.log(descriptor.width)/log2);
+    local textureHeight = 2^math.ceil(math.log(descriptor.height)/log2);
     
-    local pixels = {}
+    
+    local pixelData = {}
     
     -- x, y coordinates of current pixel
-    local x = 1;
-    local y = 1;
-    
-    for i = 1, descriptor.height do pixels[i] = {} end
+    local x = 0;
+    local y = 0;
     
     
     local pass; -- pass of deinterlacing process
@@ -377,99 +376,48 @@ function decode_lzw_data(blockReader, lzwMinCodeSize, gce, descriptor, powerOfTw
     for i = 1, #colorTable do dict[i] = string.char(i-1) end
     
     -- insert CLEAR_CODE and EOI_CODE into dictionary
-    local CLEAR_CODE = #colorTable; dict[#dict+1] = string.char();
-    local EOI_CODE = CLEAR_CODE+1;  dict[#dict+1] = string.char();
+    local CLEAR_CODE = #colorTable; dict[#dict+1] = true;
+    local EOI_CODE = CLEAR_CODE+1;  dict[#dict+1] = true;
     
     -- index from which LZW compression codes start
     local lzwCodesOffset = #dict+1;
     
-    local previousCode, code;
+    
     local codeSize = lzwMinCodeSize+1;
+    
+    local code = 0;
+    local codeReadBits = 0;
+    local isWholeCode = true;
+    
+    local previousCode;
 
-    -- variable keeping track of starting point
-    -- for reading from byte
+    
+    local blockSize = stream:Read_uchar();
+    local blockOffset = stream.Position;
+    
+    local byte = stream:Read_uchar();
+    
+    -- variable keeping track of starting point for reading from byte
     local bitOffset = 0;
     
-    local byte = blockReader:Read_uchar();
-    
-    local fl = false;
-    
-    -- while we haven't reached the EOI_CODE or the end of the blockReader
-    while ( (code ~= EOI_CODE) and (not blockReader.EOF) ) do
-
-        -- number of codes (including partial ones)
-        -- after bitOffset bits residing in byte
-        local codesInByte = math.ceil((8-bitOffset) / codeSize);
+    while (true) do
+        local codeUnreadBits = codeSize-codeReadBits;
         
+        if ((bitOffset+codeUnreadBits) > 8) then
+            isWholeCode = false;
+            
+            -- lower the amount of bits to read so as to reach exactly the byte end
+            codeUnreadBits = 8-bitOffset;
+        end
         
-        local i = 1;
+        code = (2^codeReadBits)*bitExtract(byte, bitOffset, codeUnreadBits) + code;
+        codeReadBits = codeReadBits+codeUnreadBits;
         
-        while (i <= codesInByte) do
-            
-            -- [ Code Reading ]
-            
-            -- if current code is a partial code
-            if ((8-bitOffset) < codeSize) then
-                
-                -- reading from bytes separately and then adding the results in base 2 to form the code
-                
-                -- number of bytes occupied by the code
-                -- can span across up to 3 bytes (max codeSize is 12 bits)
-                
-                -- e.g. 12 bit code starting at bit 7 of a first byte spans across 3 bytes
-                -- +-----------------------------------+
-                -- |  BYTE 01  |  BYTE 02  |  BYTE 03  |
-                -- +-----------------------------------+
-                -- | 1xxx xxxx | 1101 0111 | xxxx x110 |
-                -- +-----------------------------------+
-                
-                -- bits are read from right to left!
-                local bytesOccupied = math.ceil((bitOffset+codeSize) / 8);
-                
-                -- we substract 2 from bytesCount because we exclude first and last bytes
-                local middleBytes = bytesOccupied-2;
-                
-                -- how many bits are occupied in the first byte by the code
-                local firstByteBitSpan = 8-bitOffset;
-                
-                -- how many bits are occupied in the last byte by the code
-                local lastByteBitSpan = codeSize - (firstByteBitSpan + 8*middleBytes);
-                
-                
-                -- reading from first byte
-                code = bitExtract(byte, bitOffset, firstByteBitSpan);
-                
-                -- reading from fully occupied intermediate bytes
-                for j = 1, middleBytes do
-                    byte = blockReader:Read_uchar();
-                    
-                    code = 2^(firstByteBitSpan + 8*(j-1))*byte + code;
-                end
-                
-                -- reading from last byte
-                byte = blockReader:Read_uchar();
-                
-                code = 2^(firstByteBitSpan + 8*middleBytes) * bitExtract(byte, 0, lastByteBitSpan) + code;
-                
-                -- if there are still codes left to read
-                -- from byte then back up
-                if (lastByteBitSpan < 8) then
-                    -- blockReader.Position = blockReader.Position-1;
-                    fl = true;
-                end
-                
-            -- if it is not a partial code then reading is straight forward
-            else
-                code = bitExtract(byte, bitOffset, codeSize);
-            end
-            
-            -- advance bitOffset for reading next code (wrapping around 8)
-            bitOffset = (bitOffset+codeSize)%8;
-            
-            
-            -- [ Code Interpretation ]
-            
+        bitOffset = (bitOffset+codeUnreadBits)%8;
+        
+        if (isWholeCode) then
             if (code == CLEAR_CODE) then
+                
                 -- clear all dictionary entries created during the decoding process
                 -- (i.e. all entries > EOI_CODE)
                 for j = lzwCodesOffset, #dict do dict[j] = nil end
@@ -480,8 +428,17 @@ function decode_lzw_data(blockReader, lzwMinCodeSize, gce, descriptor, powerOfTw
                 
                 -- reset code size
                 codeSize = lzwMinCodeSize+1;
+                
+            elseif (code == EOI_CODE) then
+                if (stream:Read_uchar() == BLOCK_TERMINATOR) then -- !!!
+                    error("bad argument #1 to '" .. __func__ .. "' (unexpected EOI)", 3);
+                end
+                
+                break;
             else
-                code = code+1; -- accomodate Lua indexing which starts from 1
+                code = code+1; -- accomodate to Lua indexing which starts from 1
+                
+                -- [ Code to Indexes Conversion ]
                 
                 -- +----------------------------------------------------+
                 -- | LZW GIF DECOMPRESSION ALGORITHM                    |
@@ -525,6 +482,15 @@ function decode_lzw_data(blockReader, lzwMinCodeSize, gce, descriptor, powerOfTw
                     dict[#dict+1] = v;
                 end
                 
+                -- if inserting into dictionary increased codeSize
+                if (#dict == 2^codeSize) and (codeSize < 12) then
+                    codeSize = codeSize+1;
+                end
+                
+                previousCode = code;
+                
+                
+                -- [ Indexes to Pixels Conversion ]
                 
                 -- add colors coresponding to the decompressed color indexes to pixel data
                 local pixelsCount = string.len(indexes);
@@ -536,24 +502,22 @@ function decode_lzw_data(blockReader, lzwMinCodeSize, gce, descriptor, powerOfTw
                     local pixel = (transparencySupport and (index == gce.transparentColorIndex)) and TRANSPARENT_PIXEL
                         or colorTable[index+1];
                     
-                    pixels[y][x] = pixel;
+                    -- add 1 to descriptor.width to make room for TRANSPARENT_PIXEL padding
+                    -- for getting texture width to the nearest power of two
+                    pixelData[y*(descriptor.width+1) + (x+1)] = pixel;
                     
                     x = x+1;
                     
-                    if (x > descriptor.width) then
-                        if (powerOfTwo) then -- pad remaining space with transparent pixels
-                            pixels[y][x] = string.rep(
-                                TRANSPARENT_PIXEL,
-                                roundedWidth-x+1
-                            );
-                        end
+                    if (x >= descriptor.width) then
+                        -- pad remaining row space horizontally with transparent pixels
+                        pixelData[y*(descriptor.width+1) + (x+1)] = string.rep(TRANSPARENT_PIXEL, textureWidth-x);
                         
-                        x = 1;
+                        x = 0;
                         
                         if (isInterlaced) then
                             y = y+step;
                             
-                            if ((y > descriptor.height) and (pass < #DEINTERLACE_PASSES)) then
+                            if ((y >= descriptor.height) and (pass < #DEINTERLACE_PASSES)) then
                                 pass = pass+1;
                                 
                                 y    = DEINTERLACE_PASSES[pass].y;
@@ -565,51 +529,44 @@ function decode_lzw_data(blockReader, lzwMinCodeSize, gce, descriptor, powerOfTw
                     end
                 end
                 
-                
-                -- if inserting into dictionary increased codeSize by 1 bit
-                if (#dict == 2^codeSize) and (codeSize < 12) then
-                    codeSize = codeSize+1;
-                    
-                    -- if incrementing the codeSize lowers codesInByte for current byte by 1,
-                    -- i.e. if advancing with the new codeSize gets us to the end of the byte
-                    -- (codesInByte cannot be lowered by more than 1 because max code size is 12 bits)
-                    if (bitOffset + codeSize == 8) then
-                        codesInByte = codesInByte-1;
-                    end
-                end
-                
-                previousCode = code;
             end
             
-            i = i+1;
+            code = 0;
+            codeReadBits = 0;
+        else
+            isWholeCode = true;
         end
         
-        if (not fl) then
-            byte = blockReader:Read_uchar();
-        else
-            fl = false;
+        
+        if ((stream.Position-blockOffset) == blockSize) then
+            blockSize = stream:Read_uchar();
+            blockOffset = stream.Position;
+        end
+        
+        -- if we are at the beginning of a new byte
+        if (bitOffset == 0) then
+            byte = stream:Read_uchar();
         end
     end
     
+    -- pad remaining bottom area with transparent pixels
+    pixelData[#pixelData+1] = string.rep(TRANSPARENT_PIXEL, (textureHeight-descriptor.height)*textureWidth);
     
-    if (powerOfTwo) then -- pad remaining rows with transparent pixels
-        pixels[#pixels+1] = string.rep(
-            TRANSPARENT_PIXEL,
-            (roundedHeight-descriptor.height)*roundedWidth
-        );
-    end
-    
-    
-    -- append size to accomodate MTA pixel data format
-    local width  = powerOfTwo and roundedWidth  or descriptor.width;
-    local height = powerOfTwo and roundedHeight or descriptor.height;
-    
-    pixels[#pixels+1] = string.char(
-        bitExtract(width,  0, 8), bitExtract(width,  8, 8),
-        bitExtract(height, 0, 8), bitExtract(height, 8, 8)
+    -- append size
+    pixelData[#pixelData+1] = string.char(
+        bitExtract(textureWidth,  0, 8), bitExtract(textureWidth,  8, 8),
+        bitExtract(textureHeight, 0, 8), bitExtract(textureHeight, 8, 8)
     );
     
-    return pixels, width, height;
+    local pixels = table.concat(pixelData);
+    
+    if (not flag) then
+        print_file(FILE, pixels);
+        
+        flag = true;
+    end
+    
+    return dxCreateTexture(pixels, "argb", false, "clamp"), textureWidth, textureHeight;
 end
 
 
@@ -618,11 +575,11 @@ end
 
 
 local h1, h2, h3 = debug.gethook();
--- debug.sethook();
+debug.sethook();
 
 local s = getTickCount();
 
--- local imgs = decode_gif("Testers/jupiter.gif");
+local imgs = decode_gif("Testers/cradle.gif");
 
 print("elapsed = ", getTickCount() - s, "ms");
 
@@ -631,17 +588,17 @@ debug.sethook(nil, h1, h2, h3);
 
 local i = 1; local t = getTickCount();
 
--- addEventHandler("onClientRender", root, function()
-    -- if ((getTickCount() - t) > 50) then
-        -- t = getTickCount();
+addEventHandler("onClientRender", root, function()
+    if ((getTickCount() - t) > 50) then
+        t = getTickCount();
         
-        -- i = i+1;
+        i = i+1;
         
-        -- if (i > #imgs) then i = 1 end
-    -- end
+        if (i > #imgs) then i = 1 end
+    end
     
-    -- dxDrawImage(200, 200, imgs[i].width, imgs[i].height, imgs[i].texture);
--- end);
+    dxDrawImage(200, 200, imgs[i].width, imgs[i].height, imgs[i].texture);
+end);
 
 fileClose(OUT);
 fileClose(FILE);
