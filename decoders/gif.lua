@@ -49,9 +49,9 @@ local PLAIN_TEXT_LABEL = 0x01;
 
 local IMAGE_SEPARATOR = 0x2c;
 
-local BLOCK_TERMINATOR = 0x00; -- signals end of block
+local BLOCK_TERMINATOR = 0x00;
 
-local TRAILER = 0x3b; -- signals end of file
+local TRAILER = 0x3b;
 
 
 local NETSCAPE_LOOP_COUNT = 1;
@@ -202,6 +202,8 @@ function decode_gif(bytes)
                 
                 gce.isTransparencyEnabled = (gce.fields.transparentColorFlag == 1);
                 
+                -- stream.Position = blockOffset+blockSize;
+                
             elseif (label == APPLICATION_LABEL) then
                 
                 -- [ Application Extension ]
@@ -213,7 +215,6 @@ function decode_gif(bytes)
                 
                 local appIdentifier = stream:Read(8);
                 local appAuthCode   = stream:Read(3);
-                
                 
                 blockSize   = stream:Read_uchar();
                 blockOffset = stream.Position;
@@ -235,15 +236,35 @@ function decode_gif(bytes)
                     blockOffset = stream.Position;
                 end
                 
-            -- elseif (label == COMMENT_LABEL) then
+            elseif (label == COMMENT_LABEL) then
             
                 -- [ Comment Extension ]
+                
+                if (not images.comments) then images.comments = {} end
+                
+                local comment = {}
+                
+                while (blockSize ~= BLOCK_TERMINATOR) do
+                    comment[#comment+1] = stream:Read(blockSize);
+                    
+                    stream.Position = blockOffset+blockSize;
+                    
+                    blockSize   = stream:Read_uchar();
+                    blockOffset = stream.Position;
+                end
+                
+                images.comments[#images.comments+1] = table.concat(comment);
             
             -- IGNORED:
             -- elseif (label == PLAIN_TEXT_LABEL) then
             
+                -- [ Plain Text Extension ]
+            
             else
-                while (blockSize ~= BLOCK_TERMINATOR) do printfile(OUT, stream.Position, blockSize);
+                
+                -- [ Unknown Extension ]
+                
+                while (blockSize ~= BLOCK_TERMINATOR) do
                     stream.Position = blockOffset+blockSize;
                     
                     blockSize   = stream:Read_uchar();
@@ -322,29 +343,28 @@ function decode_gif(bytes)
             dxDrawImage(0, 0, lsd.canvasWidth, lsd.canvasHeight, canvas);
             
             if (gce) then
+                -- REFERENCES: http://www.webreference.com/content/studio/disposal.html
+                --             http://www.theimage.com/animation/pages/disposal2.html
+                
                 local disposalMethod = gce.fields.disposalMethod;
                 
                 if (disposalMethod == DISPOSE_TO_BACKGROUND) then
                     
-                    -- TODO:
-                    -- http://www.webreference.com/content/studio/disposal.html
-                    -- http://www.theimage.com/animation/pages/disposal2.html
-                    
-                    -- https://bugzilla.mozilla.org/show_bug.cgi?id=85595#c28
-                    -- https://github.com/DhyanB/Open-Imaging (see Quirks)
-                    
-                    -- clear canvas
                     dxSetRenderTarget(canvas);
                     dxSetBlendMode("overwrite");
                     
+                    -- if current frame has transparency replace background color with transparent pixel
+                    -- to avoid displaying transparent images with solid backgrounds
+                    -- REFERENCE: https://github.com/DhyanB/Open-Imaging - see Quirks section
                     local bgColor = (gce and (gce.isTransparencyEnabled)) and TRANSPARENT_PIXEL or colorTable[lsd.bgColorIndex+1];
                     
-                    bgColor = 0x1000000 * string.byte(bgColor, 4)  -- a
-                            + 0x10000   * string.byte(bgColor, 1)  -- b
-                            + 0x100     * string.byte(bgColor, 2)  -- g
-                            +             string.byte(bgColor, 3); -- b
+                    bgColor = 0x1000000 * string.byte(bgColor, 4)  -- alpha
+                            + 0x10000   * string.byte(bgColor, 1)  -- red
+                            + 0x100     * string.byte(bgColor, 2)  -- green
+                            +             string.byte(bgColor, 3); -- blue
                     
-                    -- fill canvas with background color
+                    -- only replace area occupied by current frame with background color
+                    -- REFERENCE: https://bugzilla.mozilla.org/show_bug.cgi?id=85595#c28
                     dxDrawRectangle(descriptor.x, descriptor.y, descriptor.width, descriptor.height, bgColor);
                     
                 elseif (disposalMethod == DISPOSE_TO_PREVIOUS) then
@@ -400,7 +420,7 @@ function decode_image_data(stream, gce, descriptor, colorTable)
     
     
     -- round image width and height to the nearest powers of two
-    -- for avoiding bulrring when creating texture
+    -- to avoid bulrring when creating texture
     local textureWidth  = 2^math.ceil(math.log(descriptor.width)/log2);
     local textureHeight = 2^math.ceil(math.log(descriptor.height)/log2);
     
@@ -468,7 +488,7 @@ function decode_image_data(stream, gce, descriptor, colorTable)
     -- variable keeping track of starting point for reading from byte
     local bitOffset = 0;
     
-    while (true) do
+    while (blockSize ~= BLOCK_TERMINATOR) do
         local codeUnreadBits = codeSize-codeReadBits;
         
         if ((bitOffset+codeUnreadBits) > 8) then
@@ -499,12 +519,8 @@ function decode_image_data(stream, gce, descriptor, colorTable)
                 dictMaxSize = 2^codeSize;
                 
             elseif (code == EOI_CODE) then
-                -- TODO: pcall from decode_gif or something else
-                if (stream:Read_uchar() ~= BLOCK_TERMINATOR) then
-                    error("bad argument #1 to '" .. __func__ .. "' (unexpected EOI_CODE)", 2);
-                end
-                
-                break;
+                -- move to end of block to read BLOCK_TERMINATOR and exit out of the loop
+                stream.Position = blockOffset+blockSize;
             else
                 code = code+1; -- accomodate to Lua indexing which starts from 1
                 
@@ -607,6 +623,7 @@ function decode_image_data(stream, gce, descriptor, colorTable)
         end
         
         
+        -- if reached end of block
         if ((stream.Position-blockOffset) == blockSize) then
             blockSize   = stream:Read_uchar();
             blockOffset = stream.Position;
@@ -638,11 +655,17 @@ end
 
 
 local h1, h2, h3 = debug.gethook();
--- debug.sethook();
+debug.sethook();
 
 local s = getTickCount();
 
-local imgs = decode_gif("Testers/fire.gif");
+local imgs = decode_gif("Testers/pascal-triangle.gif");
+
+if (imgs.comments) then
+    for i = 1, #imgs.comments do
+        print(imgs.comments[i]);
+    end
+end
 
 print("elapsed = ", getTickCount() - s, "ms");
 
