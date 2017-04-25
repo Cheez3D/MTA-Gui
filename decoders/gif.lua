@@ -38,16 +38,6 @@ local log2 = math.log(2);
 local math = math;
 local string = string;
 
-local function table_copy(t)
-    local copy = {}
-    
-    for i = 1, #t do
-        copy[i] = (type(t[i]) == "table") and table_copy(t[i]) or t[i];
-    end
-    
-    return copy;
-end
-
 
 
 local EXTENSION_INTRODUCER = 0x21;
@@ -59,9 +49,16 @@ local PLAIN_TEXT_LABEL = 0x01;
 
 local IMAGE_SEPARATOR = 0x2c;
 
+local BLOCK_TERMINATOR = 0x00; -- signals end of block
+
 local TRAILER = 0x3b; -- signals end of file
 
-local BLOCK_TERMINATOR = 0x00; -- signals end of block
+
+local NETSCAPE_LOOP_COUNT = 1;
+
+
+local DISPOSE_TO_BACKGROUND = 2;
+local DISPOSE_TO_PREVIOUS   = 3;
 
 local ALPHA255_BYTE = string.char(0xff);
 
@@ -134,10 +131,10 @@ function decode_gif(bytes)
         local fields = lsd.fields;
         
         lsd.fields = {
-            gctFlag = bitExtract(fields, 7, 1), -- global color table flag, denotes wether a global color table exists
-            gctSize = bitExtract(fields, 0, 3), -- number of entries in table is 2^(gctSize + 1)
+            gctFlag = bitExtract(fields, 7, 1), -- denotes wether a global color table exists
+            gctSize = bitExtract(fields, 0, 3), -- number of entries in gct is 2^(gctSize+1)
             
-            sortFlag = bitExtract(fields, 3, 1),
+            sortFlag = bitExtract(fields, 3, 1), -- denotes wether gct sorted (most important colors first)
             
             colorResolution = bitExtract(fields, 4, 3),
         }
@@ -157,10 +154,14 @@ function decode_gif(bytes)
     end
     
     
-    local current_gce;
     local isAnimation, loopCount;
     
-    local canvas = dxCreateRenderTarget(lsd.canvasWidth, lsd.canvasHeight, true);
+    local gce;
+    
+    local canvas = dxCreateRenderTarget(
+        lsd.canvasWidth, lsd.canvasHeight,
+        (version == "89a") -- only version 89a has transparency support
+    );
     
     
     local identifier = stream:Read_uchar();
@@ -171,12 +172,15 @@ function decode_gif(bytes)
         
             local label = stream:Read_uchar();
             
+            local blockSize   = stream:Read_uchar();
+            local blockOffset = stream.Position;
+            
             if (label == GRAPHIC_CONTROL_LABEL) then
                 
-                -- [ Graphics Control Extension ]
+                -- [ Graphic Control Extension ]
                 
-                local gce = {
-                    size = stream:Read_uchar(),
+                gce = {
+                    size = blockSize,
                     
                     fields = stream:Read_uchar(),
                     
@@ -196,45 +200,56 @@ function decode_gif(bytes)
                     reserved = bitExtract(fields, 5, 3),
                 }
                 
-                current_gce = gce;
+                gce.isTransparencyEnabled = (gce.fields.transparentColorFlag == 1);
                 
             elseif (label == APPLICATION_LABEL) then
                 
-                -- application block begins with 11 bytes (fixed size)
-                if (stream:Read_uchar() ~= 11) then
+                -- [ Application Extension ]
+                
+                -- any application block begins with 11 bytes (fixed size)
+                if (blockSize ~= 11) then
                     error("bad argument #1 to '" .. __func__ .. "' (invalid application block)", 2);
                 end
                 
                 local appIdentifier = stream:Read(8);
                 local appAuthCode   = stream:Read(3);
                 
-                local subBlockSize = stream:Read_uchar();
                 
-                if (appIdentifier == "NETSCAPE") and (appAuthCode == "2.0") then
-                    local subBlockID = stream:Read_uchar();
-                    
-                    if (subBlockID == 1) then
-                        isAnimation = true;
+                blockSize   = stream:Read_uchar();
+                blockOffset = stream.Position;
+                
+                while (blockSize ~= BLOCK_TERMINATOR) do
+                    if (appIdentifier == "NETSCAPE") and (appAuthCode == "2.0") then
+                        local ID = stream:Read_uchar();
                         
-                        loopCount = stream:Read_ushort();
+                        if (ID == NETSCAPE_LOOP_COUNT) then
+                            isAnimation = true;
+                            
+                            loopCount = stream:Read_ushort();
+                        end
                     end
+                    
+                    stream.Position = blockOffset+blockSize;
+                    
+                    blockSize   = stream:Read_uchar();
+                    blockOffset = stream.Position;
                 end
                 
-            -- TODO:
             -- elseif (label == COMMENT_LABEL) then
+            
+                -- [ Comment Extension ]
             
             -- IGNORED:
             -- elseif (label == PLAIN_TEXT_LABEL) then
-                
+            
+            else
+                while (blockSize ~= BLOCK_TERMINATOR) do printfile(OUT, stream.Position, blockSize);
+                    stream.Position = blockOffset+blockSize;
+                    
+                    blockSize   = stream:Read_uchar();
+                    blockOffset = stream.Position;
+                end
             end
-            
-            -- print_file(OUT, "BEFORE:", stream.Position);
-            
-            -- TODO: CHANGE THIS!!!
-            repeat local byte = stream:Read_uchar();
-            until (byte == BLOCK_TERMINATOR);
-            
-            -- print_file(OUT, "AFTER:", stream.Position, '\n');
             
         elseif (identifier == IMAGE_SEPARATOR) then
             
@@ -262,6 +277,8 @@ function decode_gif(bytes)
                 reserved = bitExtract(fields, 3, 2),
             }
             
+            descriptor.isInterlaced = (descriptor.fields.interlaceFlag == 1);
+            
             
             -- [ Local Color Table ]
             
@@ -281,32 +298,76 @@ function decode_gif(bytes)
             -- if lct is not present fall back to gct
             local colorTable = lct or gct;
             
-            local texture, width, height = decode_image_data(stream, current_gce, descriptor, colorTable, powerOfTwo);
+            if (gce) and (gce.isTransparencyEnabled) then
+                gce.transparentColor = colorTable[gce.transparentColorIndex+1];
+                
+                -- temporarily replace transparent color with a transparent pixel
+                -- to increase performance vs comparing each index against gce.transparentColorIndex in the decoding process
+                colorTable[gce.transparentColorIndex+1] = TRANSPARENT_PIXEL;
+            end
+            
+            
+            local texture, textureWidth, textureHeight = decode_image_data(stream, gce, descriptor, colorTable);
             
             
             dxSetRenderTarget(canvas);
             dxSetBlendMode("add");
             
-            dxDrawImage(descriptor.x, descriptor.y, width, height, texture);
+            dxDrawImage(descriptor.x, descriptor.y, textureWidth, textureHeight, texture);
             
             
-            local copy = dxCreateRenderTarget(lsd.canvasWidth, lsd.canvasHeight, true);
+            local canvasCopy = dxCreateRenderTarget(lsd.canvasWidth, lsd.canvasHeight, true);
             
-            dxSetRenderTarget(copy);
+            dxSetRenderTarget(canvasCopy);
             dxDrawImage(0, 0, lsd.canvasWidth, lsd.canvasHeight, canvas);
+            
+            if (gce) then
+                local disposalMethod = gce.fields.disposalMethod;
+                
+                if (disposalMethod == DISPOSE_TO_BACKGROUND) then
+                    
+                    -- TODO:
+                    -- http://www.webreference.com/content/studio/disposal.html
+                    -- http://www.theimage.com/animation/pages/disposal2.html
+                    
+                    -- https://bugzilla.mozilla.org/show_bug.cgi?id=85595#c28
+                    -- https://github.com/DhyanB/Open-Imaging (see Quirks)
+                    
+                    -- clear canvas
+                    dxSetRenderTarget(canvas);
+                    dxSetBlendMode("overwrite");
+                    
+                    local bgColor = (gce and (gce.isTransparencyEnabled)) and TRANSPARENT_PIXEL or colorTable[lsd.bgColorIndex+1];
+                    
+                    bgColor = 0x1000000 * string.byte(bgColor, 4)  -- a
+                            + 0x10000   * string.byte(bgColor, 1)  -- b
+                            + 0x100     * string.byte(bgColor, 2)  -- g
+                            +             string.byte(bgColor, 3); -- b
+                    
+                    -- fill canvas with background color
+                    dxDrawRectangle(descriptor.x, descriptor.y, descriptor.width, descriptor.height, bgColor);
+                    
+                elseif (disposalMethod == DISPOSE_TO_PREVIOUS) then
+                
+                    -- TODO
+                    
+                end
+            end
             
             dxSetBlendMode("blend");
             dxSetRenderTarget();
             
-            -- TODO:
-            -- if (current_gce.fields.disposalMethod == 0) or (current_gce.fields.disposalMethod == 1) then
             
-            -- elseif (current_gce.fields.disposalMethod == 2) then -- restore to background color
+            if (gce) and (gce.transparentColor) then
+                -- restore transparent color after decoding of the image data and disposal
+                colorTable[gce.transparentColorIndex+1] = gce.transparentColor;
+                
+                gce.transparentColor = nil;
+            end
             
-            -- end
             
             images[#images+1] = {
-                texture = copy,
+                image = canvasCopy,
                 
                 width  = lsd.canvasWidth,
                 height = lsd.canvasHeight,
@@ -321,6 +382,8 @@ end
 
 
 
+local MAX_CODE_SIZE = 12;
+
 local DEINTERLACE_PASSES = {
     [1] = { y = 0, step = 8 },
     [2] = { y = 4, step = 8 },
@@ -328,18 +391,13 @@ local DEINTERLACE_PASSES = {
     [4] = { y = 1, step = 2 },
 }
 
-function decode_image_data(stream, gce, descriptor, colorTable, powerOfTwo)
+function decode_image_data(stream, gce, descriptor, colorTable)
     
-     -- the minimum LZW code size from which we compute
+    -- the minimum LZW code size from which we compute
     -- the starting code size for reading the codes
     -- from the image data (by adding 1 to it)
     local lzwMinCodeSize = stream:Read_uchar();
     
-    
-    local isInterlaced = (descriptor.fields.interlaceFlag == 1);
-    
-    local transparencySupport;
-    if (gce) then transparencySupport = (gce.fields.transparentColorFlag == 1) end
     
     -- round image width and height to the nearest powers of two
     -- for avoiding bulrring when creating texture
@@ -357,33 +415,43 @@ function decode_image_data(stream, gce, descriptor, colorTable, powerOfTwo)
     local pass; -- pass of deinterlacing process
     local step; -- how many rows to skip
     
-    if (descriptor.fields.interlaceFlag == 1) then
+    if (descriptor.isInterlaced) then
         pass = 1;
         
-        y = DEINTERLACE_PASSES[pass].y;
-        
+        y    = DEINTERLACE_PASSES[pass].y;
         step = DEINTERLACE_PASSES[pass].step;
     end
     
     
-    -- initialize the dictionary for storing the LZW codes
-    local dict = {}
+    local dict = {} -- initialize the dictionary for storing the LZW codes
     
-    -- insert all colors into dictionary
-    -- (using strings to represent indexes in color table
-    --  this works because GIF max color table size conicides
-    --  with number of ASCII characters, i.e. 256)
-    for i = 1, #colorTable do dict[i] = string.char(i-1) end
+    -- insert all color indexes into dictionary
+    
+    -- +---------------------------------------------------------------------------------------+
+    -- | ONLY UP TO 2^lzwMinCodeSize                                                           |
+    -- +---------------------------------------------------------------------------------------+
+    -- | previously used #colorTable and was causing unexpected results for cradle.gif because |
+    -- | the colorTable size was 256 whereas the codeSize was 128 for some frames              |
+    -- +---------------------------------------------------------------------------------------+
+    
+    -- using strings to represent indexes in color table
+    -- this works because GIF max color table size conicides
+    -- with number of ASCII characters, i.e. 256
+    
+    -- strings are used for efficiency vs tables
+    
+    for i = 1, 2^lzwMinCodeSize do dict[i] = string.char(i-1) end
     
     -- insert CLEAR_CODE and EOI_CODE into dictionary
-    local CLEAR_CODE = #colorTable; dict[#dict+1] = true;
-    local EOI_CODE = CLEAR_CODE+1;  dict[#dict+1] = true;
+    local CLEAR_CODE = 2^lzwMinCodeSize;  dict[#dict+1] = true;
+    local EOI_CODE = CLEAR_CODE+1;        dict[#dict+1] = true;
     
     -- index from which LZW compression codes start
     local lzwCodesOffset = #dict+1;
     
     
     local codeSize = lzwMinCodeSize+1;
+    local dictMaxSize = 2^codeSize;
     
     local code = 0;
     local codeReadBits = 0;
@@ -392,7 +460,7 @@ function decode_image_data(stream, gce, descriptor, colorTable, powerOfTwo)
     local previousCode;
 
     
-    local blockSize = stream:Read_uchar();
+    local blockSize   = stream:Read_uchar();
     local blockOffset = stream.Position;
     
     local byte = stream:Read_uchar();
@@ -428,10 +496,12 @@ function decode_image_data(stream, gce, descriptor, colorTable, powerOfTwo)
                 
                 -- reset code size
                 codeSize = lzwMinCodeSize+1;
+                dictMaxSize = 2^codeSize;
                 
             elseif (code == EOI_CODE) then
-                if (stream:Read_uchar() == BLOCK_TERMINATOR) then -- !!!
-                    error("bad argument #1 to '" .. __func__ .. "' (unexpected EOI)", 3);
+                -- TODO: pcall from decode_gif or something else
+                if (stream:Read_uchar() ~= BLOCK_TERMINATOR) then
+                    error("bad argument #1 to '" .. __func__ .. "' (unexpected EOI_CODE)", 2);
                 end
                 
                 break;
@@ -483,8 +553,9 @@ function decode_image_data(stream, gce, descriptor, colorTable, powerOfTwo)
                 end
                 
                 -- if inserting into dictionary increased codeSize
-                if (#dict == 2^codeSize) and (codeSize < 12) then
+                if (#dict == dictMaxSize) and (codeSize < MAX_CODE_SIZE) then
                     codeSize = codeSize+1;
+                    dictMaxSize = 2^codeSize;
                 end
                 
                 previousCode = code;
@@ -495,12 +566,10 @@ function decode_image_data(stream, gce, descriptor, colorTable, powerOfTwo)
                 -- add colors coresponding to the decompressed color indexes to pixel data
                 local pixelsCount = string.len(indexes);
                 
-                for j = 1, pixelsCount do
-                    local s = string.sub(indexes, j, j);
-                    local index = string.byte(s);
+                for i = 1, pixelsCount do
+                    local index = string.byte(indexes, i);
                     
-                    local pixel = (transparencySupport and (index == gce.transparentColorIndex)) and TRANSPARENT_PIXEL
-                        or colorTable[index+1];
+                    local pixel = colorTable[index+1];
                     
                     -- add 1 to descriptor.width to make room for TRANSPARENT_PIXEL padding
                     -- for getting texture width to the nearest power of two
@@ -514,7 +583,7 @@ function decode_image_data(stream, gce, descriptor, colorTable, powerOfTwo)
                         
                         x = 0;
                         
-                        if (isInterlaced) then
+                        if (descriptor.isInterlaced) then
                             y = y+step;
                             
                             if ((y >= descriptor.height) and (pass < #DEINTERLACE_PASSES)) then
@@ -539,7 +608,7 @@ function decode_image_data(stream, gce, descriptor, colorTable, powerOfTwo)
         
         
         if ((stream.Position-blockOffset) == blockSize) then
-            blockSize = stream:Read_uchar();
+            blockSize   = stream:Read_uchar();
             blockOffset = stream.Position;
         end
         
@@ -560,12 +629,6 @@ function decode_image_data(stream, gce, descriptor, colorTable, powerOfTwo)
     
     local pixels = table.concat(pixelData);
     
-    if (not flag) then
-        print_file(FILE, pixels);
-        
-        flag = true;
-    end
-    
     return dxCreateTexture(pixels, "argb", false, "clamp"), textureWidth, textureHeight;
 end
 
@@ -575,11 +638,11 @@ end
 
 
 local h1, h2, h3 = debug.gethook();
-debug.sethook();
+-- debug.sethook();
 
 local s = getTickCount();
 
-local imgs = decode_gif("Testers/cradle.gif");
+local imgs = decode_gif("Testers/fire.gif");
 
 print("elapsed = ", getTickCount() - s, "ms");
 
@@ -589,7 +652,7 @@ debug.sethook(nil, h1, h2, h3);
 local i = 1; local t = getTickCount();
 
 addEventHandler("onClientRender", root, function()
-    if ((getTickCount() - t) > 50) then
+    if ((getTickCount() - t) > 200) then
         t = getTickCount();
         
         i = i+1;
@@ -597,7 +660,7 @@ addEventHandler("onClientRender", root, function()
         if (i > #imgs) then i = 1 end
     end
     
-    dxDrawImage(200, 200, imgs[i].width, imgs[i].height, imgs[i].texture);
+    dxDrawImage(200, 200, imgs[i].width, imgs[i].height, imgs[i].image);
 end);
 
 fileClose(OUT);

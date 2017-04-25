@@ -9,13 +9,14 @@
 	
 	<file src="Testers/aliendance.ani"/>
 	
-	<file src="Testers/photoshop.gif"/>
+	<file src="Testers/portal.gif"/>
 	<file src="Testers/sample_1.gif"/>
 	<file src="Testers/87a.gif"/>
 	<file src="Testers/87a2.gif"/>
 	<file src="Testers/uncompressed.gif"/>
 	<file src="Testers/cradle.gif"/>
 	<file src="Testers/globe.gif"/>
+	<file src="Testers/globe2.gif"/>
 	<file src="Testers/1.gif"/>
 	<file src="Testers/2.gif"/>
 	<file src="Testers/2_orig.gif"/>
@@ -32,6 +33,12 @@
 	<file src="Testers/Animhorse.gif"/>
 	<file src="Testers/huge.gif"/>
 	<file src="Testers/jupiter.gif"/>
+	<file src="Testers/harryshreck.gif"/>
+	<file src="Testers/dog.gif"/>
+	<file src="Testers/colors.gif"/>
+	<file src="Testers/colors2.gif"/>
+	<file src="Testers/m4nb.gif"/>
+	<file src="Testers/m5np.gif"/>
 	
 	<file src="Testers/out.txt"/>
 	<file src="Testers/file.txt"/>

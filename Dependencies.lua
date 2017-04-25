@@ -139,7 +139,7 @@ end
 
 -- [ DEBUGGING FUNCTIONS ]
 
-function print_f(f, ...)
+function printfunc(f, ...)
 	local strings = { ... }
 	
 	for i = 1, #strings do
@@ -150,14 +150,14 @@ function print_f(f, ...)
 end
 
 function print(...)
-	print_f(outputConsole, ...);
+	printfunc(outputConsole, ...);
 end
 
-function print_debug(...)
-	print_f(outputDebug, ...);
+function printdebug(...)
+	printfunc(outputDebug, ...);
 end
 
-function print_file(file, ...)
+function printfile(file, ...)
 	local strings = { ... }
 	
 	for i = 1, #strings do
@@ -169,7 +169,7 @@ function print_file(file, ...)
 	fileWrite(file, '\n');
 end
 
-function print_table(t, f, d)
+function printtable(t, f, d)
 	f = f or print;
 	
 	d = d or 0;
