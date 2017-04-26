@@ -139,6 +139,9 @@ end
 
 -- [ DEBUGGING FUNCTIONS ]
 
+fout = fileOpen("out.txt");
+ffile = fileOpen("file.txt");
+
 function printfunc(f, ...)
 	local strings = { ... }
 	
@@ -154,7 +157,7 @@ function print(...)
 end
 
 function printdebug(...)
-	printfunc(outputDebug, ...);
+	printfunc(outputDebugString, ...);
 end
 
 function printfile(file, ...)

@@ -1,25 +1,27 @@
---[[ [=============================================================================================================================================]
+--[[ ============================================================================================================================================= ]
 
     NAME:       table decode_ico(string bytes)
     PURPOSE:    Convert .ico and .cur files into drawable MTA:SA textures
     
-    RETURNED TABLE STRUCTURE:
+    RETURNED TABLE STRUCTURE (EXAMPLE):
     
     {
         [1] = {
             width = 16, height = 16,
             
-            [ hotspotX = 0, hotspotY = 0, ] -- only for CUR
+            -- OPTIONAL: only for cursors
+            hotspotX = 0, hotspotY = 0,
             
-            texture = userdata: xxxxxxxx
+            texture = userdata,
         },
         
         [2] = {
             width = 32, height = 32,
             
-            [ hotspotX = 0, hotspotY = 0, ] -- only for CUR
+            -- OPTIONAL: only for cursors
+            hotspotX = 0, hotspotY = 0,
             
-            texture = userdata: xxxxxxxx
+            texture = userdata,
         },
         
         ...
@@ -36,9 +38,8 @@
     
     TEST FILES: https://github.com/daleharvey/mozilla-central/tree/master/image/test/reftest/ico
     
-[===============================================================================================================================================] ]]
+--[ ============================================================================================================================================= ]]
 
--- [ CONSTANTS ] --
 
 local PNG_SIGNATURE = string.char(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a);
 

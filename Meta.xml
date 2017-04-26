@@ -6,46 +6,14 @@
 	
 	<file src="GaussianBlur.fx"/>
 	<file src="Negative.fx"/>
+    
+	<file src="decoders/gif/delays/0-delay.gif"/>
+	<file src="decoders/gif/delays/0-delay-50.gif"/>
+    <file src="decoders/gif/delays/10-delay.gif"/>
+	<file src="decoders/gif/delays/10-delay-50.gif"/>
+	<file src="decoders/gif/delays/25-delay-100.gif"/>
 	
-	<file src="Testers/aliendance.ani"/>
-	
-	<file src="Testers/portal.gif"/>
-	<file src="Testers/sample_1.gif"/>
-	<file src="Testers/87a.gif"/>
-	<file src="Testers/87a2.gif"/>
-	<file src="Testers/uncompressed.gif"/>
-	<file src="Testers/cradle.gif"/>
-	<file src="Testers/globe.gif"/>
-	<file src="Testers/globe2.gif"/>
-	<file src="Testers/1.gif"/>
-	<file src="Testers/2.gif"/>
-	<file src="Testers/2_orig.gif"/>
-	<file src="Testers/3.gif"/>
-	<file src="Testers/porsche.gif"/>
-	<file src="Testers/solid2.gif"/>
-	<file src="Testers/fire.gif"/>
-	<file src="Testers/test.gif"/>
-	<file src="Testers/test-trans.gif"/>
-	<file src="Testers/lol.gif"/>
-	<file src="Testers/interlaced.gif"/>
-	<file src="Testers/starpulse.gif"/>
-	<file src="Testers/corn.gif"/>
-	<file src="Testers/Animhorse.gif"/>
-	<file src="Testers/huge.gif"/>
-	<file src="Testers/jupiter.gif"/>
-	<file src="Testers/harryshreck.gif"/>
-	<file src="Testers/dog.gif"/>
-	<file src="Testers/colors.gif"/>
-	<file src="Testers/colors2.gif"/>
-	<file src="Testers/pascal-triangle.gif"/>
-	<file src="Testers/moire-pattern.gif"/>
-	<file src="Testers/m4nb.gif"/>
-	<file src="Testers/m5np.gif"/>
-	
-	<file src="Testers/out.txt"/>
-	<file src="Testers/file.txt"/>
-	
-    <file src="Testers/4bpp-24x14-Transparent.ico"/>
+	<file src="out.txt"/> <file src="file.txt"/>
 	
 	<file src="PointerSchemes/arrow_i.cur"/>
 	<file src="PointerSchemes/arrow_r.cur"/>

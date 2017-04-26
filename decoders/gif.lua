@@ -1,13 +1,40 @@
---[[ [===========================================================================================]
+--[[ ============================================================================================== ]
+
     NAME:    table decode_gif(string bytes)
     PURPOSE: Convert .gif files into drawable MTA:SA textures
-    
-    RETURNED TABLE STRUCTURE:
-    
+
+    RETURNED TABLE STRUCTURE (EXAMPLE):
+
     {
+        -- OPTIONAL: only if gif contains any comments, otherwise nil
+        comments = {
+            [1] = "Hello world",
+            [2] = "This is a test",
+            ...
+        },
         
+        -- OPTIONAL: only if gif is animation, otherwise nil
+        loopCount = 2,
+        
+        
+        width = 30, height = 60,
+        
+        [1] = {
+            image = userdata,
+            
+            -- OPTIONAL: only if gif is animation, otherwise nil
+            delay = 40, -- in milliseconds
+        },
+        
+        [2] = {
+            image = userdata,
+            
+            delay = 100,
+        },
+        
+        ...
     }
-    
+
     REFERENCES: https://www.w3.org/Graphics/GIF/spec-gif89a.txt
                 
                 https://en.wikipedia.org/wiki/GIF
@@ -28,10 +55,8 @@
                 http://www.daubnet.com/en/file-format-gif
                 
                 https://stackoverflow.com/questions/26894809/gif-lzw-decompression
-[=============================================================================================] ]]
-
-local OUT = fileOpen("Testers/out.txt");
-local FILE = fileOpen("Testers/file.txt");
+            
+--[ ============================================================================================== ]]
 
 local log2 = math.log(2);
 
@@ -64,20 +89,20 @@ local ALPHA255_BYTE = string.char(0xff);
 
 local TRANSPARENT_PIXEL = string.char(0x00, 0x00, 0x00, 0x00);
 
--- [ FUNCTION ] --
+
 
 local decode_image_data;
 
 function decode_gif(bytes)
     
-    -- [ ASSERTION ] --
+    -- [ ====================== [ ASSERTION ] ====================== ]
     
     local bytesType = type(bytes);
     if (bytesType ~= "string") then
         error("bad argument #1 to '" .. __func__ .. "' (string expected, got " .. bytesType .. ")", 2);
     end
     
-    -- [ ACTUAL CODE ] --
+    
     
     -- function can olso be supplied with a file path instead of raw data
     -- we treat variable bytes as a file path to see if the file exists
@@ -110,10 +135,10 @@ function decode_gif(bytes)
     end
     
     
-    local images = {}
     
+    local frames = {}
     
-    -- [ Logical Screen Descriptor ]
+    -- [ ====================== [ LOGICAL SCREEN DESCRIPTOR ] ====================== ] 
     
     local lsd = {
         canvasWidth  = stream:Read_ushort(),
@@ -140,8 +165,11 @@ function decode_gif(bytes)
         }
     end
     
+    frames.width  = lsd.canvasWidth;
+    frames.height = lsd.canvasHeight;
     
-    -- [ Global Color Table ]
+    
+    -- [ ====================== [ GLOBAL COLOR TABLE ] ====================== ]
     
     local gct;
     
@@ -151,23 +179,27 @@ function decode_gif(bytes)
         for i = 1, 2^(lsd.fields.gctSize+1) do
             gct[i] = string.reverse(stream:Read(3)) .. ALPHA255_BYTE;
         end
+        
+        
+        local bgColor = gct[lsd.bgColorIndex+1];
+        
+        gct.bgColor = 0x1000000 * 0xff                     -- A
+                    + 0x10000   * string.byte(bgColor, 1)  -- R
+                    + 0x100     * string.byte(bgColor, 2)  -- G
+                    +             string.byte(bgColor, 3); -- B
     end
     
     
-    local isAnimation, loopCount;
+    local gce; -- current graphic control extension in use
     
-    local gce;
-    
-    local canvas = dxCreateRenderTarget(
-        lsd.canvasWidth, lsd.canvasHeight,
-        (version == "89a") -- only version 89a has transparency support
-    );
+    local canvas;
+    local previousCanvas; -- used with the DISPOSE_TO_PREVIOUS disposal method
     
     
     local identifier = stream:Read_uchar();
     
     while (identifier ~= TRAILER) do
-        
+    
         if (identifier == EXTENSION_INTRODUCER) then
         
             local label = stream:Read_uchar();
@@ -177,7 +209,9 @@ function decode_gif(bytes)
             
             if (label == GRAPHIC_CONTROL_LABEL) then
                 
-                -- [ Graphic Control Extension ]
+                if (blockSize ~= 4) then
+                    error("bad argument #1 to '" .. __func__ .. "' (invalid graphic control extension at " .. stream.Position .. ")", 2);
+                end
                 
                 gce = {
                     size = blockSize,
@@ -202,15 +236,12 @@ function decode_gif(bytes)
                 
                 gce.isTransparencyEnabled = (gce.fields.transparentColorFlag == 1);
                 
-                -- stream.Position = blockOffset+blockSize;
+                stream.Position = blockOffset+blockSize;
                 
             elseif (label == APPLICATION_LABEL) then
                 
-                -- [ Application Extension ]
-                
-                -- any application block begins with 11 bytes (fixed size)
                 if (blockSize ~= 11) then
-                    error("bad argument #1 to '" .. __func__ .. "' (invalid application block)", 2);
+                    error("bad argument #1 to '" .. __func__ .. "' (invalid application extension at " .. stream.Position .. ")", 2);
                 end
                 
                 local appIdentifier = stream:Read(8);
@@ -224,9 +255,7 @@ function decode_gif(bytes)
                         local ID = stream:Read_uchar();
                         
                         if (ID == NETSCAPE_LOOP_COUNT) then
-                            isAnimation = true;
-                            
-                            loopCount = stream:Read_ushort();
+                            frames.loopCount = stream:Read_ushort();
                         end
                     end
                     
@@ -237,10 +266,7 @@ function decode_gif(bytes)
                 end
                 
             elseif (label == COMMENT_LABEL) then
-            
-                -- [ Comment Extension ]
-                
-                if (not images.comments) then images.comments = {} end
+                if (not frames.comments) then frames.comments = {} end
                 
                 local comment = {}
                 
@@ -253,17 +279,9 @@ function decode_gif(bytes)
                     blockOffset = stream.Position;
                 end
                 
-                images.comments[#images.comments+1] = table.concat(comment);
-            
-            -- IGNORED:
-            -- elseif (label == PLAIN_TEXT_LABEL) then
-            
-                -- [ Plain Text Extension ]
-            
+                frames.comments[#frames.comments+1] = table.concat(comment);
             else
-                
-                -- [ Unknown Extension ]
-                
+                -- skip unknown extension
                 while (blockSize ~= BLOCK_TERMINATOR) do
                     stream.Position = blockOffset+blockSize;
                     
@@ -274,7 +292,7 @@ function decode_gif(bytes)
             
         elseif (identifier == IMAGE_SEPARATOR) then
             
-            -- [ Image Descriptor ]
+            -- [ IMAGE DESCRIPTOR ]
             
             local descriptor = {
                 x = stream:Read_ushort(),
@@ -301,7 +319,7 @@ function decode_gif(bytes)
             descriptor.isInterlaced = (descriptor.fields.interlaceFlag == 1);
             
             
-            -- [ Local Color Table ]
+            -- [ ====================== [ LOCAL COLOR TABLE ] ====================== ]
             
             local lct;
             
@@ -314,7 +332,7 @@ function decode_gif(bytes)
             end
             
             
-            -- [ Image Data Block ]
+            -- [ ====================== [ IMAGE DATA ] ====================== ]
             
             -- if lct is not present fall back to gct
             local colorTable = lct or gct;
@@ -323,7 +341,7 @@ function decode_gif(bytes)
                 gce.transparentColor = colorTable[gce.transparentColorIndex+1];
                 
                 -- temporarily replace transparent color with a transparent pixel
-                -- to increase performance vs comparing each index against gce.transparentColorIndex in the decoding process
+                -- to increase performance (vs comparing each index against gce.transparentColorIndex in the decoding process)
                 colorTable[gce.transparentColorIndex+1] = TRANSPARENT_PIXEL;
             end
             
@@ -331,51 +349,90 @@ function decode_gif(bytes)
             local texture, textureWidth, textureHeight = decode_image_data(stream, gce, descriptor, colorTable);
             
             
-            dxSetRenderTarget(canvas);
             dxSetBlendMode("add");
             
+            if (not canvas) then
+                canvas = dxCreateRenderTarget(
+                    lsd.canvasWidth, lsd.canvasHeight,
+                    
+                    (version == "89a") -- only version 89a has transparency support
+                );
+                
+                local bgColor = ((gce and gce.isTransparencyEnabled) and 0x00000000) or (gct and gct.bgColor) or 0x00000000;
+                
+                dxDrawRectangle(descriptor.x, descriptor.y, descriptor.width, descriptor.height, bgColor);
+            end
+            
+            -- if disposal method is DISPOSE_TO_PREVIOUS then save current canvas state
+            -- so that it can be resored later
+            
+            local disposalMethod = gce and gce.fields.disposalMethod;
+            
+            if (disposalMethod == DISPOSE_TO_PREVIOUS) and (not previousCanvas) then
+                previousCanvas = dxCreateRenderTarget(
+                    lsd.canvasWidth, lsd.canvasHeight,
+                    
+                    true -- no need to check for version here as disposal method was introduced in version 89a
+                );
+                
+                dxSetRenderTarget(previousCanvas);
+                dxDrawImage(0, 0, lsd.canvasWidth, lsd.canvasHeight, canvas);
+            elseif (disposalMethod ~= DISPOSE_TO_PREVIOUS) and (previousCanvas) then
+                previousCanvas = nil;
+            end
+            
+            
+            -- draw decoded image on canvas
+            
+            dxSetRenderTarget(canvas);
             dxDrawImage(descriptor.x, descriptor.y, textureWidth, textureHeight, texture);
             
             
-            local canvasCopy = dxCreateRenderTarget(lsd.canvasWidth, lsd.canvasHeight, true);
+            -- copy canvas state to a new render target to be saved in the frames table
             
-            dxSetRenderTarget(canvasCopy);
+            local frame = dxCreateRenderTarget(lsd.canvasWidth, lsd.canvasHeight, (version == "89a"));
+            
+            dxSetRenderTarget(frame);
             dxDrawImage(0, 0, lsd.canvasWidth, lsd.canvasHeight, canvas);
             
-            if (gce) then
-                -- REFERENCES: http://www.webreference.com/content/studio/disposal.html
-                --             http://www.theimage.com/animation/pages/disposal2.html
+            
+            -- [ ====================== [ FRAME DISPOSAL ] ====================== ]
+            
+            -- REFERENCES: 
+            -- http://www.webreference.com/content/studio/disposal.html
+            -- http://www.theimage.com/animation/pages/disposal.html
+            
+            dxSetBlendMode("overwrite");
+            
+            if (disposalMethod == DISPOSE_TO_BACKGROUND) then
                 
-                local disposalMethod = gce.fields.disposalMethod;
+                dxSetRenderTarget(canvas);
                 
-                if (disposalMethod == DISPOSE_TO_BACKGROUND) then
-                    
-                    dxSetRenderTarget(canvas);
-                    dxSetBlendMode("overwrite");
-                    
-                    -- if current frame has transparency replace background color with transparent pixel
-                    -- to avoid displaying transparent images with solid backgrounds
-                    -- REFERENCE: https://github.com/DhyanB/Open-Imaging - see Quirks section
-                    local bgColor = (gce and (gce.isTransparencyEnabled)) and TRANSPARENT_PIXEL or colorTable[lsd.bgColorIndex+1];
-                    
-                    bgColor = 0x1000000 * string.byte(bgColor, 4)  -- alpha
-                            + 0x10000   * string.byte(bgColor, 1)  -- red
-                            + 0x100     * string.byte(bgColor, 2)  -- green
-                            +             string.byte(bgColor, 3); -- blue
-                    
-                    -- only replace area occupied by current frame with background color
-                    -- REFERENCE: https://bugzilla.mozilla.org/show_bug.cgi?id=85595#c28
-                    dxDrawRectangle(descriptor.x, descriptor.y, descriptor.width, descriptor.height, bgColor);
-                    
-                elseif (disposalMethod == DISPOSE_TO_PREVIOUS) then
+                -- if current frame has transparency replace background color with transparent color
+                -- to avoid displaying transparent images with solid backgrounds
                 
-                    -- TODO
-                    
-                end
+                -- REFERENCE:
+                -- https://github.com/DhyanB/Open-Imaging - see Quirks section
+                
+                local bgColor = ((gce and gce.isTransparencyEnabled) and 0x00000000) or (gct and gct.bgColor) or 0x00000000;
+                
+                -- only restore/overwrite area occupied by current frame
+                
+                -- REFERENCE:
+                -- https://bugzilla.mozilla.org/show_bug.cgi?id=85595#c28
+                
+                dxDrawRectangle(descriptor.x, descriptor.y, descriptor.width, descriptor.height, bgColor);
+                
+            elseif (disposalMethod == DISPOSE_TO_PREVIOUS) then
+                
+                dxSetRenderTarget(canvas);
+                dxDrawImage(0, 0, lsd.canvasWidth, lsd.canvasHeight, previousCanvas);
+                
             end
             
-            dxSetBlendMode("blend");
             dxSetRenderTarget();
+            
+            dxSetBlendMode("blend");
             
             
             if (gce) and (gce.transparentColor) then
@@ -386,18 +443,19 @@ function decode_gif(bytes)
             end
             
             
-            images[#images+1] = {
-                image = canvasCopy,
+            -- insert newly obtained frame into frames table
+            
+            frames[#frames+1] = {
+                image = frame,
                 
-                width  = lsd.canvasWidth,
-                height = lsd.canvasHeight,
+                delay = gce and 10*gce.delayTime, -- multiply by 10 to get delay time in millisecodns
             }
         end
         
         identifier = stream:Read_uchar();
     end
     
-    return images;
+    return frames;
 end
 
 
@@ -414,8 +472,7 @@ local DEINTERLACE_PASSES = {
 function decode_image_data(stream, gce, descriptor, colorTable)
     
     -- the minimum LZW code size from which we compute
-    -- the starting code size for reading the codes
-    -- from the image data (by adding 1 to it)
+    -- the starting code size for reading the codes from the image data
     local lzwMinCodeSize = stream:Read_uchar();
     
     
@@ -478,6 +535,8 @@ function decode_image_data(stream, gce, descriptor, colorTable)
     local isWholeCode = true;
     
     local previousCode;
+    
+    local EOI_reached = false;
 
     
     local blockSize   = stream:Read_uchar();
@@ -519,12 +578,14 @@ function decode_image_data(stream, gce, descriptor, colorTable)
                 dictMaxSize = 2^codeSize;
                 
             elseif (code == EOI_CODE) then
+                EOI_reached = true;
+                
                 -- move to end of block to read BLOCK_TERMINATOR and exit out of the loop
                 stream.Position = blockOffset+blockSize;
             else
                 code = code+1; -- accomodate to Lua indexing which starts from 1
                 
-                -- [ Code to Indexes Conversion ]
+                -- [ ====================== [ CODE -> INDEXES CONVERSION ] ====================== ]
                 
                 -- +----------------------------------------------------+
                 -- | LZW GIF DECOMPRESSION ALGORITHM                    |
@@ -577,7 +638,7 @@ function decode_image_data(stream, gce, descriptor, colorTable)
                 previousCode = code;
                 
                 
-                -- [ Indexes to Pixels Conversion ]
+                -- [ ====================== [ INDEXES -> PIXELS CONVERSION ] ====================== ]
                 
                 -- add colors coresponding to the decompressed color indexes to pixel data
                 local pixelsCount = string.len(indexes);
@@ -629,8 +690,8 @@ function decode_image_data(stream, gce, descriptor, colorTable)
             blockOffset = stream.Position;
         end
         
-        -- if we are at the beginning of a new byte
-        if (bitOffset == 0) then
+        -- if we are at the beginning of a new byte <=> bitOffset == 0
+        if (not EOI_reached) and (bitOffset == 0) then
             byte = stream:Read_uchar();
         end
     end
@@ -659,15 +720,10 @@ debug.sethook();
 
 local s = getTickCount();
 
-local imgs = decode_gif("Testers/pascal-triangle.gif");
+local frames = decode_gif("decoders/gif/delays/0-delay-50.gif");
+printdebug("loopCount =", frames.loopCount);
 
-if (imgs.comments) then
-    for i = 1, #imgs.comments do
-        print(imgs.comments[i]);
-    end
-end
-
-print("elapsed = ", getTickCount() - s, "ms");
+printdebug("elapsed = ", getTickCount() - s, "ms");
 
 debug.sethook(nil, h1, h2, h3);
 
@@ -675,16 +731,17 @@ debug.sethook(nil, h1, h2, h3);
 local i = 1; local t = getTickCount();
 
 addEventHandler("onClientRender", root, function()
-    if ((getTickCount() - t) > 200) then
+    if ((getTickCount() - t) > (frames[i].delay or 1000)) then print(i, frames[i].delay, "ms");
         t = getTickCount();
         
         i = i+1;
         
-        if (i > #imgs) then i = 1 end
+        if (i > #frames) then i = 1 end
     end
     
-    dxDrawImage(200, 200, imgs[i].width, imgs[i].height, imgs[i].image);
+    dxDrawImage(200, 200, frames.width, frames.height, frames[i].image);
 end);
 
-fileClose(OUT);
-fileClose(FILE);
+
+fileClose(out);
+fileClose(ffile);
