@@ -88,14 +88,14 @@ function Mouse.New(Object)
 			
 			if (IsConsoleActive == true) then
 				if (IsConsoleCursorAlphaSet == false) then
-					setCursorAlpha(0);
+					setCursorAlpha(--[[0]] 255);
 					
 					IsConsoleCursorAlphaSet = true;
 				end
 			elseif (IsConsoleCursorAlphaSet == true) then IsConsoleCursorAlphaSet = false end
 			
 			if (IsMainMenuCursorAlphaSet == true) then
-				setCursorAlpha(0);
+				setCursorAlpha(--[[0]] 255);
 				
 				IsMainMenuCursorAlphaSet = false;
 			end

@@ -1,0 +1,2 @@
+fileClose(fout);
+fileClose(ffile);

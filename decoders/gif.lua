@@ -9,13 +9,12 @@
         -- OPTIONAL: only if gif contains any comments, otherwise nil
         comments = {
             [1] = "Hello world",
-            [2] = "This is a test",
+            [2] = "This is a gif file",
             ...
         },
         
         -- OPTIONAL: only if gif is animation, otherwise nil
         loopCount = 2,
-        
         
         width = 30, height = 60,
         
@@ -85,13 +84,14 @@ local NETSCAPE_LOOP_COUNT = 1;
 local DISPOSE_TO_BACKGROUND = 2;
 local DISPOSE_TO_PREVIOUS   = 3;
 
+
 local ALPHA255_BYTE = string.char(0xff);
 
 local TRANSPARENT_PIXEL = string.char(0x00, 0x00, 0x00, 0x00);
 
 
 
-local decode_image_data;
+local decode_lzw_data;
 
 function decode_gif(bytes)
     
@@ -121,7 +121,10 @@ function decode_gif(bytes)
     
     
     local success, stream = pcall(Stream.New, bytes);
-    if (not success) then error(format_pcall_error(stream), 2) end
+    
+    if (not success) then
+        error("bad argument #1 to '" .. __func__ .. "' (could not create stream -> " .. stream .. ")", 2);
+    end
     
     
     if (stream:Read(3) ~= "GIF") then
@@ -346,7 +349,7 @@ function decode_gif(bytes)
             end
             
             
-            local texture, textureWidth, textureHeight = decode_image_data(stream, gce, descriptor, colorTable);
+            local texture, textureWidth, textureHeight = decode_lzw_data(stream, gce, descriptor, colorTable);
             
             
             dxSetBlendMode("add");
@@ -469,7 +472,7 @@ local DEINTERLACE_PASSES = {
     [4] = { y = 1, step = 2 },
 }
 
-function decode_image_data(stream, gce, descriptor, colorTable)
+function decode_lzw_data(stream, gce, descriptor, colorTable)
     
     -- the minimum LZW code size from which we compute
     -- the starting code size for reading the codes from the image data
@@ -521,7 +524,7 @@ function decode_image_data(stream, gce, descriptor, colorTable)
     
     -- insert CLEAR_CODE and EOI_CODE into dictionary
     local CLEAR_CODE = 2^lzwMinCodeSize;  dict[#dict+1] = true;
-    local EOI_CODE = CLEAR_CODE+1;        dict[#dict+1] = true;
+    local EOI_CODE   = CLEAR_CODE+1;      dict[#dict+1] = true;
     
     -- index from which LZW compression codes start
     local lzwCodesOffset = #dict+1;
@@ -536,7 +539,7 @@ function decode_image_data(stream, gce, descriptor, colorTable)
     
     local previousCode;
     
-    local EOI_reached = false;
+    local isEOIReached = false;
 
     
     local blockSize   = stream:Read_uchar();
@@ -578,7 +581,7 @@ function decode_image_data(stream, gce, descriptor, colorTable)
                 dictMaxSize = 2^codeSize;
                 
             elseif (code == EOI_CODE) then
-                EOI_reached = true;
+                isEOIReached = true;
                 
                 -- move to end of block to read BLOCK_TERMINATOR and exit out of the loop
                 stream.Position = blockOffset+blockSize;
@@ -691,7 +694,7 @@ function decode_image_data(stream, gce, descriptor, colorTable)
         end
         
         -- if we are at the beginning of a new byte <=> bitOffset == 0
-        if (not EOI_reached) and (bitOffset == 0) then
+        if (not isEOIReached) and (bitOffset == 0) then
             byte = stream:Read_uchar();
         end
     end
@@ -715,33 +718,29 @@ end
 
 
 
-local h1, h2, h3 = debug.gethook();
-debug.sethook();
+-- local h1, h2, h3 = debug.gethook();
+-- debug.sethook();
 
-local s = getTickCount();
+-- local s = getTickCount();
 
-local frames = decode_gif("decoders/gif/delays/0-delay-50.gif");
-printdebug("loopCount =", frames.loopCount);
+-- local frames = decode_gif("decoders/gif/delays/25-delay-100.gif");
+-- printdebug("loopCount =", frames.loopCount);
 
-printdebug("elapsed = ", getTickCount() - s, "ms");
+-- printdebug("elapsed = ", getTickCount() - s, "ms");
 
-debug.sethook(nil, h1, h2, h3);
+-- debug.sethook(nil, h1, h2, h3);
 
 
-local i = 1; local t = getTickCount();
+-- local i = 1; local t = getTickCount();
 
-addEventHandler("onClientRender", root, function()
-    if ((getTickCount() - t) > (frames[i].delay or 1000)) then print(i, frames[i].delay, "ms");
-        t = getTickCount();
+-- addEventHandler("onClientRender", root, function()
+    -- if ((getTickCount() - t) >= (frames[i].delay or 1000)) then print(i, frames[i].delay, "ms");
+        -- t = getTickCount();
         
-        i = i+1;
+        -- i = i+1;
         
-        if (i > #frames) then i = 1 end
-    end
+        -- if (i > #frames) then i = 1 end
+    -- end
     
-    dxDrawImage(200, 200, frames.width, frames.height, frames[i].image);
-end);
-
-
-fileClose(out);
-fileClose(ffile);
+    -- dxDrawImage(200, 200, frames.width, frames.height, frames[i].image);
+-- end);
