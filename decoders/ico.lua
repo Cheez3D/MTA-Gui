@@ -12,7 +12,7 @@
             -- OPTIONAL: only for cursors
             hotspotX = 0, hotspotY = 0,
             
-            texture = userdata,
+            image = userdata,
         },
         
         [2] = {
@@ -21,7 +21,7 @@
             -- OPTIONAL: only for cursors
             hotspotX = 0, hotspotY = 0,
             
-            texture = userdata,
+            image = userdata,
         },
         
         ...
@@ -44,20 +44,30 @@
     
 --[ ============================================================================================================================================= ]]
 
+local ln2 = math.log(2);
 
-local ICO, CUR = 1, 2;
+local math = math;
+local string = string;
+
+
+
+local ICO = 1;
+local CUR = 2;
 
 local PNG_SIGNATURE = string.char(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a);
 
-local BI_RGB = 0;
+local BI_RGB       = 0;
+local BI_RLE8      = 1;
+local BI_RLE4      = 2;
+local BI_BITFIELDS = 3; -- http://www.virtualdub.org/blog/pivot/entry.php?id=177
 
 local ALPHA255_BYTE = string.char(0xff);
-
 local TRANSPARENT_PIXEL = string.char(0x00, 0x00, 0x00, 0x00);
 
 
 
 local decode_bitmap_data;
+local decode_png_data;
 
 function decode_ico(bytes)
     
@@ -68,9 +78,9 @@ function decode_ico(bytes)
         error("bad argument #1 to '" .. __func__ .. "' (string expected, got " .. bytesType .. ")", 2);
     end
     
-    -- [ ACTUAL CODE ] --
     
-    -- function can olso be supplied with a file path instead of raw data
+    
+    -- function can also be supplied with a file path instead of raw data
     -- we treat variable bytes as a file path to see if the file exists
     if (fileExists(bytes)) then
         local f = fileOpen(bytes, true); -- open file read-only
@@ -126,7 +136,7 @@ function decode_ico(bytes)
             wBitCount = stream:Read_ushort(),
             
             dwBytesInRes  = stream:Read_uint(), -- bytes in resource
-            dwImageOffset = stream:Read_uint(),
+            dwImageOffset = stream:Read_uint(), -- offset to image data
         }
         
         if (ICONDIRENTRY.bReserved ~= 0) then
@@ -143,45 +153,37 @@ function decode_ico(bytes)
         
         local ICONDIRENTRY = ICONDIR.idEntries[i];
         
-        stream.Position = ICONDIRENTRY.dwImageOffset; -- set cursor to image data
+        stream.Position = ICONDIRENTRY.dwImageOffset; -- set read position to image data start
         
         
-        local texture, textureWidth, textureHeight;
+        local isPNG = (stream:Read(8) == PNG_SIGNATURE);
+        stream.Position = stream.Position-8;
         
-        if (stream:Read(8) == PNG_SIGNATURE) then
-            
-            -- icon is stored as a png image
-            
-            stream.Position = stream.Position+8;
-            
-            textureWidth  = stream:Read_uint(Enum.Endianness.BigEndian);
-            textureHeight = stream:Read_uint(Enum.Endianness.BigEndian);
-            
-            stream.Position = stream.Position-24;
-            
-            pixelData = stream:Read(ICONDIRENTRY.dwBytesInRes);
-            
-            
-            texture = dxCreateTexture(pixelData, "argb", false, "clamp");
-            
-        else
         
-            -- icon is stored as a bitmap
-            
-            stream.Position = stream.Position-8;
-            
-            texture, textureWidth, textureHeight = decode_bitmap_data(stream, ICONDIRENTRY);
-            
-        end
+        local decoder = isPNG and decode_png_data or decode_bitmap_data;
+        local texture, textureWidth, textureHeight, width, height = decoder(stream, ICONDIRENTRY);
+        
+        
+        local image = dxCreateRenderTarget(width, height, true);
+        
+        dxSetBlendMode("add");
+        
+        dxSetRenderTarget(image);
+        dxDrawImage(0, 0, textureWidth, textureHeight, texture);
+        
+        dxSetRenderTarget();
+        
+        dxSetBlendMode("blend");
+        
         
         icoVariants[i] = {
-            width  = textureWidth,
-            height = textureHeight,
+            width  = width,
+            height = height,
             
             hotspotX = ICONDIR.isCUR and ICONDIRENTRY.wPlanes,
             hotspotY = ICONDIR.isCUR and ICONDIRENTRY.wBitCount,
             
-            texture = texture,
+            image = image,
         }
     end
     
@@ -195,6 +197,47 @@ function decode_ico(bytes)
 end
 
 
+
+function decode_png_data(stream, ICONDIRENTRY)
+    stream.Position = stream.Position+16;
+    
+    local width  = stream:Read_uint(Enum.Endianness.BigEndian);
+    local height = stream:Read_uint(Enum.Endianness.BigEndian);
+    
+    -- round image width and height to the nearest powers of two
+    -- to avoid bulrring when creating texture
+    local textureWidth  = 2^math.ceil(math.log(width) /ln2);
+    local textureHeight = 2^math.ceil(math.log(height)/ln2);
+    
+    stream.Position = stream.Position-24;
+    
+    local pixels = stream:Read(ICONDIRENTRY.dwBytesInRes);
+    pixels = dxConvertPixels(pixels, "plain");
+    
+    
+    local pixelData = {}
+    
+    for y = 0, height-1 do
+        -- multiply width by 4 because every pixel occupies 4 bytes (RGBA)
+        pixelData[#pixelData+1] = string.sub(pixels, y*(4*width) + 1, (y+1)*(4*width));
+        
+        -- pad remaining row space horizontally with transparent pixels to reach nearest power of two size
+        pixelData[#pixelData+1] = string.rep(TRANSPARENT_PIXEL, textureWidth-width);
+    end
+    
+    -- pad remaining bottom area with transparent pixels
+    pixelData[#pixelData+1] = string.rep(TRANSPARENT_PIXEL, (textureHeight-height)*textureWidth);
+    
+    -- append size to accomodate MTA pixel data format
+    pixelData[#pixelData+1] = string.char(
+        bitExtract(textureWidth,  0, 8), bitExtract(textureWidth,  8, 8),
+        bitExtract(textureHeight, 0, 8), bitExtract(textureHeight, 8, 8)
+    );
+    
+    pixels = table.concat(pixelData);
+    
+    return dxCreateTexture(pixels, "argb", false, "clamp"), textureWidth, textureHeight, width, height;
+end
 
 function decode_bitmap_data(stream, ICONDIRENTRY)
     
@@ -210,25 +253,26 @@ function decode_bitmap_data(stream, ICONDIRENTRY)
         biCompression = stream:Read_uint(),
         biSizeImage   = stream:Read_uint(),
         
-        -- preferred resolution in pixels per meter
-        biXPelsPerMeter = stream:Read_uint(),
+        biXPelsPerMeter = stream:Read_uint(), -- preferred resolution in pixels per meter
         biYPelsPerMeter = stream:Read_uint(),
         
         biClrUsed      = stream:Read_uint(), -- number color map entries that are actually used
         biClrImportant = stream:Read_uint(), -- number of significant colors
     }
     
+    
     if (BITMAPINFOHEADER.biSize ~= 40) then
         error("bad argument #1 to '" .. __func__ .. "' (unsupported bitmap)", 2);
+    elseif (BITMAPINFOHEADER.biPlanes ~= 1) then
+        error("bad argument #1 to '" .. __func__ .. "' (invalid number of planes)", 2);
     end
+    
     
     local width  = BITMAPINFOHEADER.biWidth;
     local height = BITMAPINFOHEADER.biHeight;
     
-    
     -- variable determining if image is stored upside-down
     -- if height is negative then image is not stored upside-down
-    
     local isUpsideDown = true;
     
     if (height < 0) then
@@ -237,60 +281,69 @@ function decode_bitmap_data(stream, ICONDIRENTRY)
         height = math.abs(height);
     end
     
-    
     -- variable determining if image has AND mask
     -- for images with AND mask BITMAPINFOHEADER.biHeight is double the actual height in ICONDIRENTRY
-    
     local hasANDMask = (ICONDIRENTRY.bHeight ~= height);
     if (hasANDMask) then height = height/2 end
     
+    -- round image width and height to the nearest powers of two
+    -- to avoid bulrring when creating texture
+    local textureWidth  = 2^math.ceil(math.log(width) /ln2);
+    local textureHeight = 2^math.ceil(math.log(height)/ln2);
     
     
     local bitsPerPixel  = BITMAPINFOHEADER.biBitCount;
     local pixelsPerByte = 8/bitsPerPixel;
+    
     
     if (BITMAPINFOHEADER.biCompression ~= BI_RGB) then
         error("bad argument #1 to '" .. __func__ .. "' (unsupported bitmap compression)", 2);
     end
     
     
-    
-    pixelData = {}
-    
     -- every row of pixels in bitmap data is right-padded with zeroes to have a length multiple of 4 bytes
     -- we calculate how many bytes we have to skip after reading each row
-    local PADDING = (4 - (width/pixelsPerByte)%4)%4;
+    local PADDING = (4-(width/pixelsPerByte)%4)%4;
+    
+    local pixelData = {}
     
     -- [ ========================== [ XOR MASK (COLOR) ] ========================== ]
     
+    local startRow = isUpsideDown and height-1 or 0;
+    local endRow   = isUpsideDown and 0 or height-1;
+    
+    local step = isUpsideDown and -1 or 1;
+    
     if (bitsPerPixel == 1) or (bitsPerPixel == 2) or (bitsPerPixel == 4) or (bitsPerPixel == 8) then
-        
         local colorTable = {}
         
-        for j = 1, 2^(BITMAPINFOHEADER.biPlanes*bitsPerPixel) do
-            colorTable[j] = stream:Read(3) .. ALPHA255_BYTE;
+        for i = 1, 2^bitsPerPixel do
+            colorTable[i] = stream:Read(3) .. ALPHA255_BYTE;
             
             stream.Position = stream.Position+1; -- skip icReserved
         end
         
-        local currentByte;
         
-        for y = 1, height do -- XOR mask
-            local currentRow = {}
-            
+        local byte;
+        
+        for y = startRow, endRow, step do
             for x = 0, width-1 do
-                local currentBit = x%pixelsPerByte;
+                local bitOffset = x%pixelsPerByte;
                 
-                if (currentBit == 0) then
-                    currentByte = stream:Read_uchar();
+                if (bitOffset == 0) then
+                    byte = stream:Read_uchar();
                 end
                 
-                local index = bitExtract(currentByte, ((pixelsPerByte-1)-currentBit)*bitsPerPixel, bitsPerPixel);
+                local index = bitExtract(byte, ((pixelsPerByte-1)-bitOffset)*bitsPerPixel, bitsPerPixel);
+                local pixel = colorTable[index+1];
                 
-                currentRow[x+1] = colorTable[index+1];
+                -- add 1 to width to allocate an index in the array for TRANSPARENT_PIXEL padding
+                -- (for power of two size)
+                pixelData[y*(width+1) + (x+1)] = pixel;
             end
             
-            pixelData[y] = currentRow;
+            -- pad remaining row space horizontally with transparent pixels
+            pixelData[y*(width+1) + (width+1)] = string.rep(TRANSPARENT_PIXEL, textureWidth-width);
             
             stream.Position = stream.Position+PADDING;
         end
@@ -308,87 +361,74 @@ function decode_bitmap_data(stream, ICONDIRENTRY)
         --[ ================================================================================= ]]
         
     elseif (bitsPerPixel == 24) then
-        
-        for y = 1, height do
-            local currentRow = {}
-            
-            for x = 1, width do
-                currentRow[x] = stream:Read(3) .. ALPHA255_BYTE;
+    
+        for y = startRow, endRow, step do
+            for x = 0, width-1 do
+                pixelData[y*(width+1) + (x+1)] = stream:Read(3) .. ALPHA255_BYTE;
             end
             
-            pixelData[y] = currentRow;
+            pixelData[y*(width+1) + (width+1)] = string.rep(TRANSPARENT_PIXEL, textureWidth-width);
             
             stream.Position = stream.Position+PADDING;
         end
         
     elseif (bitsPerPixel == 32) then
-        for y = 1, height do
-            local currentRow = {}
-            
-            for x = 1, width do
-                currentRow[x] = stream:Read(4);
+    
+        for y = startRow, endRow, step do
+            for x = 0, width-1 do
+                pixelData[y*(width+1) + (x+1)] = stream:Read(4);
             end
             
-            pixelData[y] = currentRow;
+            pixelData[y*(width+1) + (width+1)] = string.rep(TRANSPARENT_PIXEL, textureWidth-width);
             
             stream.Position = stream.Position+PADDING;
         end
+        
     else
         error("bad argument #1 to '" .. __func__ .. "' (unsupported bitmap bit depth)", 2);
     end
-    
     
     -- [ ========================== [ AND MASK (TRANSPARENCY) ] ========================== ]
     
     if (hasANDMask or (stream.Position ~= ICONDIRENTRY.dwImageOffset + ICONDIRENTRY.dwBytesInRes)) then
         
-        if (bitsPerPixel ~= 1) then PADDING = (4-(width/8)%4)%4 end
+        -- if bitsPerPixel == 1 PADDING remains the same as that for XOR mask
+        if (bitsPerPixel ~= 1) then
+            PADDING = (4-(width/8)%4)%4;
+        end
         
-        for y = 1, height do
-            local currentRow = pixelData[y];
-            
+        local byte;
+        
+        for y = startRow, endRow, step do
             for x = 0, width-1 do
-                local currentBit = x%8;
+                local bitOffset = x%8;
                 
-                if (currentBit == 0) then
-                    currentByte = stream:Read_uchar();
+                if (bitOffset == 0) then
+                    byte = stream:Read_uchar();
                 end
                 
-                if (bitExtract(currentByte, 7-currentBit) == 1) then
-                    currentRow[x+1] = TRANSPARENT_PIXEL;
+                if (bitExtract(byte, 7-bitOffset) == 1) then
+                    pixelData[y*(width+1) + (x+1)] = TRANSPARENT_PIXEL;
                 end
             end
             
             stream.Position = stream.Position+PADDING;
         end
+        
     end
     
-    for y = 1, height do
-        pixelData[y] = table.concat(pixelData[y]);
-    end
-    
-    -- flip image
-    if (isUpsideDown) then
-        for y = 1, height/2 do
-            local flippedRowY = height-y+1;
-            
-            local temp = pixelData[y];
-            
-            pixelData[y] = pixelData[flippedRowY];
-            pixelData[flippedRowY] = temp;
-        end
-    end
+    -- pad remaining bottom area with transparent pixels
+    pixelData[#pixelData+1] = string.rep(TRANSPARENT_PIXEL, (textureHeight-height)*textureWidth);
     
     -- append size to accomodate MTA pixel data format
     pixelData[#pixelData+1] = string.char(
-        bitExtract(width,  0, 8), bitExtract(width,  8, 8),
-        bitExtract(height, 0, 8), bitExtract(height, 8, 8)
+        bitExtract(textureWidth,  0, 8), bitExtract(textureWidth,  8, 8),
+        bitExtract(textureHeight, 0, 8), bitExtract(textureHeight, 8, 8)
     );
     
-    pixelData = table.concat(pixelData);
+    local pixels = table.concat(pixelData);
     
-    
-    return dxCreateTexture(pixelData, "argb", false, clamp), width, height;
+    return dxCreateTexture(pixels, "argb", false, clamp), textureWidth, textureHeight, width, height;
 end
 
 
@@ -396,9 +436,9 @@ end
 
 
 
-local ico = decode_ico("decoders/ico/windows-4bpp.ico");
-ico = ico[#ico];
+-- local ico = decode_ico("decoders/ico/256x256-1bpp.ico");
+-- ico = ico[#ico];
 
-addEventHandler("onClientRender", root, function()
-    dxDrawImage(200, 200, ico.width, ico.height, ico.texture);
-end);
+-- addEventHandler("onClientRender", root, function()
+    -- dxDrawImage(200, 200, ico.width, ico.height, ico.image);
+-- end);

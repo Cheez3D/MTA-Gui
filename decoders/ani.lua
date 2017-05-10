@@ -16,7 +16,7 @@
                 
                 rate = 5,
                 
-                texture = userdata: xxxxxxxx
+                image = userdata: xxxxxxxx
             },
             
             [2] = {
@@ -26,7 +26,7 @@
                 
                 rate = 5,
                 
-                texture = userdata: xxxxxxxx
+                image = userdata: xxxxxxxx
             },
             
             ...
@@ -40,7 +40,7 @@
                 
                 rate = 5,
                 
-                texture = userdata: xxxxxxxx
+                image = userdata: xxxxxxxx
             },
             
             ...
@@ -60,14 +60,13 @@
 
 [=========================================================================================] ]]
 
--- [ CONSTANTS ] --
-
 local INFO_FIELD_NAMES = { IART = "artist", ICOP = "copyright", INAM = "name" }
 
--- [ FUNCTION ] --
+
 
 function decode_ani(bytes, ignoreInfo)
-    -- [ ASSERTION ] --
+    
+    -- [ ====================== [ ASSERTION ] ====================== ]
     
     local bytesType = type(bytes);
     
@@ -85,9 +84,9 @@ function decode_ani(bytes, ignoreInfo)
         ignoreInfo = true;
     end
     
-    -- [ ACTUAL CODE ]
     
-    -- function can olso be supplied with a file path instead of raw data
+    
+    -- function can also be supplied with a file path instead of raw data
     -- we treat variable bytes as a file path to see if the file exists
     if (fileExists(bytes)) then
         local f = fileOpen(bytes, true); -- open file read-only
@@ -99,7 +98,10 @@ function decode_ani(bytes, ignoreInfo)
     
     
     local success, stream = pcall(Stream.New, bytes);
-    if (not success) then error(format_pcall_error(stream), 2) end
+    
+    if (not success) then
+        error("bad argument #1 to '" .. __func__ .. "' (could not create stream -> " .. stream .. ")", 2);
+    end
     
     if (stream:Read(4) ~= "RIFF") then
         error("bad argument #1 to '" .. __func__ .. "' (invalid file format)", 2);
@@ -203,7 +205,9 @@ function decode_ani(bytes, ignoreInfo)
                     local frameSize = stream:Read_uint();
                     
                     local success, frame = pcall(decode_ico, stream:Read(frameSize));
-                    if (not success) then error(format_pcall_error(frame), 2) end
+                    if (not success) then
+                        error("bad argument #1 to '" .. __func__ .. "' (could not create decode frame -> " .. frame .. ")", 2);
+                    end
                     
                     -- if hotspot data does not exist set to a default value
                     if (frame.hotspotX == nil) then frame.hotspotX = 0 end
@@ -217,7 +221,8 @@ function decode_ani(bytes, ignoreInfo)
                     end
                     
                 end
-            else -- unnecessary list, just skip it
+            else
+                -- unnecessary list, just skip it
                 stream.Position = ckEnd;
             end
             

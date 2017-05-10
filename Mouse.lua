@@ -74,14 +74,14 @@ function Mouse.New(Object)
 				dxDrawImage(
 					Object.X-PointerData.hotspotX+2,Object.Y-PointerData.hotspotY+2,
 					PointerData.width,PointerData.height,
-					PointerData.texture,
+					PointerData.image,
 					nil,nil,tocolor(0,0,0,125),true
 				);
 				
 				dxDrawImage(
 					Object.X-PointerData.hotspotX,Object.Y-PointerData.hotspotY,
 					PointerData.width,PointerData.height,
-					PointerData.texture,
+					PointerData.image,
 					nil,nil,nil,true
 				);
 			end

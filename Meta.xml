@@ -18,6 +18,12 @@
 	<file src="decoders/ico/windows-4bpp.ico"/>
 	<file src="decoders/ico/github-32bpp.ico"/>
 	<file src="decoders/ico/vlc-32bpp.ico"/>
+	<file src="decoders/ico/17x17-4bpp.ico"/>
+	<file src="decoders/ico/24x14-4bpp-transparent.ico"/>
+	<file src="decoders/ico/24x14-24bpp-transparent.ico"/>
+	<file src="decoders/ico/invalid-compression-RLE8.ico"/>
+	<file src="decoders/ico/invalid-compression.ico"/>
+	<file src="decoders/ico/256x256-1bpp.ico"/>
     
     
     

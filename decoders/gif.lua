@@ -57,7 +57,7 @@
             
 --[ ============================================================================================== ]]
 
-local log2 = math.log(2);
+local ln2 = math.log(2);
 
 local math = math;
 local string = string;
@@ -86,14 +86,13 @@ local DISPOSE_TO_PREVIOUS   = 3;
 
 
 local ALPHA255_BYTE = string.char(0xff);
-
 local TRANSPARENT_PIXEL = string.char(0x00, 0x00, 0x00, 0x00);
 
 
 
 local decode_lzw_data;
 
-function decode_gif(bytes)
+function decode_gif(bytes, ignoreComments)
     
     -- [ ====================== [ ASSERTION ] ====================== ]
     
@@ -102,9 +101,19 @@ function decode_gif(bytes)
         error("bad argument #1 to '" .. __func__ .. "' (string expected, got " .. bytesType .. ")", 2);
     end
     
+    if (ignoreComments ~= nil) then
+        local ignoreCommentsType = type(ignoreComments);
+        
+        if (ignoreCommentsType ~= "boolean") then
+            error("bad argument #2 to '" .. __func__ .. "' (boolean expected, got " .. ignoreCommentsType .. ")");
+        end
+    else
+        ignoreCommentsType = true;
+    end
     
     
-    -- function can olso be supplied with a file path instead of raw data
+    
+    -- function can also be supplied with a file path instead of raw data
     -- we treat variable bytes as a file path to see if the file exists
     if (fileExists(bytes)) then
         local f = fileOpen(bytes, true); -- open file read-only
@@ -268,7 +277,7 @@ function decode_gif(bytes)
                     blockOffset = stream.Position;
                 end
                 
-            elseif (label == COMMENT_LABEL) then
+            elseif (label == COMMENT_LABEL) and (not ignoreComments) then
                 if (not frames.comments) then frames.comments = {} end
                 
                 local comment = {}
@@ -481,8 +490,8 @@ function decode_lzw_data(stream, gce, descriptor, colorTable)
     
     -- round image width and height to the nearest powers of two
     -- to avoid bulrring when creating texture
-    local textureWidth  = 2^math.ceil(math.log(descriptor.width)/log2);
-    local textureHeight = 2^math.ceil(math.log(descriptor.height)/log2);
+    local textureWidth  = 2^math.ceil(math.log(descriptor.width) /ln2);
+    local textureHeight = 2^math.ceil(math.log(descriptor.height)/ln2);
     
     
     local pixelData = {}
@@ -648,18 +657,17 @@ function decode_lzw_data(stream, gce, descriptor, colorTable)
                 
                 for i = 1, pixelsCount do
                     local index = string.byte(indexes, i);
-                    
                     local pixel = colorTable[index+1];
                     
-                    -- add 1 to descriptor.width to make room for TRANSPARENT_PIXEL padding
-                    -- for getting texture width to the nearest power of two
+                    -- add 1 to descriptor.width to allocate an index in the array for TRANSPARENT_PIXEL padding
+                    -- (for power of two size)
                     pixelData[y*(descriptor.width+1) + (x+1)] = pixel;
                     
                     x = x+1;
                     
                     if (x >= descriptor.width) then
                         -- pad remaining row space horizontally with transparent pixels
-                        pixelData[y*(descriptor.width+1) + (x+1)] = string.rep(TRANSPARENT_PIXEL, textureWidth-x);
+                        pixelData[y*(descriptor.width+1) + (descriptor.width+1)] = string.rep(TRANSPARENT_PIXEL, textureWidth-descriptor.width);
                         
                         x = 0;
                         
@@ -702,7 +710,7 @@ function decode_lzw_data(stream, gce, descriptor, colorTable)
     -- pad remaining bottom area with transparent pixels
     pixelData[#pixelData+1] = string.rep(TRANSPARENT_PIXEL, (textureHeight-descriptor.height)*textureWidth);
     
-    -- append size
+    -- append size to accomodate MTA pixel data format
     pixelData[#pixelData+1] = string.char(
         bitExtract(textureWidth,  0, 8), bitExtract(textureWidth,  8, 8),
         bitExtract(textureHeight, 0, 8), bitExtract(textureHeight, 8, 8)
@@ -723,7 +731,7 @@ end
 
 -- local s = getTickCount();
 
--- local frames = decode_gif("decoders/gif/delays/25-delay-100.gif");
+-- local frames = decode_gif("decoders/gif/delays/10-delay-50.gif");
 -- printdebug("loopCount =", frames.loopCount);
 
 -- printdebug("elapsed = ", getTickCount() - s, "ms");
