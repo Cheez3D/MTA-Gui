@@ -34,7 +34,7 @@ end
 function Functions.RecreateDescendantsRenderTarget(Object,RenderTargetSize)
 	if isElement(Object.RenderTarget) then destroyElement(Object.RenderTarget) end
 	
-	local RenderTargetSizeX,RenderTargetSizeY = RenderTargetSize:Unpack();
+	local RenderTargetSizeX,RenderTargetSizeY = RenderTargetSize.unpack();
 	Object.RenderTarget = dxCreateRenderTarget(RenderTargetSizeX,RenderTargetSizeY,true);
 	Object.RenderTargetSize = RenderTargetSize;
 	
@@ -149,12 +149,12 @@ function NewIndexFunctions.Position(Object,Key,Position)
 	if (ParentProxy ~= nil) then
 		local Parent = ProxyToObject[ParentProxy];
 	
-		local ParentAbsolutePositionX,ParentAbsolutePositionY = Parent.AbsolutePosition:Unpack();
-		local ParentAbsoluteSizeX,ParentAbsoluteSizeY = Parent.AbsoluteSize:Unpack();
+		local ParentAbsolutePositionX,ParentAbsolutePositionY = Parent.AbsolutePosition.unpack();
+		local ParentAbsoluteSizeX,ParentAbsoluteSizeY = Parent.AbsoluteSize.unpack();
 		
-		local PositionXScale,PositionXOffset,PositionYScale,PositionYOffset = Position:Unpack();
+		local PositionXScale,PositionXOffset,PositionYScale,PositionYOffset = Position.unpack();
 		
-		Object.AbsolutePosition = Vector2.New(
+		Object.AbsolutePosition = Vector2.new(
 			ParentAbsolutePositionX+PositionXOffset+ParentAbsoluteSizeX*PositionXScale,
 			ParentAbsolutePositionY+PositionYOffset+ParentAbsoluteSizeY*PositionYScale
 		);
@@ -175,11 +175,11 @@ function NewIndexFunctions.Size(Object,Key,Size)
 	if (ParentProxy ~= nil) then -- TO DO ASSERTION AS IN Frame.NewIndexFunctions.Parent
 		local Parent = ProxyToObject[ParentProxy];
 		
-		local ParentAbsoluteSizeX,ParentAbsoluteSizeY = Parent.AbsoluteSize:Unpack();
+		local ParentAbsoluteSizeX,ParentAbsoluteSizeY = Parent.AbsoluteSize.unpack();
 		
-		local SizeXScale,SizeXOffset,SizeYScale,SizeYOffset = Size:Unpack();
+		local SizeXScale,SizeXOffset,SizeYScale,SizeYOffset = Size.unpack();
 		
-		Object.AbsoluteSize = Vector2.New(
+		Object.AbsoluteSize = Vector2.new(
 			SizeXOffset+ParentAbsoluteSizeX*SizeXScale,
 			SizeYOffset+ParentAbsoluteSizeY*SizeYScale
 		);

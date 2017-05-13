@@ -9,8 +9,8 @@
         [1] = {
             width = 16, height = 16,
             
-            -- OPTIONAL: only for cursors
-            hotspotX = 0, hotspotY = 0,
+            -- OPTIONAL: only for cursors, otherwise nil
+            [ hotspotX = 0, hotspotY = 0, ]
             
             image = userdata,
         },
@@ -18,8 +18,8 @@
         [2] = {
             width = 32, height = 32,
             
-            -- OPTIONAL: only for cursors
-            hotspotX = 0, hotspotY = 0,
+            -- OPTIONAL: only for cursors, otherwise nil
+            [ hotspotX = 0, hotspotY = 0, ]
             
             image = userdata,
         },
@@ -44,10 +44,10 @@
     
 --[ ============================================================================================================================================= ]]
 
-local ln2 = math.log(2);
-
 local math = math;
 local string = string;
+
+local LOG2 = math.log(2);
 
 
 
@@ -206,8 +206,8 @@ function decode_png_data(stream, ICONDIRENTRY)
     
     -- round image width and height to the nearest powers of two
     -- to avoid bulrring when creating texture
-    local textureWidth  = 2^math.ceil(math.log(width) /ln2);
-    local textureHeight = 2^math.ceil(math.log(height)/ln2);
+    local textureWidth  = 2^math.ceil(math.log(width) /LOG2);
+    local textureHeight = 2^math.ceil(math.log(height)/LOG2);
     
     stream.Position = stream.Position-24;
     
@@ -288,8 +288,8 @@ function decode_bitmap_data(stream, ICONDIRENTRY)
     
     -- round image width and height to the nearest powers of two
     -- to avoid bulrring when creating texture
-    local textureWidth  = 2^math.ceil(math.log(width) /ln2);
-    local textureHeight = 2^math.ceil(math.log(height)/ln2);
+    local textureWidth  = 2^math.ceil(math.log(width) /LOG2);
+    local textureHeight = 2^math.ceil(math.log(height)/LOG2);
     
     
     local bitsPerPixel  = BITMAPINFOHEADER.biBitCount;

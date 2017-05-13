@@ -6,15 +6,15 @@
     RETURNED TABLE STRUCTURE (EXAMPLE):
 
     {
-        -- OPTIONAL: only if gif contains any comments, otherwise nil
-        comments = {
+        -- OPTIONAL: only if gif contains any comments and ignoreComments is false, otherwise nil
+        [ comments = {
             [1] = "Hello world",
             [2] = "This is a gif file",
             ...
-        },
+        }, ]
         
         -- OPTIONAL: only if gif is animation, otherwise nil
-        loopCount = 2,
+        [ loopCount = 2, ]
         
         width = 30, height = 60,
         
@@ -22,7 +22,7 @@
             image = userdata,
             
             -- OPTIONAL: only if gif is animation, otherwise nil
-            delay = 40, -- in milliseconds
+            [ delay = 40, ] -- in milliseconds
         },
         
         [2] = {
@@ -57,10 +57,10 @@
             
 --[ ============================================================================================== ]]
 
-local ln2 = math.log(2);
-
 local math = math;
 local string = string;
+
+local LOG2 = math.log(2);
 
 
 
@@ -98,14 +98,14 @@ function decode_gif(bytes, ignoreComments)
     
     local bytesType = type(bytes);
     if (bytesType ~= "string") then
-        error("bad argument #1 to '" .. __func__ .. "' (string expected, got " .. bytesType .. ")", 2);
+        error("bad argument #1 to '" ..__func__.. "' (string expected, got " ..bytesType.. ")", 2);
     end
     
     if (ignoreComments ~= nil) then
         local ignoreCommentsType = type(ignoreComments);
         
         if (ignoreCommentsType ~= "boolean") then
-            error("bad argument #2 to '" .. __func__ .. "' (boolean expected, got " .. ignoreCommentsType .. ")");
+            error("bad argument #2 to '" ..__func__.. "' (boolean expected, got " ..ignoreCommentsType.. ")");
         end
     else
         ignoreCommentsType = true;
@@ -119,7 +119,7 @@ function decode_gif(bytes, ignoreComments)
         local f = fileOpen(bytes, true); -- open file read-only
         
         if (not f) then
-            error("bad argument #1 to '" .. __func__ .. "' (cannot open file)", 2);
+            error("bad argument #1 to '" ..__func__.. "' (cannot open file)", 2);
         end
         
         -- if file exists then we substitute bytes with the contents of the file located in the path supplied
@@ -132,18 +132,18 @@ function decode_gif(bytes, ignoreComments)
     local success, stream = pcall(Stream.New, bytes);
     
     if (not success) then
-        error("bad argument #1 to '" .. __func__ .. "' (could not create stream -> " .. stream .. ")", 2);
+        error("bad argument #1 to '" ..__func__.. "' (could not create stream -> " ..stream.. ")", 2);
     end
     
     
     if (stream:Read(3) ~= "GIF") then
-        error("bad argument #1 to '" .. __func__ .. "' (invalid file format)", 2);
+        error("bad argument #1 to '" ..__func__.. "' (invalid file format)", 2);
     end
     
     local version = stream:Read(3);
     
     if (version ~= "87a") and (version ~= "89a") then
-        error("bad argument #1 to '" .. __func__ .. "' (unsupported version)", 2);
+        error("bad argument #1 to '" ..__func__.. "' (unsupported version)", 2);
     end
     
     
@@ -222,7 +222,7 @@ function decode_gif(bytes, ignoreComments)
             if (label == GRAPHIC_CONTROL_LABEL) then
                 
                 if (blockSize ~= 4) then
-                    error("bad argument #1 to '" .. __func__ .. "' (invalid graphic control extension at " .. stream.Position .. ")", 2);
+                    error("bad argument #1 to '" ..__func__.. "' (invalid graphic control extension at " ..stream.Position.. ")", 2);
                 end
                 
                 gce = {
@@ -253,7 +253,7 @@ function decode_gif(bytes, ignoreComments)
             elseif (label == APPLICATION_LABEL) then
                 
                 if (blockSize ~= 11) then
-                    error("bad argument #1 to '" .. __func__ .. "' (invalid application extension at " .. stream.Position .. ")", 2);
+                    error("bad argument #1 to '" ..__func__.. "' (invalid application extension at " ..stream.Position.. ")", 2);
                 end
                 
                 local appIdentifier = stream:Read(8);
@@ -490,8 +490,8 @@ function decode_lzw_data(stream, gce, descriptor, colorTable)
     
     -- round image width and height to the nearest powers of two
     -- to avoid bulrring when creating texture
-    local textureWidth  = 2^math.ceil(math.log(descriptor.width) /ln2);
-    local textureHeight = 2^math.ceil(math.log(descriptor.height)/ln2);
+    local textureWidth  = 2^math.ceil(math.log(descriptor.width) /LOG2);
+    local textureHeight = 2^math.ceil(math.log(descriptor.height)/LOG2);
     
     
     local pixelData = {}
@@ -739,7 +739,8 @@ end
 -- debug.sethook(nil, h1, h2, h3);
 
 
--- local i = 1; local t = getTickCount();
+-- local i = 1;
+-- local t = getTickCount();
 
 -- addEventHandler("onClientRender", root, function()
     -- if ((getTickCount() - t) >= (frames[i].delay or 1000)) then print(i, frames[i].delay, "ms");

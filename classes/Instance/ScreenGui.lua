@@ -12,8 +12,8 @@ local ReadOnlyKeys = {} -- setmetatable({},ClassMetaTable);
 local function New(Object)
 	Base.New(Object);
 	
-	Object.AbsolutePosition = Vector2.New();
-	Object.AbsoluteSize = Vector2.New(ScreenSizeX,ScreenSizeY);
+	Object.AbsolutePosition = Vector2.new();
+	Object.AbsoluteSize = Vector2.new(SCREEN_WIDTH,SCREEN_HEIGHT);
 	
 	Object.RootGui = Object;
 	
@@ -25,7 +25,7 @@ local function New(Object)
 		for i = 1,#Children do
 			dxDrawImage(
 				0,0,
-				ScreenSizeX,ScreenSizeY,
+				SCREEN_WIDTH,SCREEN_HEIGHT,
 				Children[i].RenderTarget
 			);
 		end
@@ -34,13 +34,13 @@ local function New(Object)
 		dxSetRenderTarget();
 	end
 	
-	Object.RenderTarget = dxCreateRenderTarget(ScreenSizeX,ScreenSizeY,true);
-	Object.RenderTargetSize = Vector2.New(ScreenSizeX,ScreenSizeY);
+	Object.RenderTarget = dxCreateRenderTarget(SCREEN_WIDTH,SCREEN_HEIGHT,true);
+	Object.RenderTargetSize = Vector2.new(SCREEN_WIDTH,SCREEN_HEIGHT);
 	
 	function Object.Render()
 		dxSetBlendMode("add");
 		
-		dxDrawImage(0,0,ScreenSizeX,ScreenSizeY,Object.RenderTarget);
+		dxDrawImage(0,0,SCREEN_WIDTH,SCREEN_HEIGHT,Object.RenderTarget);
 		
 		dxSetBlendMode("blend");
 	end

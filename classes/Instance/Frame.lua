@@ -15,11 +15,11 @@ local ReadOnlyKeys = {} -- setmetatable({},ClassMetaTable);
 local function New(Object)
 	Base.New(Object);
 	
-	Object.AbsolutePosition = Vector2.New();
-	Object.AbsoluteSize = Vector2.New(100,100);
+	Object.AbsolutePosition = Vector2.new();
+	Object.AbsoluteSize = Vector2.new(100,100);
 	
-	Object.Position = UDim2.New();
-	Object.Size = UDim2.New(0,100,0,100);
+	Object.Position = UDim2.new();
+	Object.Size = UDim2.new(0,100,0,100);
 	
 	function Object.Draw()
 		local Parent = ProxyToObject[Object.Parent];
@@ -38,16 +38,16 @@ local function New(Object)
 			
 			-- Border
 			dxDrawRectangle(
-				AbsolutePosition.X-BorderOffsetPixel,AbsolutePosition.Y-BorderOffsetPixel,
-				AbsoluteSize.X+2*BorderOffsetPixel,AbsoluteSize.Y+2*BorderOffsetPixel,
+				AbsolutePosition.x-BorderOffsetPixel,AbsolutePosition.y-BorderOffsetPixel,
+				AbsoluteSize.x+2*BorderOffsetPixel,AbsoluteSize.y+2*BorderOffsetPixel,
 				tocolor(BorderColor3.Red,BorderColor3.Green,BorderColor3.Blue,255*(1-Object.BorderTransparency))
 			);
 			
 			-- Background
 			dxSetBlendMode("overwrite");
 			dxDrawRectangle(
-				AbsolutePosition.X+(BorderSizePixel-BorderOffsetPixel),AbsolutePosition.Y+(BorderSizePixel-BorderOffsetPixel),
-				AbsoluteSize.X-2*BorderSizePixel+2*BorderOffsetPixel,AbsoluteSize.Y-2*BorderSizePixel+2*BorderOffsetPixel,
+				AbsolutePosition.x+(BorderSizePixel-BorderOffsetPixel),AbsolutePosition.y+(BorderSizePixel-BorderOffsetPixel),
+				AbsoluteSize.x-2*BorderSizePixel+2*BorderOffsetPixel,AbsoluteSize.y-2*BorderSizePixel+2*BorderOffsetPixel,
 				tocolor(BackgroundColor3.Red,BackgroundColor3.Green,BackgroundColor3.Blue,255*(1-Object.BackgroundTransparency))
 			);
 			dxSetBlendMode("modulate_add");
@@ -104,7 +104,7 @@ ScrGui = Instance.New("ScreenGui");
 
 
 Fr1 = Instance.New("Frame",ScrGui);	Fr1.Name = "Fr1";
-Fr1.Position = UDim2.New(0.5,-50,0.5,-50);
+Fr1.Position = UDim2.new(0.5,-50,0.5,-50);
 
 
 -- Fr2 = Instance.New("Frame",Fr1);	Fr2.Name = "Fr2";

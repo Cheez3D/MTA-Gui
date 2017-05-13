@@ -6,7 +6,10 @@
     RETURNED TABLE STRUCTURE:
     
     {
-        [ name = "cool cursor", ] -- optional
+        -- OPTIONAL: only if ani contains any info and ignoreInfo is false, otherwise nil
+        [ name = "Cursor Name",
+          artist = "Artist Name",
+          copyright = "Copyright", ]
         
         [1] = {
             [1] = {
@@ -16,7 +19,7 @@
                 
                 rate = 5,
                 
-                image = userdata: xxxxxxxx
+                image = userdata
             },
             
             [2] = {
@@ -26,7 +29,7 @@
                 
                 rate = 5,
                 
-                image = userdata: xxxxxxxx
+                image = userdata
             },
             
             ...
@@ -40,7 +43,7 @@
                 
                 rate = 5,
                 
-                image = userdata: xxxxxxxx
+                image = userdata
             },
             
             ...
@@ -71,14 +74,14 @@ function decode_ani(bytes, ignoreInfo)
     local bytesType = type(bytes);
     
     if (bytesType ~= "string") then
-        error("bad argument #1 to '" .. __func__ .. "' (string expected, got " .. bytesType .. ")");
+        error("bad argument #1 to '" ..__func__.. "' (string expected, got " ..bytesType.. ")");
     end
     
     if (ignoreInfo ~= nil) then
         local ignoreInfoType = type(ignoreInfo);
         
         if (ignoreInfoType ~= "boolean") then
-            error("bad argument #2 to '" .. __func__ .. "' (boolean expected, got " .. ignoreInfoType .. ")");
+            error("bad argument #2 to '" ..__func__.. "' (boolean expected, got " ..ignoreInfoType.. ")");
         end
     else
         ignoreInfo = true;
@@ -100,24 +103,20 @@ function decode_ani(bytes, ignoreInfo)
     local success, stream = pcall(Stream.New, bytes);
     
     if (not success) then
-        error("bad argument #1 to '" .. __func__ .. "' (could not create stream -> " .. stream .. ")", 2);
+        error("bad argument #1 to '" ..__func__.. "' (could not create stream -> " ..stream.. ")", 2);
     end
     
     if (stream:Read(4) ~= "RIFF") then
-        error("bad argument #1 to '" .. __func__ .. "' (invalid file format)", 2);
+        error("bad argument #1 to '" ..__func__.. "' (invalid file format)", 2);
     end
     
     
     local RIFF_Size = stream:Read_uint();
     local RIFF_End = stream.Position + RIFF_Size;
     
-    -- handle invalid RIFF_Size
-    -- if length stored in file is greater than the actual length
-    if (RIFF_End > stream.Size) then RIFF_End = RIFF_End-stream.Position end
-    
     
     if (stream:Read(4) ~= "ACON") then
-        error("bad argument #1 to '" .. __func__ .. "' (invalid file format)", 2);
+        error("bad argument #1 to '" ..__func__.. "' (invalid file format)", 2);
     end
     
     
@@ -156,7 +155,7 @@ function decode_ani(bytes, ignoreInfo)
             }
             
             if (ANIHEADER.cbSize ~= 36) then
-                error("bad argument #1 to '" .. __func__ .. "' (unsupported version)", 2);
+                error("bad argument #1 to '" ..__func__.. "' (unsupported version)", 2);
             end
             
             local bfAttributes = ANIHEADER.bfAttributes;
@@ -190,23 +189,23 @@ function decode_ani(bytes, ignoreInfo)
             elseif (LIST_Type == "fram") then
                 
                 if (ANIHEADER == nil) then
-                    error("bad argument #1 to '" .. __func__ .. "' (invalid chunk order)", 2);
+                    error("bad argument #1 to '" ..__func__.. "' (invalid chunk order)", 2);
                 end
                 
                 if (ANIHEADER.bfAttributes.icoFlag ~= 1) then
-                    error("bad argument #1 to '" .. __func__ .. "' (invalid file format)", 2);
+                    error("bad argument #1 to '" ..__func__.. "' (invalid file format)", 2);
                 end
                 
                 for i = 1, ANIHEADER.nFrames do
                     if (stream:Read(4) ~= "icon") then
-                        error("bad argument #1 to '" .. __func__ .. "' (invalid file format)", 2);
+                        error("bad argument #1 to '" ..__func__.. "' (invalid file format)", 2);
                     end
                     
                     local frameSize = stream:Read_uint();
                     
                     local success, frame = pcall(decode_ico, stream:Read(frameSize));
                     if (not success) then
-                        error("bad argument #1 to '" .. __func__ .. "' (could not create decode frame -> " .. frame .. ")", 2);
+                        error("bad argument #1 to '" ..__func__.. "' (could not create decode frame -> " .. frame .. ")", 2);
                     end
                     
                     -- if hotspot data does not exist set to a default value
@@ -227,23 +226,28 @@ function decode_ani(bytes, ignoreInfo)
             end
             
         elseif (ckID == "rate") then
+            
             -- if anih was not reached until now
             if (ANIHEADER == nil) then
-                error("bad argument #1 to '" .. __func__ .. "' (invalid chunk order)", 2);
+                error("bad argument #1 to '" ..__func__.. "' (invalid chunk order)", 2);
             end
             
             for i = 1, ANIHEADER.nSteps do
                 rate[i] = stream:Read_uint();
             end
+            
         elseif (ckID == "seq ") then
+            
             if (ANIHEADER == nil) then
-                error("bad argument #1 to '" .. __func__ .. "' (invalid chunk order)", 2);
+                error("bad argument #1 to '" ..__func__.. "' (invalid chunk order)", 2);
             end
             
             for i = 1, ANIHEADER.nSteps do
                 seq [i] = stream:Read_uint()+1; -- add 1 to accomodate Lua index start
             end
-        else -- unnecessary chunk, just skip it
+            
+        else
+            -- unnecessary chunk, just skip it
             stream.Position = ckEnd;
         end
         
@@ -254,30 +258,62 @@ function decode_ani(bytes, ignoreInfo)
     end
     
     
-    local animation = {}
+    local aniVariants = {}
     
     if (not ignoreInfo) then
         for k, v in pairs(LIST_INFO) do
-            animation[k] = v;
+            aniVariants[k] = v;
         end
     end
     
+    
     for step = 1, ANIHEADER.nSteps do
-        local frame = LIST_fram[seq [step] or step]; -- if seq [step] is empty then fall back to step
+        
+        -- variable containing all the ico variants (sizes) for the current frame
+        -- if seq [step] is empty then fall back to step
+        local frame = LIST_fram[seq [step] or step];
         
         -- append corresponding rate to corresponding frames
         local rate = rate[step] or ANIHEADER.iDispRate;
         
+        
         -- loop through all sizes of an icon (see decode_ico return table format)
-        for frameVariant = 1, #frame do
+        for sizeID = 1, #frame do
+            
             -- create a table to store all icon sizes
-            if (animation[frameVariant] == nil) then animation[frameVariant] = {} end
+            if (not aniVariants[sizeID]) then
+                aniVariants[sizeID] = {}
+            end
             
-            frame[frameVariant].rate = rate;
+            frame[sizeID].rate = rate;
             
-            animation[frameVariant][step] = frame[frameVariant];
+            aniVariants[sizeID][step] = frame[sizeID];
+            
         end
+        
     end
     
-    return animation;
+    return aniVariants;
 end
+
+
+
+
+
+
+-- local ani = decode_ani("PointerSchemes/PulseGlass/Busy.ani")[1];
+
+-- local i = 1;
+-- local t = getTickCount();
+
+-- addEventHandler("onClientRender", root, function()
+    -- if ((getTickCount() - t) >= ani[i].rate*(50/3)) then print(i, ani[i].rate*(50/3), "ms");
+        -- t = getTickCount();
+        
+        -- i = i+1;
+        
+        -- if (i > #ani) then i = 1 end
+    -- end
+    
+    -- dxDrawImage(200, 200, ani[i].width, ani[i].height, ani[i].image);
+-- end);

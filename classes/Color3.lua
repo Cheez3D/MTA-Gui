@@ -1,8 +1,3 @@
--- [=======[ FILE ]======[
--- NAME:		Color3.lua
--- PURPOSE:		?
--- ]=====================]
-
 local Class = {
 	Functions = {},
 	IndexFunctions = {}

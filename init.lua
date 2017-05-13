@@ -1,2 +1,0 @@
-fileClose(fout);
-fileClose(ffile);
