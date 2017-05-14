@@ -22,7 +22,7 @@ local function New(Object)
 	Object.Size = UDim2.new(0,100,0,100);
 	
 	function Object.Draw()
-		local Parent = ProxyToObject[Object.Parent];
+		local Parent = PROXY__OBJ[Object.Parent];
 		
 		if (Object.Visible == true) then
 			dxSetRenderTarget(Object.RenderTarget,true);
@@ -48,7 +48,7 @@ local function New(Object)
 			dxDrawRectangle(
 				AbsolutePosition.x+(BorderSizePixel-BorderOffsetPixel),AbsolutePosition.y+(BorderSizePixel-BorderOffsetPixel),
 				AbsoluteSize.x-2*BorderSizePixel+2*BorderOffsetPixel,AbsoluteSize.y-2*BorderSizePixel+2*BorderOffsetPixel,
-				tocolor(BackgroundColor3.Red,BackgroundColor3.Green,BackgroundColor3.Blue,255*(1-Object.BackgroundTransparency))
+				tocolor(BackgroundColor3.r,BackgroundColor3.g,BackgroundColor3.b,255*(1-Object.BackgroundTransparency))
 			);
 			dxSetBlendMode("modulate_add");
 			

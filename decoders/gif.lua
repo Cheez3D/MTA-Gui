@@ -129,18 +129,18 @@ function decode_gif(bytes, ignoreComments)
     end
     
     
-    local success, stream = pcall(Stream.New, bytes);
+    local success, stream = pcall(Stream.new, bytes);
     
     if (not success) then
-        error("bad argument #1 to '" ..__func__.. "' (could not create stream -> " ..stream.. ")", 2);
+        error("bad argument #1 to '" ..__func__.. "' (could not create stream) -> " ..stream, 2);
     end
     
     
-    if (stream:Read(3) ~= "GIF") then
+    if (stream.read(3) ~= "GIF") then
         error("bad argument #1 to '" ..__func__.. "' (invalid file format)", 2);
     end
     
-    local version = stream:Read(3);
+    local version = stream.read(3);
     
     if (version ~= "87a") and (version ~= "89a") then
         error("bad argument #1 to '" ..__func__.. "' (unsupported version)", 2);
@@ -153,15 +153,15 @@ function decode_gif(bytes, ignoreComments)
     -- [ ====================== [ LOGICAL SCREEN DESCRIPTOR ] ====================== ] 
     
     local lsd = {
-        canvasWidth  = stream:Read_ushort(),
-        canvasHeight = stream:Read_ushort(),
+        canvasWidth  = stream.read_ushort(),
+        canvasHeight = stream.read_ushort(),
         
-        fields = stream:Read_uchar(),
+        fields = stream.read_uchar(),
         
         -- background color index, denotes which color to use for pixels with unspecified color index
-        bgColorIndex = stream:Read_uchar(),
+        bgColorIndex = stream.read_uchar(),
         
-        pixelAspectRatio = stream:Read_uchar(),
+        pixelAspectRatio = stream.read_uchar(),
     }
     
     do
@@ -189,16 +189,16 @@ function decode_gif(bytes, ignoreComments)
         gct = {}
         
         for i = 1, 2^(lsd.fields.gctSize+1) do
-            gct[i] = string.reverse(stream:Read(3)) .. ALPHA255_BYTE;
+            gct[i] = string.reverse(stream.read(3)) .. ALPHA255_BYTE;
         end
         
         
         local bgColor = gct[lsd.bgColorIndex+1];
         
-        gct.bgColor = 0x1000000 * 0xff                     -- A
-                    + 0x10000   * string.byte(bgColor, 1)  -- R
-                    + 0x100     * string.byte(bgColor, 2)  -- G
-                    +             string.byte(bgColor, 3); -- B
+        gct.bgColor = 0x1000000 * 0xff                     -- a
+                    + 0x10000   * string.byte(bgColor, 1)  -- r
+                    + 0x100     * string.byte(bgColor, 2)  -- g
+                    +             string.byte(bgColor, 3); -- b
     end
     
     
@@ -208,31 +208,31 @@ function decode_gif(bytes, ignoreComments)
     local previousCanvas; -- used with the DISPOSE_TO_PREVIOUS disposal method
     
     
-    local identifier = stream:Read_uchar();
+    local identifier = stream.read_uchar();
     
     while (identifier ~= TRAILER) do
     
         if (identifier == EXTENSION_INTRODUCER) then
         
-            local label = stream:Read_uchar();
+            local label = stream.read_uchar();
             
-            local blockSize   = stream:Read_uchar();
-            local blockOffset = stream.Position;
+            local blockSize   = stream.read_uchar();
+            local blockOffset = stream.pos;
             
             if (label == GRAPHIC_CONTROL_LABEL) then
                 
                 if (blockSize ~= 4) then
-                    error("bad argument #1 to '" ..__func__.. "' (invalid graphic control extension at " ..stream.Position.. ")", 2);
+                    error("bad argument #1 to '" ..__func__.. "' (invalid graphic control extension at " ..stream.pos.. ")", 2);
                 end
                 
                 gce = {
                     size = blockSize,
                     
-                    fields = stream:Read_uchar(),
+                    fields = stream.read_uchar(),
                     
-                    delayTime = stream:Read_ushort(),
+                    delayTime = stream.read_ushort(),
                     
-                    transparentColorIndex = stream:Read_uchar(),
+                    transparentColorIndex = stream.read_uchar(),
                 }
                 
                 local fields = gce.fields;
@@ -248,33 +248,33 @@ function decode_gif(bytes, ignoreComments)
                 
                 gce.isTransparencyEnabled = (gce.fields.transparentColorFlag == 1);
                 
-                stream.Position = blockOffset+blockSize;
+                stream.pos = blockOffset+blockSize;
                 
             elseif (label == APPLICATION_LABEL) then
                 
                 if (blockSize ~= 11) then
-                    error("bad argument #1 to '" ..__func__.. "' (invalid application extension at " ..stream.Position.. ")", 2);
+                    error("bad argument #1 to '" ..__func__.. "' (invalid application extension at " ..stream.pos.. ")", 2);
                 end
                 
-                local appIdentifier = stream:Read(8);
-                local appAuthCode   = stream:Read(3);
+                local appIdentifier = stream.read(8);
+                local appAuthCode   = stream.read(3);
                 
-                blockSize   = stream:Read_uchar();
-                blockOffset = stream.Position;
+                blockSize   = stream.read_uchar();
+                blockOffset = stream.pos;
                 
                 while (blockSize ~= BLOCK_TERMINATOR) do
                     if (appIdentifier == "NETSCAPE") and (appAuthCode == "2.0") then
-                        local ID = stream:Read_uchar();
+                        local ID = stream.read_uchar();
                         
                         if (ID == NETSCAPE_LOOP_COUNT) then
-                            frames.loopCount = stream:Read_ushort();
+                            frames.loopCount = stream.read_ushort();
                         end
                     end
                     
-                    stream.Position = blockOffset+blockSize;
+                    stream.pos = blockOffset+blockSize;
                     
-                    blockSize   = stream:Read_uchar();
-                    blockOffset = stream.Position;
+                    blockSize   = stream.read_uchar();
+                    blockOffset = stream.pos;
                 end
                 
             elseif (label == COMMENT_LABEL) and (not ignoreComments) then
@@ -283,22 +283,22 @@ function decode_gif(bytes, ignoreComments)
                 local comment = {}
                 
                 while (blockSize ~= BLOCK_TERMINATOR) do
-                    comment[#comment+1] = stream:Read(blockSize);
+                    comment[#comment+1] = stream.read(blockSize);
                     
-                    stream.Position = blockOffset+blockSize;
+                    stream.pos = blockOffset+blockSize;
                     
-                    blockSize   = stream:Read_uchar();
-                    blockOffset = stream.Position;
+                    blockSize   = stream.read_uchar();
+                    blockOffset = stream.pos;
                 end
                 
                 frames.comments[#frames.comments+1] = table.concat(comment);
             else
                 -- skip unknown extension
                 while (blockSize ~= BLOCK_TERMINATOR) do
-                    stream.Position = blockOffset+blockSize;
+                    stream.pos = blockOffset+blockSize;
                     
-                    blockSize   = stream:Read_uchar();
-                    blockOffset = stream.Position;
+                    blockSize   = stream.read_uchar();
+                    blockOffset = stream.pos;
                 end
             end
             
@@ -307,13 +307,13 @@ function decode_gif(bytes, ignoreComments)
             -- [ IMAGE DESCRIPTOR ]
             
             local descriptor = {
-                x = stream:Read_ushort(),
-                y = stream:Read_ushort(),
+                x = stream.read_ushort(),
+                y = stream.read_ushort(),
                 
-                width  = stream:Read_ushort(),
-                height = stream:Read_ushort(),
+                width  = stream.read_ushort(),
+                height = stream.read_ushort(),
                 
-                fields = stream:Read_uchar(),
+                fields = stream.read_uchar(),
             }
             
             local fields = descriptor.fields;
@@ -339,7 +339,7 @@ function decode_gif(bytes, ignoreComments)
                 lct = {}
                 
                 for i = 1, 2^(descriptor.fields.lctSize+1) do
-                    lct[i] = string.reverse(stream:Read(3)) .. ALPHA255_BYTE;
+                    lct[i] = string.reverse(stream.read(3)) .. ALPHA255_BYTE;
                 end
             end
             
@@ -464,7 +464,7 @@ function decode_gif(bytes, ignoreComments)
             }
         end
         
-        identifier = stream:Read_uchar();
+        identifier = stream.read_uchar();
     end
     
     return frames;
@@ -485,7 +485,7 @@ function decode_lzw_data(stream, gce, descriptor, colorTable)
     
     -- the minimum LZW code size from which we compute
     -- the starting code size for reading the codes from the image data
-    local lzwMinCodeSize = stream:Read_uchar();
+    local lzwMinCodeSize = stream.read_uchar();
     
     
     -- round image width and height to the nearest powers of two
@@ -551,10 +551,10 @@ function decode_lzw_data(stream, gce, descriptor, colorTable)
     local isEOIReached = false;
 
     
-    local blockSize   = stream:Read_uchar();
-    local blockOffset = stream.Position;
+    local blockSize   = stream.read_uchar();
+    local blockOffset = stream.pos;
     
-    local byte = stream:Read_uchar();
+    local byte = stream.read_uchar();
     
     -- variable keeping track of starting point for reading from byte
     local bitOffset = 0;
@@ -593,7 +593,7 @@ function decode_lzw_data(stream, gce, descriptor, colorTable)
                 isEOIReached = true;
                 
                 -- move to end of block to read BLOCK_TERMINATOR and exit out of the loop
-                stream.Position = blockOffset+blockSize;
+                stream.pos = blockOffset+blockSize;
             else
                 code = code+1; -- accomodate to Lua indexing which starts from 1
                 
@@ -696,14 +696,14 @@ function decode_lzw_data(stream, gce, descriptor, colorTable)
         
         
         -- if reached end of block
-        if ((stream.Position-blockOffset) == blockSize) then
-            blockSize   = stream:Read_uchar();
-            blockOffset = stream.Position;
+        if ((stream.pos-blockOffset) == blockSize) then
+            blockSize   = stream.read_uchar();
+            blockOffset = stream.pos;
         end
         
         -- if we are at the beginning of a new byte <=> bitOffset == 0
         if (not isEOIReached) and (bitOffset == 0) then
-            byte = stream:Read_uchar();
+            byte = stream.read_uchar();
         end
     end
     
@@ -734,7 +734,7 @@ end
 -- local frames = decode_gif("decoders/gif/delays/10-delay-50.gif");
 -- printdebug("loopCount =", frames.loopCount);
 
--- printdebug("elapsed = ", getTickCount() - s, "ms");
+-- printdebug("elapsed =", getTickCount() - s, "ms");
 
 -- debug.sethook(nil, h1, h2, h3);
 
@@ -743,7 +743,7 @@ end
 -- local t = getTickCount();
 
 -- addEventHandler("onClientRender", root, function()
-    -- if ((getTickCount() - t) >= (frames[i].delay or 1000)) then print(i, frames[i].delay, "ms");
+    -- if ((getTickCount() - t) >= (frames[i].delay or 1000)) then -- print(i, frames[i].delay, "ms");
         -- t = getTickCount();
         
         -- i = i+1;

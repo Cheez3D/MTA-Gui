@@ -1,137 +1,150 @@
-local Class = {
-	Functions = {},
-	IndexFunctions = {}
+local func = {}
+local get  = {}
+
+
+
+local meta = {
+    __metatable = "Color3",
+    
+    
+	__index = function(proxy, key)
+        local obj = PROXY__OBJ[proxy];
+        
+        local val = obj[key];
+        if (val ~= nil) then -- val might be false so compare against nil
+            return val;
+        end
+    
+        local func_f = func[key];
+        if (func_f) then
+            return (function(...) return func_f(obj, ...) end); -- might be able to do memoization here
+        end
+        
+        local get_f = get[key];
+        if (get_f) then
+            return get_f(obj, key);
+        end
+    end,
+	
+	__newindex = function(proxy, key)
+		error("attempt to modify a read-only key (" ..tostring(key).. ")", 2);
+	end,
+    
+    
+	__tostring = function(proxy)
+		local obj = PROXY__OBJ[proxy];
+		
+		return obj.r..", "..obj.g..", "..obj.b;
+	end,
 }
 
 
 
-local MetaTable = {
-	__index = function(Proxy,Key)
-		local Object = ProxyToObject[Proxy];
-	
-		local Value = Object[Key];
-		if (Value ~= nil) then
-			return Value;
-		end
-		
-		
-		
-		local Function = Class.Functions[Key];
-		if (Function ~= nil) then
-			return Function;
-		end
-		
-		local IndexFunction = Class.IndexFunctions[Key];
-		if (IndexFunction ~= nil) then
-			return IndexFunction(Object);
-		end
-	end,
-	__metatable = "Color3",
-	__newindex = function(_Proxy,Key)
-		error("attempt to modify a read-only key ("..tostring(Key)..")",2);
-	end,
-	__tostring = function(Proxy)
-		local Object = ProxyToObject[Proxy];
-		
-		return Object.Red..", "..Object.Green..", "..Object.Blue;
-	end,
-}
+local MEM_PROXIES = setmetatable({}, { __mode = 'v' });
 
-local MemoizedProxies = setmetatable({},{__mode = "v"});
-function Class.New(Red,Green,Blue)
-	if (Red ~= nil) then
-		local RedType = type(Red);
-		if (RedType ~= "number") then error("bad argument #1 to '"..__func__.."' (number expected, got "..RedType..")",2) end
-		
-		if (Red < 0) or (Red > 255) then error("bad argument #1 to '"..__func__.."' (value out of bounds)",2) end
+function new(r, g, b)
+    
+    -- [ ====================== [ ASSERTION ] ====================== ]
+    
+	if (r ~= nil) then
+		local rType = type(r);
+        
+		if (rType ~= "number") then
+            error("bad argument #1 to '" ..__func__.. "' (number expected, got " ..rType.. ")", 2);
+        elseif (r < 0) or (r > 255) then
+            error("bad argument #1 to '" ..__func__.. "' (value out of bounds)", 2);
+        end
 	else
-		Red = 0;
+		r = 0;
 	end
 	
-	if (Green ~= nil) then
-		local GreenType = type(Green);
-		if (GreenType ~= "number") then
-			error("bad argument #1 to '"..__func__.."' (number expected, got "..GreenType..")",2);
-		end
-		
-		if (Green < 0) or (Green > 255) then
-			error("bad argument #1 to '"..__func__.."' (value out of bounds)",2);
-		end
+	if (g ~= nil) then
+		local gType = type(g);
+        
+		if (gType ~= "number") then
+            error("bad argument #2 to '" ..__func__.. "' (number expected, got " ..gType.. ")", 2);
+        elseif (g < 0) or (g > 255) then
+            error("bad argument #2 to '" ..__func__.. "' (value out of bounds)", 2);
+        end
 	else
-		Green = 0;
+		g = 0;
 	end
 	
-	if (Blue ~= nil) then
-		local BlueType = type(Blue);
-		if (BlueType ~= "number") then
-			error("bad argument #1 to '"..__func__.."' (number expected, got "..BlueType..")",2);
-		end
-		
-		if (Blue < 0) or (Blue > 255) then
-			error("bad argument #1 to '"..__func__.."' (value out of bounds)",2);
-		end
+	if (b ~= nil) then
+		local bType = type(b);
+        
+		if (bType ~= "number") then
+            error("bad argument #3 to '" ..__func__.. "' (number expected, got " ..bType.. ")", 2);
+        elseif (b < 0) or (b > 255) then
+            error("bad argument #3 to '" ..__func__.. "' (value out of bounds)", 2);
+        end
 	else
-		Blue = 0;
+		b = 0;
 	end
 	
 	
 	
-	local MemoizedProxyIdentifier = Red..Green..Blue;
+	local memID = r.. ':' ..g.. ':' ..b;
 	
-	local Proxy = MemoizedProxies[MemoizedProxyIdentifier];
-	if (Proxy == nil) then
-		local Object = {
-			Red = Red,
-			Green = Green,
-			Blue = Blue
+	local proxy = MEM_PROXIES[MemoizedProxyIdentifier];
+    
+	if (not proxy) then
+		local obj = {
+			r = r,
+            g = g,
+            b = b,
 		}
 		
-		Proxy = setmetatable({},MetaTable);
-		ProxyToObject[Proxy] = Object;
+		proxy = setmetatable({}, meta);
+        
+		PROXY__OBJ[proxy] = obj;
 		
-		MemoizedProxies[MemoizedProxyIdentifier] = Proxy;
+		MEM_PROXIES[memID] = proxy;
 	end
 	
-	return Proxy;
+	return proxy;
 end
 
 
 
-function Class.Functions.Unpack(Proxy)
-	do
-		local ProxyType = type(Proxy);
-		if (ProxyType ~= "Color3") then
-			error("bad argument #1 to '"..__func__.."' (Color3 expected, got "..ProxyType..")",2);
-		end
-	end
-	
-	local Object = ProxyToObject[Proxy];
-	
-	return Object.Red,Object.Green,Object.Blue;
+function func.unpack(obj)
+	return obj.r, obj.g, obj.b;
 end
 
 
 
-function Class.IndexFunctions.Hex(Object)
-	local Hex = Object.Red+Object.Green*256+Object.Blue*65536;
+function get.hex(obj)
+    local hex = 0x10000 * obj.b
+              + 0x100   * obj.g
+              +           obj.r;
 	
-	Object.Hex = Hex;
+	obj.hex = hex; -- memoize hex value inside obj
 
-	return Hex;
+	return hex;
 end
 
 
 
-Color3 = setmetatable({},{
-	__call = function(_Proxy,...)
-		local Success,Result = pcall(Class.New,...);
-		if (Success == false) then error(format_pcall_error(Result),2) end
-		
-		return Result;
-	end,
-	__index = Class,
-	__metatable = "Color3",
-	__newindex = function(_Proxy,Key)
-		error("attempt to modify a read-only key ("..tostring(Key)..")",2);
-	end
+Color3 = setmetatable({}, {
+    __metatable = "Color3",
+    
+    
+    __index = function(proxy, key)
+        return (key == "new") and new or nil;
+    end,
+    
+    __newindex = function(proxy, key)
+        error("attempt to modify a read-only key (" ..tostring(key).. ")", 2);
+    end,
+    
+    
+    __call = function(proxy, ...)
+        local success, result = pcall(new, ...);
+        
+        if (not success) then
+            error("call error", 2);
+        end
+        
+        return result;
+    end,
 });

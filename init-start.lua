@@ -1,22 +1,31 @@
-SCREEN_WIDTH, SCREEN_HEIGHT = guiGetScreenSize();
-
 REFERENCE_FPS  = 60;
 REFERENCE_FPMS = 1000*REFERENCE_FPS;
 
+setFPSLimit(REFERENCE_FPS);
 
-ObjectToProxy = setmetatable({}, { __mode = 'v' });
-ProxyToObject = setmetatable({}, { __mode = 'k' });
+
+IS_CLIENT = (triggerServerEvent ~= nil);
+
+if (not IS_CLIENT) then return end
+
+
+SCREEN_WIDTH, SCREEN_HEIGHT = guiGetScreenSize();
+
+
+PROXY__OBJ = setmetatable({}, { __mode = 'k' });
+OBJ__PROXY = setmetatable({}, { __mode = 'v' });
 
 
 
 setmetatable(_G, {
-    __index = function(_t, key)
+    __index = function(tbl, key)
         if     (key == "__FILE__") then return debug.getinfo(2, 'S').short_src;
         elseif (key == "__func__") then return debug.getinfo(2, 'n').name or '?';
         elseif (key == "__LINE__") then return debug.getinfo(2, 'l').currentline;
         end
     end
 });
+
 
 
 
@@ -73,28 +82,6 @@ function type(arg)
         return argType;
     end
 end
-
--- -- formats error message, for use with pcall
--- function format_pcall_error(Message,ArgumentOffset)
-    -- local MessageType = type(Message);
-    -- if (MessageType ~= "string") then error_("bad argument #1 to '"..__func__.."' (string expected, got "..MessageType..")",2) end
-    
-    -- Message = Message:gsub("(.+):(%s)","",1); -- remove redundant location
-    
-    -- if (ArgumentOffset ~= nil) then
-        -- local ArgumentOffsetType = type(ArgumentOffset);
-        -- if (ArgumentOffsetType ~= "number") then error_("bad argument #2 to '"..__func__.."' (number expected, got "..ArgumentOffsetType..")",2) end
-    
-        -- Message = Message:gsub("#(%d+)",function(ArgumentNumber) return "#"..(ArgumentNumber+ArgumentOffset) end,1); -- offset argument number
-    -- end
-    
-    -- local FunctionName = debug.getinfo(2,"n").name or "?";
-    -- -- if (FunctionName ~= nil) then
-        -- Message = (Message:find("'?'",nil,true) ~= nil) and Message:gsub("'%?'","'"..FunctionName.."'",1) or Message:gsub("'([_%w]-)'","'"..FunctionName.."' -> '%1'",1);
-    -- -- end
-    
-    -- return Message;
--- end
 
 
 
@@ -161,7 +148,3 @@ addCommandHandler("cls", function()
         outputConsole("\n");
     end
 end);
-
-
-
-setFPSLimit(REFERENCE_FPS);

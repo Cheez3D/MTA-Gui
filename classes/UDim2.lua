@@ -7,7 +7,7 @@ local meta = {
     
     
     __index = function(proxy, key)
-        local obj = ProxyToObject[proxy];
+        local obj = PROXY__OBJ[proxy];
         
         local val = obj[key];
         if (val ~= nil) then -- val might be false so compare against nil
@@ -18,8 +18,6 @@ local meta = {
         if (func_f) then
             return (function(...) return func_f(obj, ...) end); -- might be able to do memoization here
         end
-        
-        return nil;
     end,
     
     __newindex = function(proxy, key)
@@ -28,7 +26,7 @@ local meta = {
     
     
     __tostring = function(proxy)
-        local obj = ProxyToObject[proxy];
+        local obj = PROXY__OBJ[proxy];
         
         return "{" ..tostring(obj.x).. "}, {" ..tostring(obj.y).. "}";
     end,
@@ -49,8 +47,8 @@ local meta = {
         
         
         
-        local obj1 = ProxyToObject[proxy1];
-        local obj2 = ProxyToObject[proxy2];
+        local obj1 = PROXY__OBJ[proxy1];
+        local obj2 = PROXY__OBJ[proxy2];
         
         local obj1ScaleX, obj1OffsetX, obj1ScaleY, obj1OffsetY = func.unpack(obj1);
         local obj2ScaleX, obj2OffsetX, obj2ScaleY, obj2OffsetY = func.unpack(obj2);
@@ -121,7 +119,7 @@ function new(scaleX, offsetX, scaleY, offsetY)
         
         proxy = setmetatable({}, meta);
         
-        ProxyToObject[proxy] = obj;
+        PROXY__OBJ[proxy] = obj;
         
         MEM_PROXIES[memID] = proxy;
     end

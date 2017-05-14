@@ -75,7 +75,7 @@ function decode_ico(bytes)
     
     local bytesType = type(bytes);
     if (bytesType ~= "string") then
-        error("bad argument #1 to '" .. __func__ .. "' (string expected, got " .. bytesType .. ")", 2);
+        error("bad argument #1 to '" ..__func__.. "' (string expected, got " .. bytesType .. ")", 2);
     end
     
     
@@ -86,7 +86,7 @@ function decode_ico(bytes)
         local f = fileOpen(bytes, true); -- open file read-only
         
         if (not f) then
-            error("bad argument #1 to '" .. __func__ .. "' (cannot open file)", 2);
+            error("bad argument #1 to '" ..__func__.. "' (cannot open file)", 2);
         end
         
         -- if file exists then we substitute bytes with the contents of the file located in the path supplied
@@ -96,28 +96,28 @@ function decode_ico(bytes)
     end
     
     
-    local success, stream = pcall(Stream.New, bytes);
+    local success, stream = pcall(Stream.new, bytes);
     
     if (not success) then
-        error("bad argument #1 to '" .. __func__ .. "' (could not create stream -> " .. stream .. ")", 2);
+        error("bad argument #1 to '" ..__func__.. "' (could not create stream) -> " ..stream, 2);
     end
     
     
     local ICONDIR = {
-        idReserved = stream:Read_ushort(),
+        idReserved = stream.read_ushort(),
         
-        idType = stream:Read_ushort(),
+        idType = stream.read_ushort(),
         
-        idCount   = stream:Read_ushort(),
+        idCount   = stream.read_ushort(),
         idEntries = {}
     }
     
     if (ICONDIR.idReserved ~= 0) then
-        error("bad argument #1 to '" .. __func__ .. "' (invalid file format)", 2);
+        error("bad argument #1 to '" ..__func__.. "' (invalid file format)", 2);
     elseif (ICONDIR.idType ~= ICO) and (ICONDIR.idType ~= CUR) then
-        error("bad argument #1 to '" .. __func__ .. "' (invalid icon type)", 2);
+        error("bad argument #1 to '" ..__func__.. "' (invalid icon type)", 2);
     elseif (ICONDIR.idCount == 0) then
-        error("bad argument #1 to '" .. __func__ .. "' (no entries found in ICONDIR)", 2);
+        error("bad argument #1 to '" ..__func__.. "' (no entries found in ICONDIR)", 2);
     end
     
     ICONDIR.isCUR = (ICONDIR.idType == CUR);
@@ -125,22 +125,22 @@ function decode_ico(bytes)
     
     for i = 1, ICONDIR.idCount do 
         local ICONDIRENTRY = {
-            bWidth  = stream:Read_uchar(),
-            bHeight = stream:Read_uchar(),
+            bWidth  = stream.read_uchar(),
+            bHeight = stream.read_uchar(),
             
-            bColorCount = stream:Read_uchar(),
+            bColorCount = stream.read_uchar(),
             
-            bReserved = stream:Read_uchar(),
+            bReserved = stream.read_uchar(),
             
-            wPlanes   = stream:Read_ushort(),
-            wBitCount = stream:Read_ushort(),
+            wPlanes   = stream.read_ushort(),
+            wBitCount = stream.read_ushort(),
             
-            dwBytesInRes  = stream:Read_uint(), -- bytes in resource
-            dwImageOffset = stream:Read_uint(), -- offset to image data
+            dwBytesInRes  = stream.read_uint(), -- bytes in resource
+            dwImageOffset = stream.read_uint(), -- offset to image data
         }
         
         if (ICONDIRENTRY.bReserved ~= 0) then
-            error("bad argument #1 to '" .. __func__ .. "' (invalid file format)", 2);
+            error("bad argument #1 to '" ..__func__.. "' (invalid file format)", 2);
         end
         
         ICONDIR.idEntries[i] = ICONDIRENTRY;
@@ -153,11 +153,11 @@ function decode_ico(bytes)
         
         local ICONDIRENTRY = ICONDIR.idEntries[i];
         
-        stream.Position = ICONDIRENTRY.dwImageOffset; -- set read position to image data start
+        stream.pos = ICONDIRENTRY.dwImageOffset; -- set read position to image data start
         
         
-        local isPNG = (stream:Read(8) == PNG_SIGNATURE);
-        stream.Position = stream.Position-8;
+        local isPNG = (stream.read(8) == PNG_SIGNATURE);
+        stream.pos = stream.pos-8;
         
         
         local decoder = isPNG and decode_png_data or decode_bitmap_data;
@@ -199,19 +199,19 @@ end
 
 
 function decode_png_data(stream, ICONDIRENTRY)
-    stream.Position = stream.Position+16;
+    stream.pos = stream.pos+16;
     
-    local width  = stream:Read_uint(Enum.Endianness.BigEndian);
-    local height = stream:Read_uint(Enum.Endianness.BigEndian);
+    local width  = stream.read_uint(false);
+    local height = stream.read_uint(false);
     
     -- round image width and height to the nearest powers of two
     -- to avoid bulrring when creating texture
     local textureWidth  = 2^math.ceil(math.log(width) /LOG2);
     local textureHeight = 2^math.ceil(math.log(height)/LOG2);
     
-    stream.Position = stream.Position-24;
+    stream.pos = stream.pos-24;
     
-    local pixels = stream:Read(ICONDIRENTRY.dwBytesInRes);
+    local pixels = stream.read(ICONDIRENTRY.dwBytesInRes);
     pixels = dxConvertPixels(pixels, "plain");
     
     
@@ -242,29 +242,29 @@ end
 function decode_bitmap_data(stream, ICONDIRENTRY)
     
     local BITMAPINFOHEADER = {
-        biSize = stream:Read_uint(),
+        biSize = stream.read_uint(),
         
-        biWidth  = stream:Read_uint(),
-        biHeight = stream:Read_int(),
+        biWidth  = stream.read_uint(),
+        biHeight = stream.read_int(),
         
-        biPlanes   = stream:Read_ushort(),
-        biBitCount = stream:Read_ushort(),
+        biPlanes   = stream.read_ushort(),
+        biBitCount = stream.read_ushort(),
         
-        biCompression = stream:Read_uint(),
-        biSizeImage   = stream:Read_uint(),
+        biCompression = stream.read_uint(),
+        biSizeImage   = stream.read_uint(),
         
-        biXPelsPerMeter = stream:Read_uint(), -- preferred resolution in pixels per meter
-        biYPelsPerMeter = stream:Read_uint(),
+        biXPelsPerMeter = stream.read_uint(), -- preferred resolution in pixels per meter
+        biYPelsPerMeter = stream.read_uint(),
         
-        biClrUsed      = stream:Read_uint(), -- number color map entries that are actually used
-        biClrImportant = stream:Read_uint(), -- number of significant colors
+        biClrUsed      = stream.read_uint(), -- number color map entries that are actually used
+        biClrImportant = stream.read_uint(), -- number of significant colors
     }
     
     
     if (BITMAPINFOHEADER.biSize ~= 40) then
-        error("bad argument #1 to '" .. __func__ .. "' (unsupported bitmap)", 2);
+        error("bad argument #1 to '" ..__func__.. "' (unsupported bitmap)", 2);
     elseif (BITMAPINFOHEADER.biPlanes ~= 1) then
-        error("bad argument #1 to '" .. __func__ .. "' (invalid number of planes)", 2);
+        error("bad argument #1 to '" ..__func__.. "' (invalid number of planes)", 2);
     end
     
     
@@ -297,7 +297,7 @@ function decode_bitmap_data(stream, ICONDIRENTRY)
     
     
     if (BITMAPINFOHEADER.biCompression ~= BI_RGB) then
-        error("bad argument #1 to '" .. __func__ .. "' (unsupported bitmap compression)", 2);
+        error("bad argument #1 to '" ..__func__.. "' (unsupported bitmap compression)", 2);
     end
     
     
@@ -318,9 +318,9 @@ function decode_bitmap_data(stream, ICONDIRENTRY)
         local colorTable = {}
         
         for i = 1, 2^bitsPerPixel do
-            colorTable[i] = stream:Read(3) .. ALPHA255_BYTE;
+            colorTable[i] = stream.read(3) .. ALPHA255_BYTE;
             
-            stream.Position = stream.Position+1; -- skip icReserved
+            stream.pos = stream.pos+1; -- skip icReserved
         end
         
         
@@ -331,7 +331,7 @@ function decode_bitmap_data(stream, ICONDIRENTRY)
                 local bitOffset = x%pixelsPerByte;
                 
                 if (bitOffset == 0) then
-                    byte = stream:Read_uchar();
+                    byte = stream.read_uchar();
                 end
                 
                 local index = bitExtract(byte, ((pixelsPerByte-1)-bitOffset)*bitsPerPixel, bitsPerPixel);
@@ -345,7 +345,7 @@ function decode_bitmap_data(stream, ICONDIRENTRY)
             -- pad remaining row space horizontally with transparent pixels
             pixelData[y*(width+1) + (width+1)] = string.rep(TRANSPARENT_PIXEL, textureWidth-width);
             
-            stream.Position = stream.Position+PADDING;
+            stream.pos = stream.pos+PADDING;
         end
     
     -- TO TAKE INTO CONSIDERATION (XRGB555 and RGB565):
@@ -364,33 +364,33 @@ function decode_bitmap_data(stream, ICONDIRENTRY)
     
         for y = startRow, endRow, step do
             for x = 0, width-1 do
-                pixelData[y*(width+1) + (x+1)] = stream:Read(3) .. ALPHA255_BYTE;
+                pixelData[y*(width+1) + (x+1)] = stream.read(3) .. ALPHA255_BYTE;
             end
             
             pixelData[y*(width+1) + (width+1)] = string.rep(TRANSPARENT_PIXEL, textureWidth-width);
             
-            stream.Position = stream.Position+PADDING;
+            stream.pos = stream.pos+PADDING;
         end
         
     elseif (bitsPerPixel == 32) then
     
         for y = startRow, endRow, step do
             for x = 0, width-1 do
-                pixelData[y*(width+1) + (x+1)] = stream:Read(4);
+                pixelData[y*(width+1) + (x+1)] = stream.read(4);
             end
             
             pixelData[y*(width+1) + (width+1)] = string.rep(TRANSPARENT_PIXEL, textureWidth-width);
             
-            stream.Position = stream.Position+PADDING;
+            stream.pos = stream.pos+PADDING;
         end
         
     else
-        error("bad argument #1 to '" .. __func__ .. "' (unsupported bitmap bit depth)", 2);
+        error("bad argument #1 to '" ..__func__.. "' (unsupported bitmap bit depth)", 2);
     end
     
     -- [ ========================== [ AND MASK (TRANSPARENCY) ] ========================== ]
     
-    if (hasANDMask or (stream.Position ~= ICONDIRENTRY.dwImageOffset + ICONDIRENTRY.dwBytesInRes)) then
+    if (hasANDMask or (stream.pos ~= ICONDIRENTRY.dwImageOffset + ICONDIRENTRY.dwBytesInRes)) then
         
         -- if bitsPerPixel == 1 PADDING remains the same as that for XOR mask
         if (bitsPerPixel ~= 1) then
@@ -404,7 +404,7 @@ function decode_bitmap_data(stream, ICONDIRENTRY)
                 local bitOffset = x%8;
                 
                 if (bitOffset == 0) then
-                    byte = stream:Read_uchar();
+                    byte = stream.read_uchar();
                 end
                 
                 if (bitExtract(byte, 7-bitOffset) == 1) then
@@ -412,7 +412,7 @@ function decode_bitmap_data(stream, ICONDIRENTRY)
                 end
             end
             
-            stream.Position = stream.Position+PADDING;
+            stream.pos = stream.pos+PADDING;
         end
         
     end

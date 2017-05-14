@@ -14,10 +14,10 @@ local ReadOnlyKeys = {} -- setmetatable({},ClassMetaTable);
 local function New(Object)
 	Base.New(Object);
 	
-	Object.BackgroundColor3 = Color3.New(255,255,255);
+	Object.BackgroundColor3 = Color3.new(255,255,255);
 	Object.BackgroundTransparency = 0;
 	
-	Object.BorderColor3 = Color3.New(27,42,53);
+	Object.BorderColor3 = Color3.new(27,42,53);
 	Object.BorderOffsetPixel = 1;
 	Object.BorderSizePixel = 1;
 	Object.BorderTransparency = 0;
@@ -120,19 +120,19 @@ end
 
 function NewIndexFunctions.Parent(Object,_Key,ParentProxy,PreviousParentProxy)
 	if (PreviousParentProxy ~= nil) and (PreviousParentProxy:IsA("GuiBase2D") == true) then
-		local PreviousParent = ProxyToObject[PreviousParentProxy];
+		local PreviousParent = PROXY__OBJ[PreviousParentProxy];
 		
 		PreviousParent.Draw();
 	end
 	
 	
 	if (ParentProxy ~= nil) and (ParentProxy:IsA("GuiBase2D") == true) then
-		local Parent = ProxyToObject[ParentProxy];
+		local Parent = PROXY__OBJ[ParentProxy];
 		
 		local ParentRenderTargetSize = Parent.RenderTargetSize;
 		if (ParentRenderTargetSize ~= Object.RenderTargetSize) then Functions.RecreateDescendantsRenderTarget(Object,ParentRenderTargetSize) end
 		
-		local Proxy = ObjectToProxy[Object];
+		local Proxy = OBJ__PROXY[Object];
 		
 		Proxy.Position = Object.Position;
 		Proxy.Size = Object.Size;
@@ -147,7 +147,7 @@ function NewIndexFunctions.Position(Object,Key,Position)
 	
 	local ParentProxy = Object.Parent;
 	if (ParentProxy ~= nil) then
-		local Parent = ProxyToObject[ParentProxy];
+		local Parent = PROXY__OBJ[ParentProxy];
 	
 		local ParentAbsolutePositionX,ParentAbsolutePositionY = Parent.AbsolutePosition.unpack();
 		local ParentAbsoluteSizeX,ParentAbsoluteSizeY = Parent.AbsoluteSize.unpack();
@@ -173,7 +173,7 @@ function NewIndexFunctions.Size(Object,Key,Size)
 	
 	local ParentProxy = Object.Parent;
 	if (ParentProxy ~= nil) then -- TO DO ASSERTION AS IN Frame.NewIndexFunctions.Parent
-		local Parent = ProxyToObject[ParentProxy];
+		local Parent = PROXY__OBJ[ParentProxy];
 		
 		local ParentAbsoluteSizeX,ParentAbsoluteSizeY = Parent.AbsoluteSize.unpack();
 		
@@ -188,7 +188,7 @@ function NewIndexFunctions.Size(Object,Key,Size)
 		local Children = Object.Children;	local ChildrenNumber = #Children;
 		if (ChildrenNumber > 0) then
 			for i = 1,ChildrenNumber do
-				local Child = Children[i];	local ChildProxy = ObjectToProxy[Child];
+				local Child = Children[i];	local ChildProxy = OBJ__PROXY[Child];
 				
 				ChildProxy.Position = Child.Position;
 				ChildProxy.Size = Child.Size;

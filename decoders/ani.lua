@@ -100,22 +100,22 @@ function decode_ani(bytes, ignoreInfo)
     end
     
     
-    local success, stream = pcall(Stream.New, bytes);
+    local success, stream = pcall(Stream.new, bytes);
     
     if (not success) then
-        error("bad argument #1 to '" ..__func__.. "' (could not create stream -> " ..stream.. ")", 2);
+        error("bad argument #1 to '" ..__func__.. "' (could not create stream) -> " ..stream, 2);
     end
     
-    if (stream:Read(4) ~= "RIFF") then
+    if (stream.read(4) ~= "RIFF") then
         error("bad argument #1 to '" ..__func__.. "' (invalid file format)", 2);
     end
     
     
-    local RIFF_Size = stream:Read_uint();
-    local RIFF_End = stream.Position + RIFF_Size;
+    local RIFF_Size = stream.read_uint();
+    local RIFF_End = stream.pos + RIFF_Size;
     
     
-    if (stream:Read(4) ~= "ACON") then
+    if (stream.read(4) ~= "ACON") then
         error("bad argument #1 to '" ..__func__.. "' (invalid file format)", 2);
     end
     
@@ -128,30 +128,30 @@ function decode_ani(bytes, ignoreInfo)
     local seq  = {}
     
     -- read all possible chunks (they can be stored in any order)
-    while (stream.Position ~= RIFF_End) do
+    while (stream.pos ~= RIFF_End) do
         
-        local ckID = stream:Read(4); -- chunk ID
+        local ckID = stream.read(4); -- chunk ID
         
-        local ckSize = stream:Read_uint(); -- chunk size
-        local ckEnd = stream.Position + ckSize; -- chunk end position
+        local ckSize = stream.read_uint(); -- chunk size
+        local ckEnd = stream.pos + ckSize; -- chunk end position
         
         if (ckID == "anih") then
         
             ANIHEADER = {
-                cbSize = stream:Read_uint(),
+                cbSize = stream.read_uint(),
                 
-                nFrames = stream:Read_uint(), -- number of stored frames
-                nSteps = stream:Read_uint(), -- number of steps (might contain duplicate frames, depends on seq  chunk)
+                nFrames = stream.read_uint(), -- number of stored frames
+                nSteps = stream.read_uint(), -- number of steps (might contain duplicate frames, depends on seq  chunk)
                 
-                iWidth = stream:Read_uint(),
-                iHeight = stream:Read_uint(),
+                iWidth = stream.read_uint(),
+                iHeight = stream.read_uint(),
                 
-                iBitCount = stream:Read_uint(),
-                nPlanes = stream:Read_uint(),
+                iBitCount = stream.read_uint(),
+                nPlanes = stream.read_uint(),
                 
-                iDispRate = stream:Read_uint(), -- display rate in jiffies (1 jiffy = 1/60 of a second)
+                iDispRate = stream.read_uint(), -- display rate in jiffies (1 jiffy = 1/60 of a second)
                 
-                bfAttributes = stream:Read_uint(),
+                bfAttributes = stream.read_uint(),
             }
             
             if (ANIHEADER.cbSize ~= 36) then
@@ -167,22 +167,22 @@ function decode_ani(bytes, ignoreInfo)
             
         elseif (ckID == "LIST") then
             
-            local LIST_Type = stream:Read(4);
+            local LIST_Type = stream.read(4);
             
             if (LIST_Type == "INFO") and (not ignoreInfo) then
             
-                while (stream.Position ~= ckEnd) do
+                while (stream.pos ~= ckEnd) do
                 
-                    local INFO_Type = stream:Read(4);
-                    local INFO_Size = stream:Read_uint();
+                    local INFO_Type = stream.read(4);
+                    local INFO_Size = stream.read_uint();
                     
                     local fieldName = INFO_FIELD_NAMES[INFO_Type] or INFO_Type;
                     
-                    LIST_INFO[fieldName] = stream:Read(INFO_Size);
+                    LIST_INFO[fieldName] = stream.read(INFO_Size);
                     
                     -- skip one byte padding if size is odd
                     if (INFO_Size%2 == 1) then
-                        stream.Position = stream.Position+1;
+                        stream.pos = stream.pos+1;
                     end
                 end
                 
@@ -197,15 +197,16 @@ function decode_ani(bytes, ignoreInfo)
                 end
                 
                 for i = 1, ANIHEADER.nFrames do
-                    if (stream:Read(4) ~= "icon") then
+                    if (stream.read(4) ~= "icon") then
                         error("bad argument #1 to '" ..__func__.. "' (invalid file format)", 2);
                     end
                     
-                    local frameSize = stream:Read_uint();
+                    local frameSize = stream.read_uint();
                     
-                    local success, frame = pcall(decode_ico, stream:Read(frameSize));
+                    local success, frame = pcall(decode_ico, stream.read(frameSize));
+                    
                     if (not success) then
-                        error("bad argument #1 to '" ..__func__.. "' (could not create decode frame -> " .. frame .. ")", 2);
+                        error("bad argument #1 to '" ..__func__.. "' (could not decode frame) -> " .. frame, 2);
                     end
                     
                     -- if hotspot data does not exist set to a default value
@@ -216,13 +217,13 @@ function decode_ani(bytes, ignoreInfo)
                     
                     -- one byte padding if size is odd
                     if (frameSize%2 == 1) then
-                        stream.Position = stream.Position+1;
+                        stream.pos = stream.pos+1;
                     end
                     
                 end
             else
                 -- unnecessary list, just skip it
-                stream.Position = ckEnd;
+                stream.pos = ckEnd;
             end
             
         elseif (ckID == "rate") then
@@ -233,7 +234,7 @@ function decode_ani(bytes, ignoreInfo)
             end
             
             for i = 1, ANIHEADER.nSteps do
-                rate[i] = stream:Read_uint();
+                rate[i] = stream.read_uint();
             end
             
         elseif (ckID == "seq ") then
@@ -243,17 +244,17 @@ function decode_ani(bytes, ignoreInfo)
             end
             
             for i = 1, ANIHEADER.nSteps do
-                seq [i] = stream:Read_uint()+1; -- add 1 to accomodate Lua index start
+                seq [i] = stream.read_uint()+1; -- add 1 to accomodate Lua index start
             end
             
         else
             -- unnecessary chunk, just skip it
-            stream.Position = ckEnd;
+            stream.pos = ckEnd;
         end
         
         -- one byte padding if chunk size is odd
         if (ckSize%2 == 1) then
-            stream.Position = stream.Position+1;
+            stream.pos = stream.pos+1;
         end
     end
     

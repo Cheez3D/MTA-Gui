@@ -22,7 +22,7 @@ local Class = {
 
 local MetaTable = {
 	__index = function(Proxy,Key)
-		local Object = ProxyToObject[Proxy];
+		local Object = PROXY__OBJ[Proxy];
 		
 		local StartingClass = Class.Inherited[Object.ClassName];	local CurrentClass;
 		
@@ -58,7 +58,7 @@ local MetaTable = {
 	end,
 	__metatable = "Instance",
 	__newindex = function(Proxy,Key,Value)
-		local Object = ProxyToObject[Proxy];
+		local Object = PROXY__OBJ[Proxy];
 		
 		-- local PreviousValue = Object[Key];
 		-- if (PreviousValue == Value) then return end
@@ -83,7 +83,7 @@ local MetaTable = {
 		else print(Proxy) print(Value) error("attempt to modify an invalid key ("..tostring(Key)..")",2) end
 	end,
 	__tostring = function(Proxy)
-		local Object = ProxyToObject[Proxy];
+		local Object = PROXY__OBJ[Proxy];
 		
 		return Object.ClassName.." "..Object.Name;
 	end
@@ -112,7 +112,7 @@ function Class.New(ClassName,ParentProxy)
 		Class.New(Object);
 		
 		local Proxy = setmetatable({},MetaTable);
-		ObjectToProxy[Object] = Proxy;	ProxyToObject[Proxy] = Object;
+		OBJ__PROXY[Object] = Proxy;	PROXY__OBJ[Proxy] = Object;
 		
 		Proxy.Parent = ParentProxy;
 		
@@ -128,7 +128,7 @@ do -- Class.Functions
 		local ClassNameType = type(ClassName);
 		if (ClassNameType ~= "string") then error("bad argument #2 to '"..__func__.."' (string expected, got "..ClassNameType..")",2) end
 		
-		local Object = ProxyToObject[Proxy];
+		local Object = PROXY__OBJ[Proxy];
 		
 		local CurrentClass = Class.Inherited[Object.ClassName];
 		while (CurrentClass ~= nil) do
@@ -147,7 +147,7 @@ do -- Class.NewIndexFunctions
 		if (NameType ~= "string") then error("bad argument #1 to '"..Key.."' (string expected, got "..NameType..")",3) end
 		
 		
-		local Parent = ProxyToObject[Object.Parent];
+		local Parent = PROXY__OBJ[Object.Parent];
 		
 		local ParentChildrenByName = Parent.ChildrenByName;
 		
@@ -172,7 +172,7 @@ do -- Class.NewIndexFunctions
 			local ParentProxyType = type(ParentProxy);
 			if (ParentProxyType ~= "Instance") then error("bad argument #1 to '"..Key.."' (Instance expected, got "..ParentProxyType..")",3) end
 			
-			local Parent = ProxyToObject[ParentProxy];
+			local Parent = PROXY__OBJ[ParentProxy];
 			
 			local Children = Object.Children;
 			for i = 1,#Children do
@@ -194,7 +194,7 @@ do -- Class.NewIndexFunctions
 		
 		
 		if (PreviousParentProxy ~= nil) then
-			local PreviousParent = ProxyToObject[PreviousParentProxy];
+			local PreviousParent = PROXY__OBJ[PreviousParentProxy];
 			
 			local PreviousParentChildren = PreviousParent.Children;
 			local PreviousParentChildrenByName = PreviousParent.ChildrenByName;
