@@ -1,3 +1,7 @@
+local UDim = require("UDim");
+
+
+
 local func = {}
 
 local new;
@@ -11,6 +15,12 @@ local meta = {
         
         local val = obj[key];
         if (val ~= nil) then -- val might be false so compare against nil
+        
+            -- if val is an object then return proxy instead
+            if (OBJ__PROXY[val]) then
+                val = OBJ__PROXY[val];
+            end
+            
             return val;
         end
     
@@ -65,6 +75,9 @@ local meta = {
 local MEM_PROXIES = setmetatable({}, { __mode = 'v' });
 
 function new(scaleX, offsetX, scaleY, offsetY)
+
+    -- [ ====================== [ ASSERTION ] ====================== ]
+    
     if (scaleX ~= nil) then
         local scaleXType = type(scaleX);
         
@@ -113,8 +126,8 @@ function new(scaleX, offsetX, scaleY, offsetY)
     
     if (not proxy) then
         local obj = {
-            x = UDim.new(scaleX, offsetX),
-            y = UDim.new(scaleY, offsetY),
+            x = PROXY__OBJ[UDim.new(scaleX, offsetX)],
+            y = PROXY__OBJ[UDim.new(scaleY, offsetY)],
         }
         
         proxy = setmetatable({}, meta);
@@ -130,34 +143,42 @@ end
 
 
 function func.unpack(obj)
-    local scaleX, offsetX = obj.x.unpack();
-    local scaleY, offsetY = obj.y.unpack();
+    local scaleX, offsetX = UDim.func.unpack(obj.x);
+    local scaleY, offsetY = UDim.func.unpack(obj.y);
     
     return scaleX, offsetX, scaleY, offsetY;
 end
 
 
 
-UDim2 = setmetatable({}, {
-    __metatable = "UDim2",
+return {
+    func = func,
+    
+    new = new,
+    
+    meta = meta,
+}
+
+-- UDim2 = setmetatable({}, {
+    -- __metatable = "UDim2",
     
     
-    __index = function(proxy, key)
-        return (key == "new") and new or nil;
-    end,
+    -- __index = function(proxy, key)
+        -- return (key == "new") and new or nil;
+    -- end,
     
-    __newindex = function(proxy, key)
-        error("attempt to modify a read-only key (" ..tostring(key).. ")", 2);
-    end,
+    -- __newindex = function(proxy, key)
+        -- error("attempt to modify a read-only key (" ..tostring(key).. ")", 2);
+    -- end,
     
     
-    __call = function(proxy, ...)
-        local success, result = pcall(new, ...);
+    -- __call = function(proxy, ...)
+        -- local success, result = pcall(new, ...);
         
-        if (not success) then
-            error("call error", 2);
-        end
+        -- if (not success) then
+            -- error("call error", 2);
+        -- end
         
-        return result;
-    end,
-});
+        -- return result;
+    -- end,
+-- });

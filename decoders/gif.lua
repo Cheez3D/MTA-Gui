@@ -57,6 +57,10 @@
             
 --[ ============================================================================================== ]]
 
+local Stream = require("Stream");
+
+
+
 local math = math;
 local string = string;
 
@@ -113,26 +117,10 @@ function decode_gif(bytes, ignoreComments)
     
     
     
-    -- function can also be supplied with a file path instead of raw data
-    -- we treat variable bytes as a file path to see if the file exists
-    if (fileExists(bytes)) then
-        local f = fileOpen(bytes, true); -- open file read-only
-        
-        if (not f) then
-            error("bad argument #1 to '" ..__func__.. "' (cannot open file)", 2);
-        end
-        
-        -- if file exists then we substitute bytes with the contents of the file located in the path supplied
-        bytes = fileRead(f, fileGetSize(f));
-        
-        fileClose(f);
-    end
-    
-    
     local success, stream = pcall(Stream.new, bytes);
     
     if (not success) then
-        error("bad argument #1 to '" ..__func__.. "' (could not create stream) -> " ..stream, 2);
+        error("bad argument #1 to '" ..__func__.. "' (could not create stream)\n-> " ..stream, 2);
     end
     
     
@@ -466,6 +454,9 @@ function decode_gif(bytes, ignoreComments)
         
         identifier = stream.read_uchar();
     end
+    
+    stream.close();
+    
     
     return frames;
 end

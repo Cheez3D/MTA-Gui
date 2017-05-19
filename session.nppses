@@ -1,14 +1,13 @@
 <NotepadPlus>
-    <Session activeView="1">
-        <mainView activeIndex="2">
-            <File firstVisibleLine="0" xOffset="0" scrollWidth="1211" startPos="1488" endPos="1488" selMode="0" lang="Normal Text" encoding="-1" filename="D:\Users\Andrei\Google Drive\Resources\Favorite-Music.txt" backupFilePath="" originalFileLastModifTimestamp="1494436250" />
-            <File firstVisibleLine="0" xOffset="0" scrollWidth="1211" startPos="1020" endPos="1020" selMode="0" lang="XML" encoding="-1" filename="D:\Users\Andrei\Projects\MTA San Andreas\Gui\Meta.xml" backupFilePath="" originalFileLastModifTimestamp="1494436574" />
-            <File firstVisibleLine="217" xOffset="0" scrollWidth="1211" startPos="8052" endPos="8052" selMode="0" lang="Lua" encoding="-1" filename="D:\Users\Andrei\Projects\MTA San Andreas\Gui\decoders\ani.lua" backupFilePath="" originalFileLastModifTimestamp="1494437112" />
+    <Session activeView="0">
+        <mainView activeIndex="1">
+            <File firstVisibleLine="24" xOffset="0" scrollWidth="1267" startPos="2436" endPos="2436" selMode="0" lang="Normal Text" encoding="-1" filename="D:\Users\Andrei\Google Drive\Resources\Favorite-Music.txt" backupFilePath="" originalFileLastModifTimestamp="1495215817" />
+            <File firstVisibleLine="0" xOffset="0" scrollWidth="1267" startPos="798" endPos="798" selMode="0" lang="XML" encoding="-1" filename="D:\Users\Andrei\Projects\MTA San Andreas\Gui\meta.xml" backupFilePath="" originalFileLastModifTimestamp="1495215591" />
         </mainView>
-        <subView activeIndex="1">
-            <File firstVisibleLine="67" xOffset="0" scrollWidth="1036" startPos="3387" endPos="3387" selMode="0" lang="Lua" encoding="-1" filename="D:\Users\Andrei\Projects\MTA San Andreas\Gui\decoders\gif.lua" backupFilePath="" originalFileLastModifTimestamp="1494436941" />
-            <File firstVisibleLine="55" xOffset="0" scrollWidth="1036" startPos="3269" endPos="3269" selMode="0" lang="Lua" encoding="-1" filename="D:\Users\Andrei\Projects\MTA San Andreas\Gui\decoders\ico.lua" backupFilePath="" originalFileLastModifTimestamp="1494436946" />
-            <File firstVisibleLine="0" xOffset="0" scrollWidth="1036" startPos="0" endPos="0" selMode="0" lang="Normal Text" encoding="-1" filename="D:\Games\MTA San Andreas 1.5\mods\deathmatch\resources\Gui\Testers\out.txt" backupFilePath="" originalFileLastModifTimestamp="1493206781" />
+        <subView activeIndex="2">
+            <File firstVisibleLine="0" xOffset="0" scrollWidth="770" startPos="0" endPos="0" selMode="0" lang="Normal Text" encoding="-1" filename="D:\Games\MTA San Andreas 1.5\mods\deathmatch\resources\Gui\out.txt" backupFilePath="" originalFileLastModifTimestamp="1493313796" />
+            <File firstVisibleLine="674" xOffset="0" scrollWidth="1036" startPos="26839" endPos="26839" selMode="0" lang="Lua" encoding="-1" filename="D:\Users\Andrei\Projects\MTA San Andreas\Gui\decoders\gif.lua" backupFilePath="" originalFileLastModifTimestamp="1495215905" />
+            <File firstVisibleLine="184" xOffset="0" scrollWidth="1036" startPos="4797" endPos="4797" selMode="0" lang="Lua" encoding="-1" filename="D:\Users\Andrei\Projects\MTA San Andreas\Gui\classes\Vector2.lua" backupFilePath="" originalFileLastModifTimestamp="1495200836" />
         </subView>
     </Session>
 </NotepadPlus>

@@ -12,10 +12,6 @@ if (not IS_CLIENT) then return end
 SCREEN_WIDTH, SCREEN_HEIGHT = guiGetScreenSize();
 
 
-PROXY__OBJ = setmetatable({}, { __mode = 'k' });
-OBJ__PROXY = setmetatable({}, { __mode = 'v' });
-
-
 
 setmetatable(_G, {
     __index = function(tbl, key)

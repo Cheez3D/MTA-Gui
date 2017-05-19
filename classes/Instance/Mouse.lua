@@ -95,15 +95,16 @@ function Mouse.New(Object)
     end
     addEventHandler("onClientPreRender",root,Object.Render);
     
+    
     do
-        local MoveConnections,MoveTrigger;
-        Object.Move,MoveConnections,MoveTrigger = Signal.New();
+        -- local MoveConnections,MoveTrigger;
+        -- Object.Move,MoveConnections,MoveTrigger = Signal.New();
         
         addEventHandler("onClientCursorMove",root,function(_RelativeCursorX,_RelativeCursorY,AbsoluteCursorX,AbsoluteCursorY)
             Object.X = AbsoluteCursorX;
             Object.Y = AbsoluteCursorY;
             
-            MoveTrigger(AbsoluteCursorX,AbsoluteCursorY);
+            -- MoveTrigger(AbsoluteCursorX,AbsoluteCursorY);
         end);
     end
 end

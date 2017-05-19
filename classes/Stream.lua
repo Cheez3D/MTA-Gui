@@ -1,3 +1,9 @@
+local string = string;
+
+local fileRead = fileRead;
+
+
+
 local CHAR_MASK  = 2^7;
 local SHORT_MASK = 2^15;
 local INT_MASK   = 2^31;
@@ -9,6 +15,8 @@ local get  = {}
 local set  = {}
 
 local private = {
+    isFile = true,
+    
     bytes = true,
 }
 
@@ -63,13 +71,24 @@ local meta = {
 
 function new(bytes)
 	local bytesType = type(bytes);
-	if (bytesType ~= "string") then error("bad argument #1 to '"..__func__.."' (string expected, got "..bytesType..")",2) end
+	if (bytesType ~= "string") then error("bad argument #1 to '" ..__func__.. "' (string expected, got " ..bytesType.. ")",2) end
 	
 	
+    local isFile = fileExists(bytes);
+    local file;
+    
+    if (isFile) then
+        file = fileOpen(bytes);
+    end
+    
 	local obj = {
-		bytes = bytes,
+        isFile = isFile,
+        
+		bytes = isFile and file or bytes,
 		
-		pos = 0, size = #bytes,
+		pos = 0,
+        
+        size = isFile and fileGetSize(file) or #bytes,
 	}
 	
 	local proxy = setmetatable({}, meta);
@@ -86,7 +105,7 @@ function func.read(obj, count)
         local countType = type(count);
         
         if (countType ~= "number") then
-            error("bad argument #2 to '" ..__func__.. "' (number expected, got "..countType..")", 2);
+            error("bad argument #2 to '" ..__func__.. "' (number expected, got " ..countType.. ")", 2);
         elseif (count < 0) then
             error("bad argument #2 to '" ..__func__.. "' (value out of bounds)", 2);
         end
@@ -106,46 +125,67 @@ function func.read(obj, count)
     
     obj.pos = nextPos;
     
-    return string.sub(obj.bytes, prevPos+1, nextPos);
+    return obj.isFile and fileRead(obj.bytes, count) or string.sub(obj.bytes, prevPos+1, nextPos);
 end
 
 function func.read_uchar(obj)    
     return string.byte(func.read(obj, 1));
 end
 
-function func.read_ushort(obj, isLittleEndian)
-    isLittleEndian = isLittleEndian or true; -- TODO: change this into proper assertion
+function func.read_ushort(obj, isLE)
+    isLE = isLE or true; -- TODO: change this into proper assertion
     
     local uchar1 = func.read_uchar(obj);
     local uchar2 = func.read_uchar(obj);
     
-    return (isLittleEndian) and 0x100 * uchar2
-                              +         uchar1
-                            
-                            or  0x100 * uchar1
-                              +         uchar2;
+    return (isLE) and 0x100 * uchar2
+                    +         uchar1
+                  
+                   or 0x100 * uchar1
+                    +         uchar2;
 end
 
-function func.read_uint(obj, isLittleEndian)
-    isLittleEndian = isLittleEndian or true; -- TODO: change this into proper assertion
+function func.read_uint(obj, isLE)
+    isLE = isLE or true; -- TODO: change this into proper assertion
     
-    local ushort1 = func.read_ushort(obj, isLittleEndian);
-    local ushort2 = func.read_ushort(obj, isLittleEndian);
+    local ushort1 = func.read_ushort(obj, isLE);
+    local ushort2 = func.read_ushort(obj, isLE);
     
 
-    return (isLittleEndian) and 0x10000 * ushort2
-                              +           ushort1
+    return (isLE) and 0x10000 * ushort2
+                    +           ushort1
                             
-                            or  0x10000 * ushort1
-                              +           ushort2;
+                   or 0x10000 * ushort1
+                    +           ushort2;
 end
 
-function func.read_int(obj, isLittleEndian)
-    local uint = func.read_uint(obj, isLittleEndian);
+
+-- convert unsigned to signed
+-- using MASKS to determine if MSB is 1 or 0
+
+function func.read_char(obj)
+    local uchar = func.read_uchar(obj);
     
-    -- convert unsigned to signed
-    -- using INT_MASK to determine if MSB is 1 or 0
+    return uchar-2*bitAnd(uchar, CHAR_MASK);
+end
+
+function func.read_short(obj, isLE)
+    local ushort = func.read_ushort(obj, isLE);
+    
+    return ushort-2*bitAnd(ushort, SHORT_MASK);
+end
+
+function func.read_int(obj, isLE)
+    local uint = func.read_uint(obj, isLE);
+    
     return uint-2*bitAnd(uint, INT_MASK);
+end
+
+
+function func.close(obj)
+    if (obj.isFile) then
+        fileClose(obj.bytes);
+    end
 end
 
 
@@ -173,31 +213,48 @@ function set.pos(obj, key, pos)
     end
     
     
+    if (obj.isFile) then
+        fileSetPos(obj.bytes, pos);
+    end
+    
     obj.pos = pos;
 end
 
 
 
-Stream = setmetatable({}, {
-    __metatable = "Stream",
+return {
+    func = func,
+    get  = get,
+    set  = set,
+    
+    private  = private,
+    readonly = readonly,
+    
+    new = new,
+    
+    meta = meta,
+}
+
+-- Stream = setmetatable({}, {
+    -- __metatable = "Stream",
     
     
-    __index = function(proxy, key)
-        return (key == "new") and new or nil;
-    end,
+    -- __index = function(proxy, key)
+        -- return (key == "new") and new or nil;
+    -- end,
     
-    __newindex = function(proxy, key)
-        error("attempt to modify a read-only key (" ..tostring(key).. ")", 2);
-    end,
+    -- __newindex = function(proxy, key)
+        -- error("attempt to modify a read-only key (" ..tostring(key).. ")", 2);
+    -- end,
     
     
-    __call = function(proxy, ...)
-        local success, result = pcall(new, ...);
+    -- __call = function(proxy, ...)
+        -- local success, result = pcall(new, ...);
         
-        if (not success) then
-            error("call error", 2);
-        end
+        -- if (not success) then
+            -- error("call error", 2);
+        -- end
         
-        return result;
-    end,
-});
+        -- return result;
+    -- end,
+-- });

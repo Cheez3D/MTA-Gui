@@ -1,8 +1,6 @@
 local func = {}
 local get  = {}
 
-
-
 local meta = {
     __metatable = "Color3",
     
@@ -125,26 +123,35 @@ end
 
 
 
-Color3 = setmetatable({}, {
-    __metatable = "Color3",
+return {
+    func = func,
+    get  = get,
+    
+    new = new,
+    
+    meta = meta,
+}
+
+-- Color3 = setmetatable({}, {
+    -- __metatable = "Color3",
     
     
-    __index = function(proxy, key)
-        return (key == "new") and new or nil;
-    end,
+    -- __index = function(proxy, key)
+        -- return (key == "new") and new or nil;
+    -- end,
     
-    __newindex = function(proxy, key)
-        error("attempt to modify a read-only key (" ..tostring(key).. ")", 2);
-    end,
+    -- __newindex = function(proxy, key)
+        -- error("attempt to modify a read-only key (" ..tostring(key).. ")", 2);
+    -- end,
     
     
-    __call = function(proxy, ...)
-        local success, result = pcall(new, ...);
+    -- __call = function(proxy, ...)
+        -- local success, result = pcall(new, ...);
         
-        if (not success) then
-            error("call error", 2);
-        end
+        -- if (not success) then
+            -- error("call error", 2);
+        -- end
         
-        return result;
-    end,
-});
+        -- return result;
+    -- end,
+-- });

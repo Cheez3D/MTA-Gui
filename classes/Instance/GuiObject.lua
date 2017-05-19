@@ -1,3 +1,8 @@
+local Color3  = require("Color3");
+local Vector2 = require("Vector2");
+
+
+
 local Base = GuiBase2D;
 
 local Name = "GuiObject";

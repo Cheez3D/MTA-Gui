@@ -63,6 +63,10 @@
 
 [=========================================================================================] ]]
 
+local Stream = require("Stream");
+
+
+
 local INFO_FIELD_NAMES = { IART = "artist", ICOP = "copyright", INAM = "name" }
 
 
@@ -89,21 +93,10 @@ function decode_ani(bytes, ignoreInfo)
     
     
     
-    -- function can also be supplied with a file path instead of raw data
-    -- we treat variable bytes as a file path to see if the file exists
-    if (fileExists(bytes)) then
-        local f = fileOpen(bytes, true); -- open file read-only
-        
-        bytes = fileRead(f, fileGetSize(f));
-        
-        fileClose(f);
-    end
-    
-    
     local success, stream = pcall(Stream.new, bytes);
     
     if (not success) then
-        error("bad argument #1 to '" ..__func__.. "' (could not create stream) -> " ..stream, 2);
+        error("bad argument #1 to '" ..__func__.. "' (could not create stream)\n-> " ..stream, 2);
     end
     
     if (stream.read(4) ~= "RIFF") then
@@ -206,7 +199,7 @@ function decode_ani(bytes, ignoreInfo)
                     local success, frame = pcall(decode_ico, stream.read(frameSize));
                     
                     if (not success) then
-                        error("bad argument #1 to '" ..__func__.. "' (could not decode frame) -> " .. frame, 2);
+                        error("bad argument #1 to '" ..__func__.. "' (could not decode frame)\n-> " .. frame, 2);
                     end
                     
                     -- if hotspot data does not exist set to a default value
@@ -257,6 +250,8 @@ function decode_ani(bytes, ignoreInfo)
             stream.pos = stream.pos+1;
         end
     end
+    
+    stream.close();
     
     
     local aniVariants = {}
