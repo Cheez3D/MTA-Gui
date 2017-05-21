@@ -44,7 +44,7 @@
     
 --[ ============================================================================================================================================= ]]
 
-local Stream = require("Stream");
+-- local Stream = require("Stream");
 
 
 
@@ -183,6 +183,8 @@ function decode_ico(bytes)
             return (first.height < second.height) or (first.width < second.width);
         end);
     end
+    
+    icoVariants.type = ICONDIR.isCUR and "cur" or "ico";
     
     return icoVariants;
 end

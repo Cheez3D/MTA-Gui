@@ -213,7 +213,7 @@ end
 
 
 
-return {
+Vector2 = {
     func = func,
     get  = get,
     

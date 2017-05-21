@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
+
 <meta>
     <info author="Cheez" name="mtasa-gui" description="" type="resource" version=""/>
     <min_mta_version client="1.3.5-9.06178.0" server="1.3.5-9.06178.0"/>
@@ -29,6 +30,8 @@
     <file src="decoders/ico/invalid-compression.ico"/>
     <file src="decoders/ico/256x256-1bpp.ico"/>
     
+    <file src="decoders/ani/windows-4bpp.ani"/>
+    
     
     <file src="cursors/arrow_i.cur"/>
     <file src="cursors/arrow_r.cur"/>
@@ -40,8 +43,8 @@
     <file src="cursors/PulseGlass/move.cur"/>
     <file src="cursors/PulseGlass/precision.cur"/>
     <file src="cursors/PulseGlass/size-ew.cur"/>
-    <file src="cursors/PulseGlass/size-nesw.cur"/>
     <file src="cursors/PulseGlass/size-ns.cur"/>
+    <file src="cursors/PulseGlass/size-nesw.cur"/>
     <file src="cursors/PulseGlass/size-nwse.cur"/>
     <file src="cursors/PulseGlass/beam.cur"/>
     <file src="cursors/PulseGlass/unavailable.cur"/>
@@ -55,16 +58,16 @@
     <!-- <file src="test.lua"/> -->
     
     
-    <script src="require.lua" type="shared"/>
+    <script src="require.lua"  type="shared"/>
     <script src="isolator.lua" type="shared"/>
     
     <script src="enums.lua" type="shared"/>
     
-    <file src="classes/Stream.lua"/>
-    <file src="classes/Color3.lua"/>
-    <file src="classes/UDim.lua"/>
-    <file src="classes/UDim2.lua"/>
-    <file src="classes/Vector2.lua"/>
+    <script src="classes/Stream.lua"  type="client"/>
+    <script src="classes/Color3.lua"  type="client"/>
+    <script src="classes/UDim.lua"    type="client"/>
+    <script src="classes/UDim2.lua"   type="client"/>
+    <script src="classes/Vector2.lua" type="client"/>
     
     <script src="decoders/ico.lua" type="client"/>
     <script src="decoders/ani.lua" type="client"/>
@@ -78,8 +81,8 @@
     <script src="classes/Instance/GuiBase2D.lua" type="client"/>
     <script src="classes/Instance/GuiObject.lua" type="client"/>
     <script src="classes/Instance/ScreenGui.lua" type="client"/>
-    <script src="classes/Instance/Frame.lua" type="client"/>
-    <script src="classes/Instance/Image.lua" type="client"/>
+    <script src="classes/Instance/Frame.lua"     type="client"/>
+    <script src="classes/Instance/Image.lua"     type="client"/>
     
     
     <script src="init-end.lua" type="client"/>

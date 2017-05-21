@@ -75,10 +75,11 @@ function new(bytes)
 	
 	
     local isFile = fileExists(bytes);
+    
     local file;
     
     if (isFile) then
-        file = fileOpen(bytes);
+        file = fileOpen(bytes, true);
     end
     
 	local obj = {
@@ -222,7 +223,7 @@ end
 
 
 
-return {
+Stream = {
     func = func,
     get  = get,
     set  = set,

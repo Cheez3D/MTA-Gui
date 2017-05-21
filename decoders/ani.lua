@@ -6,6 +6,8 @@
     RETURNED TABLE STRUCTURE:
     
     {
+        type = "ani",
+        
         -- OPTIONAL: only if ani contains any info and ignoreInfo is false, otherwise nil
         [ name = "Cursor Name",
           artist = "Artist Name",
@@ -63,7 +65,7 @@
 
 [=========================================================================================] ]]
 
-local Stream = require("Stream");
+-- local Stream = require("Stream");
 
 
 
@@ -288,6 +290,8 @@ function decode_ani(bytes, ignoreInfo)
         end
         
     end
+    
+    aniVariants.type = "ani";
     
     return aniVariants;
 end

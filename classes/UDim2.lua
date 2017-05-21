@@ -1,4 +1,4 @@
-local UDim = require("UDim");
+-- local UDim = require("UDim");
 
 
 
@@ -151,7 +151,7 @@ end
 
 
 
-return {
+UDim2 = {
     func = func,
     
     new = new,
@@ -159,7 +159,8 @@ return {
     meta = meta,
 }
 
--- UDim2 = setmetatable({}, {
+
+-- return setmetatable({}, {
     -- __metatable = "UDim2",
     
     

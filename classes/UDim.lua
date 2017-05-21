@@ -113,7 +113,7 @@ end
 
 
 
-return {
+UDim = {
     func = func,
     
     new = new,

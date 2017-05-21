@@ -6,6 +6,10 @@
     RETURNED TABLE STRUCTURE (EXAMPLE):
 
     {
+        type = "gif",
+        
+        isAnimation = true,
+        
         -- OPTIONAL: only if gif contains any comments and ignoreComments is false, otherwise nil
         [ comments = {
             [1] = "Hello world",
@@ -13,7 +17,7 @@
             ...
         }, ]
         
-        -- OPTIONAL: only if gif is animation, otherwise nil
+        -- OPTIONAL: only if isAnimation == true, otherwise nil
         [ loopCount = 2, ]
         
         width = 30, height = 60,
@@ -21,14 +25,15 @@
         [1] = {
             image = userdata,
             
-            -- OPTIONAL: only if gif is animation, otherwise nil
+            -- OPTIONAL: only if isAnimation == true, otherwise nil
             [ delay = 40, ] -- in milliseconds
         },
         
         [2] = {
             image = userdata,
             
-            delay = 100,
+            -- OPTIONAL: only if isAnimation == true, otherwise nil
+            [ delay = 100, ] -- in milliseconds
         },
         
         ...
@@ -57,7 +62,7 @@
             
 --[ ============================================================================================== ]]
 
-local Stream = require("Stream");
+-- local Stream = require("Stream");
 
 
 
@@ -190,6 +195,8 @@ function decode_gif(bytes, ignoreComments)
     end
     
     
+    local isAnimation = false;
+    
     local gce; -- current graphic control extension in use
     
     local canvas;
@@ -255,6 +262,8 @@ function decode_gif(bytes, ignoreComments)
                         local ID = stream.read_uchar();
                         
                         if (ID == NETSCAPE_LOOP_COUNT) then
+                            isAnimation = true;
+                            
                             frames.loopCount = stream.read_ushort();
                         end
                     end
@@ -448,7 +457,7 @@ function decode_gif(bytes, ignoreComments)
             frames[#frames+1] = {
                 image = frame,
                 
-                delay = gce and 10*gce.delayTime, -- multiply by 10 to get delay time in millisecodns
+                delay = gce and isAnimation and 10*gce.delayTime, -- multiply by 10 to get delay time in millisecodns
             }
         end
         
@@ -457,6 +466,9 @@ function decode_gif(bytes, ignoreComments)
     
     stream.close();
     
+    frames.type = "gif";
+    
+    frames.isAnimation = true;
     
     return frames;
 end

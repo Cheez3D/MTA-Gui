@@ -123,7 +123,7 @@ end
 
 
 
-return {
+Color3 = {
     func = func,
     get  = get,
     
