@@ -69,9 +69,11 @@
     <script src="classes/UDim2.lua"   type="client"/>
     <script src="classes/Vector2.lua" type="client"/>
     
+    <script src="decoders/png.lua" type="client"/>
+    <script src="decoders/jpg.lua" type="client"/>
+    <script src="decoders/gif.lua" type="client"/>
     <script src="decoders/ico.lua" type="client"/>
     <script src="decoders/ani.lua" type="client"/>
-    <script src="decoders/gif.lua" type="client"/>
     
     
     <script src="classes/Instance.lua" type="client"/>

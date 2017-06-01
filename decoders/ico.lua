@@ -6,6 +6,8 @@
     RETURNED TABLE STRUCTURE (EXAMPLE):
     
     {
+        type = "ico" / "cur", 
+        
         [1] = {
             width = 16, height = 16,
             
@@ -178,11 +180,11 @@ function decode_ico(bytes)
     stream.close();
     
     
-    if (#icoVariants > 1) then
-        table.sort(icoVariants, function(first, second)
-            return (first.height < second.height) or (first.width < second.width);
-        end);
-    end
+    -- if (#icoVariants > 1) then
+        -- table.sort(icoVariants, function(first, second)
+            -- return (first.height < second.height) or (first.width < second.width);
+        -- end);
+    -- end
     
     icoVariants.type = ICONDIR.isCUR and "cur" or "ico";
     
@@ -194,8 +196,8 @@ end
 function decode_png_data(stream, ICONDIRENTRY)
     stream.pos = stream.pos+16;
     
-    local width  = stream.read_uint(false);
-    local height = stream.read_uint(false);
+    local width  = stream.read_uint(true);
+    local height = stream.read_uint(true);
     
     -- round image width and height to the nearest powers of two
     -- to avoid bulrring when creating texture
@@ -429,8 +431,8 @@ end
 
 
 
--- local ico = decode_ico("decoders/ico/256x256-1bpp.ico");
--- ico = ico[#ico];
+-- local ico = decode_ico("decoders/ico/chrome-png.ico");
+-- ico = ico[1];
 
 -- addEventHandler("onClientRender", root, function()
     -- dxDrawImage(200, 200, ico.width, ico.height, ico.image);

@@ -6,8 +6,6 @@
     RETURNED TABLE STRUCTURE (EXAMPLE):
 
     {
-        type = "gif",
-        
         isAnimation = true,
         
         -- OPTIONAL: only if gif contains any comments and ignoreComments is false, otherwise nil
@@ -22,18 +20,21 @@
         
         width = 30, height = 60,
         
+        -- FOR isAnimation = false
+        image = userdata,
+        
+        -- FOR isAnimation = true
         [1] = {
             image = userdata,
             
             -- OPTIONAL: only if isAnimation == true, otherwise nil
-            [ delay = 40, ] -- in milliseconds
+            [ delay = 10, ] -- in milliseconds
         },
         
         [2] = {
             image = userdata,
             
-            -- OPTIONAL: only if isAnimation == true, otherwise nil
-            [ delay = 100, ] -- in milliseconds
+            [ delay = 100, ]
         },
         
         ...
@@ -225,7 +226,7 @@ function decode_gif(bytes, ignoreComments)
                     
                     fields = stream.read_uchar(),
                     
-                    delayTime = stream.read_ushort(),
+                    delay = stream.read_ushort(),
                     
                     transparentColorIndex = stream.read_uchar(),
                 }
@@ -399,9 +400,9 @@ function decode_gif(bytes, ignoreComments)
             
             -- copy canvas state to a new render target to be saved in the frames table
             
-            local frame = dxCreateRenderTarget(lsd.canvasWidth, lsd.canvasHeight, (version == "89a"));
+            local image = dxCreateRenderTarget(lsd.canvasWidth, lsd.canvasHeight, (version == "89a"));
             
-            dxSetRenderTarget(frame);
+            dxSetRenderTarget(image);
             dxDrawImage(0, 0, lsd.canvasWidth, lsd.canvasHeight, canvas);
             
             
@@ -454,11 +455,13 @@ function decode_gif(bytes, ignoreComments)
             
             -- insert newly obtained frame into frames table
             
-            frames[#frames+1] = {
-                image = frame,
-                
-                delay = gce and isAnimation and 10*gce.delayTime, -- multiply by 10 to get delay time in millisecodns
-            }
+            local frame = {}
+            
+            frame.image = image;
+            
+            frame.delay = gce and isAnimation and 10*gce.delay; -- multiply by 10 to get delay in milliseconds
+            
+            frames[#frames+1] = frame;
         end
         
         identifier = stream.read_uchar();
@@ -466,9 +469,7 @@ function decode_gif(bytes, ignoreComments)
     
     stream.close();
     
-    frames.type = "gif";
-    
-    frames.isAnimation = true;
+    frames.isAnimation = isAnimation;
     
     return frames;
 end

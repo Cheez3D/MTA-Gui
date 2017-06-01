@@ -106,9 +106,9 @@ function func.read(obj, count)
         local countType = type(count);
         
         if (countType ~= "number") then
-            error("bad argument #2 to '" ..__func__.. "' (number expected, got " ..countType.. ")", 2);
+            error("bad argument #1 to '" ..__func__.. "' (number expected, got " ..countType.. ")", 2);
         elseif (count < 0) then
-            error("bad argument #2 to '" ..__func__.. "' (value out of bounds)", 2);
+            error("bad argument #1 to '" ..__func__.. "' (value out of bounds)", 2);
         end
         
         count = math.floor(count);
@@ -133,31 +133,49 @@ function func.read_uchar(obj)
     return string.byte(func.read(obj, 1));
 end
 
-function func.read_ushort(obj, isLE)
-    isLE = isLE or true; -- TODO: change this into proper assertion
+function func.read_ushort(obj, bigEndian)
+    if (bigEndian ~= nil) then
+        local bigEndianType = type(bigEndian);
+        
+        if (bigEndianType ~= "boolean") then
+            error("bad argument #1 to '" ..__func__.. "' (boolean expected, got " ..bigEndianType.. ")", 2);
+        end
+    else
+        bigEndian = false;
+    end
+    
     
     local uchar1 = func.read_uchar(obj);
     local uchar2 = func.read_uchar(obj);
     
-    return (isLE) and 0x100 * uchar2
-                    +         uchar1
-                  
-                   or 0x100 * uchar1
-                    +         uchar2;
+    return (bigEndian) and 0x100 * uchar1
+                         +         uchar2
+                         
+                        or         uchar1
+                         + 0x100 * uchar2;
 end
 
-function func.read_uint(obj, isLE)
-    isLE = isLE or true; -- TODO: change this into proper assertion
+function func.read_uint(obj, bigEndian)
+    if (bigEndian ~= nil) then
+        local bigEndianType = type(bigEndian);
+        
+        if (bigEndianType ~= "boolean") then
+            error("bad argument #1 to '" ..__func__.. "' (boolean expected, got " ..bigEndianType.. ")", 2);
+        end
+    else
+        bigEndian = false;
+    end
     
-    local ushort1 = func.read_ushort(obj, isLE);
-    local ushort2 = func.read_ushort(obj, isLE);
+    
+    local ushort1 = func.read_ushort(obj, bigEndian);
+    local ushort2 = func.read_ushort(obj, bigEndian);
     
 
-    return (isLE) and 0x10000 * ushort2
-                    +           ushort1
-                            
-                   or 0x10000 * ushort1
-                    +           ushort2;
+    return (bigEndian) and 0x10000 * ushort1
+                         +           ushort2
+                         
+                        or           ushort1
+                         + 0x10000 * ushort2;
 end
 
 
@@ -170,14 +188,14 @@ function func.read_char(obj)
     return uchar-2*bitAnd(uchar, CHAR_MASK);
 end
 
-function func.read_short(obj, isLE)
-    local ushort = func.read_ushort(obj, isLE);
+function func.read_short(obj, bigEndian)
+    local ushort = func.read_ushort(obj, bigEndian);
     
     return ushort-2*bitAnd(ushort, SHORT_MASK);
 end
 
-function func.read_int(obj, isLE)
-    local uint = func.read_uint(obj, isLE);
+function func.read_int(obj, bigEndian)
+    local uint = func.read_uint(obj, bigEndian);
     
     return uint-2*bitAnd(uint, INT_MASK);
 end

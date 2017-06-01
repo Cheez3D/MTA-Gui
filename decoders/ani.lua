@@ -6,8 +6,6 @@
     RETURNED TABLE STRUCTURE:
     
     {
-        type = "ani",
-        
         -- OPTIONAL: only if ani contains any info and ignoreInfo is false, otherwise nil
         [ name = "Cursor Name",
           artist = "Artist Name",
@@ -19,7 +17,7 @@
                 
                 hotspotX = 0, hotspotY = 0,
                 
-                rate = 5,
+                rate = 5, -- in jiffies (1 jiffy = 1/60 s = 16.66 ms)
                 
                 image = userdata
             },
@@ -229,7 +227,7 @@ function decode_ani(bytes, ignoreInfo)
             end
             
             for i = 1, ANIHEADER.nSteps do
-                rate[i] = stream.read_uint();
+                rate[i] = stream.read_uint(); -- in jiffies (1 jiffy = 1/60 s = 16.66 ms)
             end
             
         elseif (ckID == "seq ") then
@@ -285,13 +283,14 @@ function decode_ani(bytes, ignoreInfo)
             
             frame[sizeID].rate = rate;
             
+            -- frame[sizeID].fps  = 60/rate;
+            -- frame[sizeID].fpms = frame[sizeID].fps/1000;
+            
             aniVariants[sizeID][step] = frame[sizeID];
             
         end
         
     end
-    
-    aniVariants.type = "ani";
     
     return aniVariants;
 end
