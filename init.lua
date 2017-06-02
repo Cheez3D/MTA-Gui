@@ -84,25 +84,29 @@ end
 OUT  = fileOpen("out.txt");
 FILE = fileOpen("file.txt");
 
-function printfunc(f, ...)
+function print_func(f, ...)
     local strings = { ... }
     
     for i = 1, #strings do
         strings[i] = tostring(strings[i]);
     end
 
-    f(table.concat(strings, " "));
+    f(table.concat(strings, ' '));
 end
 
 function print(...)
-    printfunc(outputConsole, ...);
+    print_func(outputConsole, ...);
 end
 
-function printdebug(...)
-    printfunc(outputDebugString, ...);
+function print_chat(...)
+    print_func(outputChatBox, ...);
 end
 
-function printfile(file, ...)
+function print_debug(...)
+    print_func(outputDebugString, ...);
+end
+
+function print_file(file, ...)
     local strings = { ... }
     
     for i = 1, #strings do
@@ -114,7 +118,7 @@ function printfile(file, ...)
     fileWrite(file, '\n');
 end
 
-function printtable(t, f, d)
+function print_table(t, f, d)
     f = f or print;
     
     d = d or 0;
@@ -133,7 +137,7 @@ end
 
 
 addCommandHandler("r", function(cmd, ...)
-    local code = table.concat({ ... }, " ");
+    local code = table.concat({ ... }, ' ');
     
     local f = loadstring(code);
     f();
@@ -141,6 +145,6 @@ end);
 
 addCommandHandler("cls", function()
     for i = 1, 100 do
-        outputConsole("\n");
+        outputConsole('\n');
     end
 end);

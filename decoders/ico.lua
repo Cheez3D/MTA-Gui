@@ -50,10 +50,13 @@
 
 
 
-local math = math;
+local math   = math;
 local string = string;
 
 local LOG2 = math.log(2);
+
+local ALPHA255_BYTE     = string.char(0xff);
+local TRANSPARENT_PIXEL = string.char(0x00, 0x00, 0x00, 0x00);
 
 
 
@@ -67,13 +70,9 @@ local BI_RLE8      = 1;
 local BI_RLE4      = 2;
 local BI_BITFIELDS = 3; -- http://www.virtualdub.org/blog/pivot/entry.php?id=177
 
-local ALPHA255_BYTE = string.char(0xff);
-local TRANSPARENT_PIXEL = string.char(0x00, 0x00, 0x00, 0x00);
 
 
-
-local decode_bitmap_data;
-local decode_png_data;
+local decode_bitmap;
 
 function decode_ico(bytes)
     
@@ -81,7 +80,7 @@ function decode_ico(bytes)
     
     local bytesType = type(bytes);
     if (bytesType ~= "string") then
-        error("bad argument #1 to '" ..__func__.. "' (string expected, got " .. bytesType .. ")", 2);
+        error("bad argument #1 to '" ..__func__.. "' (string expected, got " ..bytesType.. ")", 2);
     end
     
     
@@ -146,24 +145,34 @@ function decode_ico(bytes)
         stream.pos = ICONDIRENTRY.dwImageOffset; -- set read position to image data start
         
         
-        local isPNG = (stream.read(8) == PNG_SIGNATURE);
-        stream.pos = stream.pos-8;
+        local isPNG = (stream.read(8) == PNG_SIGNATURE); stream.pos = stream.pos-8;
         
+        local image, width, height;
         
-        local decoder = isPNG and decode_png_data or decode_bitmap_data;
-        local texture, textureWidth, textureHeight, width, height = decoder(stream, ICONDIRENTRY);
-        
-        
-        local image = dxCreateRenderTarget(width, height, true);
-        
-        dxSetBlendMode("add");
-        
-        dxSetRenderTarget(image);
-        dxDrawImage(0, 0, textureWidth, textureHeight, texture);
-        
-        dxSetRenderTarget();
-        
-        dxSetBlendMode("blend");
+        if (isPNG) then
+            local data = decode_png(stream.read(ICONDIRENTRY.dwBytesInRes));
+            
+            image = data.image;
+            
+            width  = data.width;
+            height = data.height;
+        else
+            local texture, textureWidth, textureHeight = decode_bitmap(stream, ICONDIRENTRY);
+            
+            width  = ICONDIRENTRY.bWidth;
+            height = ICONDIRENTRY.bHeight;
+            
+            image = dxCreateRenderTarget(width, height, true);
+            
+            dxSetBlendMode("add");
+
+            dxSetRenderTarget(image);
+            dxDrawImage(0, 0, textureWidth, textureHeight, texture);
+
+            dxSetRenderTarget();
+
+            dxSetBlendMode("blend");
+        end
         
         
         icoVariants[i] = {
@@ -193,48 +202,7 @@ end
 
 
 
-function decode_png_data(stream, ICONDIRENTRY)
-    stream.pos = stream.pos+16;
-    
-    local width  = stream.read_uint(true);
-    local height = stream.read_uint(true);
-    
-    -- round image width and height to the nearest powers of two
-    -- to avoid bulrring when creating texture
-    local textureWidth  = 2^math.ceil(math.log(width) /LOG2);
-    local textureHeight = 2^math.ceil(math.log(height)/LOG2);
-    
-    stream.pos = stream.pos-24;
-    
-    local pixels = stream.read(ICONDIRENTRY.dwBytesInRes);
-    pixels = dxConvertPixels(pixels, "plain");
-    
-    
-    local pixelData = {}
-    
-    for y = 0, height-1 do
-        -- multiply width by 4 because every pixel occupies 4 bytes (RGBA)
-        pixelData[#pixelData+1] = string.sub(pixels, y*(4*width) + 1, (y+1)*(4*width));
-        
-        -- pad remaining row space horizontally with transparent pixels to reach nearest power of two size
-        pixelData[#pixelData+1] = string.rep(TRANSPARENT_PIXEL, textureWidth-width);
-    end
-    
-    -- pad remaining bottom area with transparent pixels
-    pixelData[#pixelData+1] = string.rep(TRANSPARENT_PIXEL, (textureHeight-height)*textureWidth);
-    
-    -- append size to accomodate MTA pixel data format
-    pixelData[#pixelData+1] = string.char(
-        bitExtract(textureWidth,  0, 8), bitExtract(textureWidth,  8, 8),
-        bitExtract(textureHeight, 0, 8), bitExtract(textureHeight, 8, 8)
-    );
-    
-    pixels = table.concat(pixelData);
-    
-    return dxCreateTexture(pixels, "argb", false, "clamp"), textureWidth, textureHeight, width, height;
-end
-
-function decode_bitmap_data(stream, ICONDIRENTRY)
+function decode_bitmap(stream, ICONDIRENTRY)
     
     local BITMAPINFOHEADER = {
         biSize = stream.read_uint(),
@@ -259,7 +227,7 @@ function decode_bitmap_data(stream, ICONDIRENTRY)
     if (BITMAPINFOHEADER.biSize ~= 40) then
         error("bad argument #1 to '" ..__func__.. "' (unsupported bitmap)", 2);
     elseif (BITMAPINFOHEADER.biPlanes ~= 1) then
-        error("bad argument #1 to '" ..__func__.. "' (invalid number of planes)", 2);
+        error("bad argument #1 to '" ..__func__.. "' (unsupported number of planes)", 2);
     end
     
     
@@ -273,17 +241,15 @@ function decode_bitmap_data(stream, ICONDIRENTRY)
     if (height < 0) then
         isUpsideDown = false;
         
-        height = math.abs(height);
+        height = -height;
     end
     
-    -- variable determining if image has AND mask
     -- for images with AND mask BITMAPINFOHEADER.biHeight is double the actual height in ICONDIRENTRY
-    local hasANDMask = (ICONDIRENTRY.bHeight ~= height);
-    if (hasANDMask) then height = height/2 end
+    if (ICONDIRENTRY.bHeight ~= height) then height = height/2 end
     
     -- round image width and height to the nearest powers of two
     -- to avoid bulrring when creating texture
-    local textureWidth  = 2^math.ceil(math.log(width) /LOG2);
+    local textureWidth  = 2^math.ceil(math.log(width)/LOG2);
     local textureHeight = 2^math.ceil(math.log(height)/LOG2);
     
     
@@ -385,7 +351,8 @@ function decode_bitmap_data(stream, ICONDIRENTRY)
     
     -- [ ========================== [ AND MASK (TRANSPARENCY) ] ========================== ]
     
-    if (hasANDMask or (stream.pos ~= ICONDIRENTRY.dwImageOffset + ICONDIRENTRY.dwBytesInRes)) then
+    -- determining mask presence by checking if bitmap EOF was reached or not
+    if (stream.pos ~= ICONDIRENTRY.dwImageOffset + ICONDIRENTRY.dwBytesInRes) then
         
         -- if bitsPerPixel == 1 PADDING remains the same as that for XOR mask
         if (bitsPerPixel ~= 1) then
@@ -423,7 +390,7 @@ function decode_bitmap_data(stream, ICONDIRENTRY)
     
     local pixels = table.concat(pixelData);
     
-    return dxCreateTexture(pixels, "argb", false, clamp), textureWidth, textureHeight, width, height;
+    return dxCreateTexture(pixels, "argb", false, clamp), textureWidth, textureHeight;
 end
 
 
@@ -431,9 +398,9 @@ end
 
 
 
--- local ico = decode_ico("decoders/ico/chrome-png.ico");
--- ico = ico[1];
+local ico = decode_ico("decoders/ico/chrome-png.ico");
+ico = ico[1];
 
--- addEventHandler("onClientRender", root, function()
-    -- dxDrawImage(200, 200, ico.width, ico.height, ico.image);
--- end);
+addEventHandler("onClientRender", root, function()
+    dxDrawImage(200, 200, ico.width, ico.height, ico.image);
+end);

@@ -14,7 +14,7 @@ local DEFAULT_SCHEME = {
 }
 
 
-local DECODERS = {decode_ico, decode_ani, decode_gif}
+local DECODERS = { decode_ico, decode_ani, decode_gif, decode_jpg, decode_png }
 
 local function decode_cursor(path)
     for i = 1, #DECODERS do
@@ -37,9 +37,9 @@ local function decode_cursor(path)
                     data.hotspotX = 0;
                     data.hotspotY = 0;
                 end
-                
+
             elseif (decoder == decode_ani) then
-                
+            
                 data = data[1];
                 
                 data.isAnimation = true;
@@ -70,7 +70,10 @@ local function decode_cursor(path)
                     
                     data.image = data[1].image;
                 end
-                
+            
+            elseif (decoder == decode_jpg) or (decoder == decode_png) then
+                data.hotspotX = 0;
+                data.hotspotY = 0;
             end
             
             return data;
@@ -139,15 +142,14 @@ local function new(obj) setCursorAlpha(0);
     
     local isScenario2Fixed = false; -- scenario 2: when cursor alpha is 0, main menu is open
                                     -- and we open and close console, cursor alpha in main menu is set to 0
-                                    
-                                    -- there is no need to reset this fix's flag every time as it only happens once
-                                    -- probable explanation for this is that game stores 2 separate alpha values for when inside the main menu and when not
     
     function obj.render(dt)
         local isConsoleActive  = isConsoleActive();
         local isMainMenuActive = isMainMenuActive();
         
         if (isConsoleActive) then
+            if (isMainMenuActive) and (isScenario2Fixed) then isScenario2Fixed = false end
+            
             if (not isMainMenuActive) and (not isScenario1Fixed) then
                 setCursorAlpha(0);
                 

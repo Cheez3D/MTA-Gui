@@ -67,19 +67,22 @@
 
 
 
-local math = math;
+local math   = math;
 local string = string;
 
 local LOG2 = math.log(2);
+
+local ALPHA255_BYTE     = string.char(0xff);
+local TRANSPARENT_PIXEL = string.char(0x00, 0x00, 0x00, 0x00);
 
 
 
 local EXTENSION_INTRODUCER = 0x21;
 
-local APPLICATION_LABEL = 0xff;
-local COMMENT_LABEL = 0xfe;
+local APPLICATION_LABEL     = 0xff;
+local COMMENT_LABEL         = 0xfe;
 local GRAPHIC_CONTROL_LABEL = 0xf9;
-local PLAIN_TEXT_LABEL = 0x01;
+local PLAIN_TEXT_LABEL      = 0x01;
 
 local IMAGE_SEPARATOR = 0x2c;
 
@@ -95,16 +98,10 @@ local DISPOSE_TO_BACKGROUND = 2;
 local DISPOSE_TO_PREVIOUS   = 3;
 
 
-local ALPHA255_BYTE = string.char(0xff);
-local TRANSPARENT_PIXEL = string.char(0x00, 0x00, 0x00, 0x00);
-
-
 
 local decode_lzw_data;
 
 function decode_gif(bytes, ignoreComments)
-    
-    -- [ ====================== [ ASSERTION ] ====================== ]
     
     local bytesType = type(bytes);
     if (bytesType ~= "string") then
@@ -120,7 +117,6 @@ function decode_gif(bytes, ignoreComments)
     else
         ignoreCommentsType = true;
     end
-    
     
     
     local success, stream = pcall(Stream.new, bytes);
@@ -494,7 +490,7 @@ function decode_lzw_data(stream, gce, descriptor, colorTable)
     
     -- round image width and height to the nearest powers of two
     -- to avoid bulrring when creating texture
-    local textureWidth  = 2^math.ceil(math.log(descriptor.width) /LOG2);
+    local textureWidth  = 2^math.ceil(math.log(descriptor.width)/LOG2);
     local textureHeight = 2^math.ceil(math.log(descriptor.height)/LOG2);
     
     

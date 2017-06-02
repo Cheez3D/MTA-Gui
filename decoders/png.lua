@@ -1,12 +1,35 @@
-function decode_png(bytes)
+--[[ ==================================================================== ]
+
+    NAME:       table decode_png(string bytes)
+    PURPOSE:    Convert .png files into drawable MTA:SA textures
     
-    -- [ ====================== [ ASSERTION ] ====================== ]
+    RETURNED TABLE STRUCTURE (EXAMPLE):
+    
+    {
+        width = 16, height = 16,
+        
+        image = userdata,
+    }
+    
+--[ ==================================================================== ]]
+
+
+
+local math = math;
+local string = string;
+
+local LOG2 = math.log(2);
+
+local TRANSPARENT_PIXEL = string.char(0x00, 0x00, 0x00, 0x00);
+
+
+
+function decode_png(bytes)
     
     local bytesType = type(bytes);
     if (bytesType ~= "string") then
-        error("bad argument #1 to '" ..__func__.. "' (string expected, got " .. bytesType .. ")", 2);
+        error("bad argument #1 to '" ..__func__.. "' (string expected, got " ..bytesType.. ")", 2);
     end
-    
     
     
     local success, stream = pcall(Stream.new, bytes);
@@ -16,19 +39,23 @@ function decode_png(bytes)
     end
     
     
-    stream.pos = stream.pos+16;
+    local pixels = stream.read(stream.size);
     
-    local width  = stream.read_uint(true);
-    local height = stream.read_uint(true);
+    local pixelsFormat = dxGetPixelsFormat(pixels);
+    
+    if (not pixelsFormat) or (pixelsFormat ~= "png") then
+        error("bad argument #1 to '" ..__func__.. "' (invalid file format)", 2);
+    end
+    
+    
+    local width, height = dxGetPixelsSize(pixels);
     
     -- round image width and height to the nearest powers of two
     -- to avoid bulrring when creating texture
-    local textureWidth  = 2^math.ceil(math.log(width) /LOG2);
+    local textureWidth  = 2^math.ceil(math.log(width)/LOG2);
     local textureHeight = 2^math.ceil(math.log(height)/LOG2);
     
-    stream.pos = stream.pos-24;
     
-    local pixels = stream.read(stream.size);
     pixels = dxConvertPixels(pixels, "plain");
     
     
@@ -53,5 +80,25 @@ function decode_png(bytes)
     
     pixels = table.concat(pixelData);
     
-    return dxCreateTexture(pixels, "argb", false, "clamp"), textureWidth, textureHeight, width, height;
+    local texture = dxCreateTexture(pixels, "argb", false, clamp);
+    
+    
+    local image = dxCreateRenderTarget(width, height, true);
+    
+    dxSetBlendMode("add");
+    
+    dxSetRenderTarget(image);
+    dxDrawImage(0, 0, textureWidth, textureHeight, texture);
+    
+    dxSetRenderTarget();
+    
+    dxSetBlendMode("blend");
+    
+    
+    return {
+        width  = width,
+        height = height,
+        
+        image = image,
+    }
 end

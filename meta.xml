@@ -36,6 +36,9 @@
     <file src="cursors/arrow_i.cur"/>
     <file src="cursors/arrow_r.cur"/>
     
+    <file src="cursors/arrow.jpg"/>
+    <file src="cursors/arrow.png"/>
+    
     <file src="cursors/PulseGlass/arrow.ani"/>
     <file src="cursors/PulseGlass/busy.ani"/>
     <file src="cursors/PulseGlass/help.cur"/>
@@ -61,17 +64,16 @@
     <script src="require.lua"  type="shared"/>
     <script src="isolator.lua" type="shared"/>
     
-    <script src="enums.lua" type="shared"/>
-    
     <script src="classes/Stream.lua"  type="client"/>
     <script src="classes/Color3.lua"  type="client"/>
     <script src="classes/UDim.lua"    type="client"/>
     <script src="classes/UDim2.lua"   type="client"/>
     <script src="classes/Vector2.lua" type="client"/>
     
-    <script src="decoders/png.lua" type="client"/>
-    <script src="decoders/jpg.lua" type="client"/>
     <script src="decoders/gif.lua" type="client"/>
+    <script src="decoders/jpg.lua" type="client"/>
+    <script src="decoders/png.lua" type="client"/>
+    
     <script src="decoders/ico.lua" type="client"/>
     <script src="decoders/ani.lua" type="client"/>
     
