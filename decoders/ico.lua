@@ -398,9 +398,9 @@ end
 
 
 
-local ico = decode_ico("decoders/ico/chrome-png.ico");
-ico = ico[1];
+-- local ico = decode_ico("decoders/ico/chrome-png.ico");
+-- ico = ico[1];
 
-addEventHandler("onClientRender", root, function()
-    dxDrawImage(200, 200, ico.width, ico.height, ico.image);
-end);
+-- addEventHandler("onClientRender", root, function()
+    -- dxDrawImage(200, 200, ico.width, ico.height, ico.image);
+-- end);

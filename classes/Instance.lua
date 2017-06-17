@@ -1,231 +1,345 @@
-ClassMetaTable = {__index = function(Class,Key) return Class.Base[Key] end}
+local name = "Instance";
 
-local Class = {
-	Inherited = {},
-	
-	Functions = {},
-	IndexFunctions = {},
-	NewIndexFunctions = {},
-	
-	Name = "Instance",
-	
-	PrivateKeys = {
-		Children = true,
-		ChildrenByName = true
-	},
-	ReadOnlyKeys = {
-		ClassName = true
-	}
+local func = {}
+local set  = {}
+
+local setAll = {}
+
+local private = {
+    children       = true,
+    childrenByKey  = true,
+    childrenByName = true,
+    
+    index = true,
 }
 
+local readOnly = {
+    className = true,
+}
 
+local initializable = {}
+local privateClass  = {}
 
-local MetaTable = {
-	__index = function(Proxy,Key)
-		local Object = PROXY__OBJ[Proxy];
+local new;
+
+local meta = {
+    __metatable = name,
+    
+    
+	__index = function(proxy, key)
+		local obj = PROXY__OBJ[proxy];
 		
-		local StartingClass = Class.Inherited[Object.ClassName];	local CurrentClass;
-		
-		CurrentClass = StartingClass;
-		while (CurrentClass ~= nil) do
-			if (CurrentClass.PrivateKeys[Key] == true) then
-				local Child = Object.ChildrenByName[Key];
-				if (Child ~= nil) then return ObjectToProxy[Child]
-				else return nil end
+        
+        -- check if key is private
+		local class = initializable[obj.className];
+        
+		while (class) do
+			if (class.private) and (class.private[key]) then -- if key is private but a child with its name exists
+				local child = obj.childrenByName[key];
+                
+				if (child) then
+                    return OBJ__PROXY[child];
+                end
+                
+                return;
 			end
 			
-			CurrentClass = CurrentClass.Base;
+			class = class.super;
 		end
 		
-		local Value = Object[Key];
-		if (Value ~= nil) then return Value end
+        
+		local val = obj[key];
+        if (val ~= nil) then -- val might be false so compare against nil
+        
+            -- convert object to proxy before returning
+            if (OBJ__PROXY[val]) then
+                val = OBJ__PROXY[val];
+            end
+            
+            return val;
+        end
 		
-		CurrentClass = StartingClass;
-		while (CurrentClass ~= nil) do
-			local Function = CurrentClass.Functions[Key];
-			if (Function ~= nil) then return Function end
+        
+		local class = initializable[obj.className];
+        
+		while (class) do
+			local func_f = class.func and class.func[key];
+			if (func_f) then
+                return (function(...) return func_f(obj, ...) end);
+            end
 			
-			local IndexFunction = CurrentClass.IndexFunctions[Key];
-			if (IndexFunction ~= nil) then return IndexFunction(Object,Key) end
+			local get_f = class.get and class.get[key];
+			if (get_f) then
+                return get_f(obj, key);
+            end
 			
-			CurrentClass = CurrentClass.Base;
+			class = class.super;
 		end
 		
-		local Child = Object.ChildrenByName[Key];
-		if (Child ~= nil) then return ObjectToProxy[Child] end
-		
-		return nil;
+		local child = obj.childrenByName[key];
+        
+		if (child) then
+            return OBJ__PROXY[child];
+        end
 	end,
-	__metatable = "Instance",
-	__newindex = function(Proxy,Key,Value)
-		local Object = PROXY__OBJ[Proxy];
+    
+	__newindex = function(proxy, key, val)
+		local obj = PROXY__OBJ[proxy];
 		
-		-- local PreviousValue = Object[Key];
-		-- if (PreviousValue == Value) then return end
+		local prev = obj[key];
+		if (val == prev) then return end -- if trying to set same val then return
 		
-		local NewIndexFunctions = {}
+        
+		local set_fs = {} -- stack of set functions to call
 		
-		local CurrentClass = Class.Inherited[Object.ClassName];
-		while (CurrentClass ~= nil) do
-			local IsKeyReadOnly = CurrentClass.ReadOnlyKeys[Key];
-			if (IsKeyReadOnly == true) or ((IsKeyReadOnly == false) and (Object[Key] ~= nil)) then error("attempt to modify a read-only key ("..tostring(Key)..")",2) end
+		local class = initializable[obj.className];
+        
+		while (class) do
+			if (class.readOnly) and (class.readOnly[key]) then
+                error("attempt to modify a read-only key (" ..tostring(key).. ")", 2);
+            end
 			
-			local NewIndexFunction = CurrentClass.NewIndexFunctions[Key];
-			if (NewIndexFunction ~= nil) then table.insert(NewIndexFunctions,1,NewIndexFunction) end
+			local set_f = class.set and class.set[key];
+            
+			if (set_f) then
+                set_fs[#set_fs+1] = set_f;
+            end
 			
-			CurrentClass = CurrentClass.Base;
+			class = class.super;
 		end
-		
-		local NewIndexFunctionsNumber = #NewIndexFunctions;
-		if (NewIndexFunctionsNumber > 0) then
-			local PreviousValue = Object[Key];
-			for i = 1,NewIndexFunctionsNumber do NewIndexFunctions[i](Object,Key,Value,PreviousValue) end
-		else print(Proxy) print(Value) error("attempt to modify an invalid key ("..tostring(Key)..")",2) end
+        
+        
+        if (#set_fs > 0) then
+            for i = #set_fs, 1, -1 do
+                set_fs[i](obj, val, prev, key);
+            end
+		else
+            error("attempt to modify an invalid key (" ..tostring(key).. ")", 2);
+        end
 	end,
-	__tostring = function(Proxy)
-		local Object = PROXY__OBJ[Proxy];
+    
+    
+	__tostring = function(proxy)
+		local obj = PROXY__OBJ[proxy];
 		
-		return Object.ClassName.." "..Object.Name;
+		return obj.className.. " " ..obj.name;
 	end
 }
 
-function Class.New(ClassName,ParentProxy)
-	local ClassNameType = type(ClassName);
-	if (ClassNameType ~= "string") then error("bad argument #1 to '"..__func__.."' (string expected, got "..ClassNameType..")",2) end
+function new(className, parentProxy)
+	local classNameType = type(className);
+    
+	if (classNameType ~= "string") then
+        error("bad argument #1 to '" ..__func__.. "' (string expected, got " ..classNameType.. ")", 2);
+    end
 	
-	if (ParentProxy ~= nil) then
-		local ParentProxyType = type(ParentProxy);
-		if (ParentProxyType ~= "Instance") then error("bad argument #2 to '"..__func__.."' (Instance expected, got "..ParentProxyType..")",2) end
-	end
-	
-	local Class = Class.Inherited[ClassName];
-	if (Class == nil) then error("bad argument #1 to '"..__func__.."' (invalid class)",2)
-	else
-		local Object = {
-			ClassName = ClassName,
-			Name = ClassName,
-			
-			Children = {},
-			ChildrenByName = {}
-		}
-		
-		Class.New(Object);
-		
-		local Proxy = setmetatable({},MetaTable);
-		OBJ__PROXY[Object] = Proxy;	PROXY__OBJ[Proxy] = Object;
-		
-		Proxy.Parent = ParentProxy;
-		
-		return Proxy;
-	end
-end
-
-do -- Class.Functions
-	function Class.Functions.IsA(Proxy,ClassName)
-		local ProxyType = type(Proxy);
-		if (ProxyType ~= "Instance") then error("bad argument #1 to '"..__func__.."' (Instance expected, got "..ProxyType..")",2) end
-		
-		local ClassNameType = type(ClassName);
-		if (ClassNameType ~= "string") then error("bad argument #2 to '"..__func__.."' (string expected, got "..ClassNameType..")",2) end
-		
-		local Object = PROXY__OBJ[Proxy];
-		
-		local CurrentClass = Class.Inherited[Object.ClassName];
-		while (CurrentClass ~= nil) do
-			if (CurrentClass.Name == ClassName) then return true end
-			
-			CurrentClass = CurrentClass.Base;
-		end
-		
-		return false;
-	end
-end
-
-do -- Class.NewIndexFunctions
-	function Class.NewIndexFunctions.Name(Object,Key,Name,PreviousName)
-		local NameType = type(Name);
-		if (NameType ~= "string") then error("bad argument #1 to '"..Key.."' (string expected, got "..NameType..")",3) end
-		
-		
-		local Parent = PROXY__OBJ[Object.Parent];
-		
-		local ParentChildrenByName = Parent.ChildrenByName;
-		
-		local Index = Object.Index;
-		if (ParentChildrenByName[PreviousName].Index == Index) then
-			local ParentChildren = Parent.Children;
-			for i = Index+1,#ParentChildren do
-				local Child = ParentChildren[i];
-				if (Child.Name == PreviousName) then ParentChildrenByName[PreviousName] = Child end
-			end
-		end
-		
-		if (ParentChildrenByName[Name] == nil) then ParentChildrenByName[Name] = Object end
-		
-		Object.Name = Name;
+	if (parentProxy ~= nil) then
+		local parentProxyType = type(parentProxy);
+        
+		if (parentProxyType ~= "Instance") then
+            error("bad argument #2 to '" ..__func__.. "' (Instance expected, got " ..parentProxyType.. ")", 2);
+        end
 	end
 	
-	function Class.NewIndexFunctions.Parent(Object,Key,ParentProxy,PreviousParentProxy)
-		local Name = Object.Name;
-		
-		if (ParentProxy ~= nil) then
-			local ParentProxyType = type(ParentProxy);
-			if (ParentProxyType ~= "Instance") then error("bad argument #1 to '"..Key.."' (Instance expected, got "..ParentProxyType..")",3) end
-			
-			local Parent = PROXY__OBJ[ParentProxy];
-			
-			local Children = Object.Children;
-			for i = 1,#Children do
-				if (Parent == Children[i]) then error("bad argument #1 to '"..Key.."' (circular reference)",3) end
-			end
-			
-			if (Parent == Object) then error("bad argument #1 to '"..Key.."' (self parenting)",3) end
-			
-			
-			local ParentChildren = Parent.Children;
-			local Index = #ParentChildren+1;
-			
-			Object.Index = Index;
-			ParentChildren[Index] = Object;
-			
-			local ParentChildrenByName = Parent.ChildrenByName;
-			if (ParentChildrenByName[Name] == nil) then ParentChildrenByName[Name] = Object end
-		end
-		
-		
-		if (PreviousParentProxy ~= nil) then
-			local PreviousParent = PROXY__OBJ[PreviousParentProxy];
-			
-			local PreviousParentChildren = PreviousParent.Children;
-			local PreviousParentChildrenByName = PreviousParent.ChildrenByName;
-			
-			local Index = Object.Index;
-			
-			if (PreviousParentChildrenByName[Name].Index == Index) then
-				for i = Index+1,#PreviousParentChildren do
-					local Child = PreviousParentChildren[i];
-					if (Child.Name == Name) then PreviousParentChildrenByName[Name] = Child end
-				end
-			end
-			
-			table.remove(PreviousParentChildren,Index);
-		end
-		
-		
-		Object.Parent = ParentProxy;
+    
+    
+	local class = (not privateClass[className]) and initializable[className];
+    
+	if (not class) then
+        error("bad argument #1 to '" ..__func__.. "' (invalid class)",2);
 	end
+    
+    local obj = {
+        className = className,
+        
+        name = className,
+        
+        children       = {},
+        childrenByKey  = {},
+        childrenByName = {},
+    }
+    
+    class.new(obj);
+    
+    local proxy = setmetatable({}, meta);
+    
+    PROXY__OBJ[proxy] = obj;
+    OBJ__PROXY[obj]   = proxy;
+    
+    proxy.parent = parentProxy;
+    
+    return proxy;
 end
 
-Instance = setmetatable({},{
-	__call = function(_Proxy,...)
-		local Success,Result = pcall(Class.New,...);
-		if (Success == false) then error(fromat_pcall_error(Result),2) end
+
+
+function func.isA(obj, className)
+    local classNameType = type(className);
+    
+    if (classNameType ~= "string") then
+        error("bad argument #2 to '" ..__func__.. "' (string expected, got " ..classNameType.. ")", 2);
+    end
+    
+    
+    local class = initializable[obj.className];
+    
+    while (class) do
+        if (class.name == className) then
+            return true;
+        end
+        
+        class = class.super;
+    end
+    
+    return false;
+end
+
+
+
+function set.name(obj, name, prevName, key)
+    local nameType = type(name);
+    
+    if (nameType ~= "string") then
+        error("bad argument #1 to '" ..key.. "' (string expected, got " ..nameType.. ")", 3);
+    end
+    
+    
+    if (obj.parent) then
+        local parent = obj.parent;
+        
+        -- if obj is occupying the place in childrenByName then try to find another child with same prevName to replace it
+        if (parent.childrenByName[prevName] == obj) then
+            
+            -- start search from after obj because childrenByName place is occupied by object with smallest index
+            for i = obj.index+1, #parent.children do
+                local child = parent.children[i];
+                
+                if (child.name == prevName) then
+                    parent.childrenByName[prevName] = child;
+                    
+                    break;
+                end
+            end
+        end
+        
+        if (not parent.childrenByName[name]) then
+            parent.childrenByName[name] = obj;
+        end
+    end
+    
+    obj.name = name;
+end
+
+function set.parent(obj, parentProxy, prevParentProxy, key)
+    
+    local parent;
+    
+    if (parentProxy ~= nil) then
+        local parentProxyType = type(parentProxy);
+        
+        if (parentProxyType ~= "Instance") then
+            error("bad argument #1 to '" ..key.. "' (Instance expected, got " ..parentProxyType.. ")", 3);
+        end
+        
+        
+        parent = PROXY__OBJ[parentProxy];
+        
+        -- if trying to set a child to be the parent of its parent
+        -- e.g. obj1.parent = obj2; obj2.parent = obj1;
+        
+        if (obj.childrenByKey[parent]) then
+            error("bad argument #1 to '" ..key.. "' (circular reference)", 3);
+        end
+        
+        -- if trying to set an object as its own parent
+        -- e.g. obj.parent = obj;
+        
+        if (parent == obj) then
+            error("bad argument #1 to '" ..key.. "' (self parenting)", 3);
+        end
+    end
+    
+    
+    if (prevParentProxy) then
+        
+        local prevParent = PROXY__OBJ[prevParentProxy];
+        
+        -- remove child from children table
+        prevParent.children[obj.index] = nil;
+        
+        for i = obj.index+1, #prevParent.children do
+            local child = prevParent.children[i];
+            
+            child.index = child.index-1;
+            prevParent.children[i-1] = child;
+        end
+        
+        prevParent.children[#prevParent.children] = nil; -- remove last redundant element
+        
+        -- remove child from childrenByKey table
+        prevParent.childrenByKey[obj] = nil;
+        
+        -- remove child from childrenByName table and, if possible, replace with another child with same name
+        if (prevParent.childrenByName[obj.name] == obj) then
+            local child;
+            
+            for i = obj.index, #prevParent.children do
+                child = prevParent.children[i];
+                
+                if (child.name == obj.name) then
+                    break;
+                end
+            end
+            
+            prevParent.childrenByName[obj.name] = child; -- if other child not found it will be set to nil
+        end
+        
+        obj.index = nil;
+    end
+    
+    
+    if (parent) then
+        obj.index = #parent.children+1;
+        parent.children[obj.index] = obj;
+        
+        parent.childrenByKey[obj] = true;
+        
+        if (not parent.childrenByName[obj.name]) then -- if there is no existing child with same name
+            parent.childrenByName[obj.name] = obj;
+        end
+    end
+    
+    
+    obj.parent = parent;
+end
+
+
+
+Instance = {
+    initializable = initializable,
+    privateClass  = privateClass,
+	
+	func = func,
+	set  = set,
+	
+	name = name,
+	
+	private  = private,
+	readOnly = readOnly,
+    
+    new = new,
+}
+
+-- Instance = setmetatable({}, {
+	-- __call = function(_Proxy,...)
+		-- local Success,Result = pcall(Class.New,...);
+		-- if (Success == false) then error(fromat_pcall_error(Result),2) end
 		
-		return Result;
-	end,
-	__index = Class,
-	__metatable = "Instance",
-	__newindex = function(_Proxy,Key)
-		error("attempt to modify a read-only key ("..tostring(Key)..")",2);
-	end
-});
+		-- return Result;
+	-- end,
+	-- __index = Class,
+	-- __metatable = "Instance",
+	-- __newindex = function(_Proxy,Key)
+		-- error("attempt to modify a read-only key ("..tostring(Key)..")",2);
+	-- end
+-- });

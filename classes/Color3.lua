@@ -1,8 +1,10 @@
+local name = "Color3";
+
 local func = {}
 local get  = {}
 
 local meta = {
-    __metatable = "Color3",
+    __metatable = name,
     
     
 	__index = function(proxy, key)
@@ -82,9 +84,9 @@ function new(r, g, b)
 	
 	
 	
-	local memID = r.. ':' ..g.. ':' ..b;
+	local memID = r.. ":" ..g.. ":" ..b;
 	
-	local proxy = MEM_PROXIES[MemoizedProxyIdentifier];
+	local proxy = MEM_PROXIES[memID];
     
 	if (not proxy) then
 		local obj = {

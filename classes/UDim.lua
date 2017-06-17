@@ -1,9 +1,11 @@
+local name = "UDim";
+
 local func = {}
 
 local new;
 
 local meta = {
-    __metatable = "UDim",
+    __metatable = name,
     
     
     __index = function(proxy, key)
@@ -13,7 +15,7 @@ local meta = {
         if (val ~= nil) then -- val might be false so compare against nil
             return val;
         end
-    
+
         local func_f = func[key];
         if (func_f) then
             return (function(...) return func_f(obj, ...) end); -- might be able to do memoization here
@@ -22,13 +24,6 @@ local meta = {
     
     __newindex = function(proxy, key)
         error("attempt to modify a read-only key (" ..tostring(key).. ")", 2);
-    end,
-    
-    
-    __tostring = function(proxy)
-        local obj = ProxyToObject[proxy];
-        
-        return obj.scale.. ", " ..obj.offset;
     end,
     
     
@@ -46,14 +41,19 @@ local meta = {
         end
         
         
-        
         local obj1 = PROXY__OBJ[proxy1];
         local obj2 = PROXY__OBJ[proxy2];
         
         return new(obj1.scale + obj2.scale, obj1.offset + obj2.offset);
     end,
+    
+    
+    __tostring = function(proxy)
+        local obj = PROXY__OBJ[proxy];
+        
+        return obj.scale.. ", " ..obj.offset;
+    end,
 }
-
 
 
 local MEM_PROXIES = setmetatable({}, { __mode = 'v' });
@@ -84,7 +84,7 @@ function new(scale, offset)
     
     
     
-    local memID = scale.. ':' ..offset;
+    local memID = scale.. ":" ..offset;
     
     local proxy = MEM_PROXIES[memID];
     
@@ -98,6 +98,7 @@ function new(scale, offset)
         proxy = setmetatable({}, meta);
         
         PROXY__OBJ[proxy] = obj;
+        OBJ__PROXY[obj] = proxy;
         
         MEM_PROXIES[memID] = proxy;
     end

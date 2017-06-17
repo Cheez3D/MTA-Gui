@@ -3,21 +3,19 @@
 
 
 
-local Base = GuiBase2D;
+local name = "GuiObject";
 
-local Name = "GuiObject";
+local super = GuiBase2D;
 
-local Functions = {}
-local IndexFunctions = {}
-local NewIndexFunctions = {}
+local func = {}
+local set  = {}
 
-local PrivateKeys = {
+local private = {
 	RecreateDescendantsRenderTarget = true
 }
-local ReadOnlyKeys = {} -- setmetatable({},ClassMetaTable);
 
-local function New(Object)
-	Base.New(Object);
+local function new(Object)
+	super.new(Object);
 	
 	Object.BackgroundColor3 = Color3.new(255,255,255);
 	Object.BackgroundTransparency = 0;
@@ -36,19 +34,19 @@ local function New(Object)
 end
 
 
-function Functions.RecreateDescendantsRenderTarget(Object,RenderTargetSize)
+function func.RecreateDescendantsRenderTarget(Object,RenderTargetSize)
 	if isElement(Object.RenderTarget) then destroyElement(Object.RenderTarget) end
 	
 	local RenderTargetSizeX,RenderTargetSizeY = RenderTargetSize.unpack();
 	Object.RenderTarget = dxCreateRenderTarget(RenderTargetSizeX,RenderTargetSizeY,true);
 	Object.RenderTargetSize = RenderTargetSize;
 	
-	local Children = Object.Children;
-	for i = 1,#Children do Functions.RecreateDescendantsRenderTarget(Children[i],RenderTargetSize) end
+	local Children = Object.children;
+	for i = 1,#Children do func.RecreateDescendantsRenderTarget(Children[i],RenderTargetSize) end
 end
 
 
-function NewIndexFunctions.BackgroundColor3(Object,Key,BackgroundColor3)
+function set.BackgroundColor3(Object,BackgroundColor3,__,Key)
 	local BackgroundColor3Type = type(BackgroundColor3);
 	if (BackgroundColor3Type ~= "Color3") then error("bad argument #1 to '"..Key.."' (Color3 expected, got "..BackgroundColor3Type..")",3) end
 	
@@ -57,7 +55,7 @@ function NewIndexFunctions.BackgroundColor3(Object,Key,BackgroundColor3)
 	Object.Draw();
 end
 
-function NewIndexFunctions.BackgroundTransparency(Object,Key,BackgroundTransparency)
+function set.BackgroundTransparency(Object,BackgroundTransparency,__,Key)
 	local BackgroundTransparencyType = type(BackgroundTransparency);
 	if (BackgroundTransparencyType ~= "number") then error("bad argument #1 to '"..Key.."' (number expected, got "..BackgroundTransparencyType..")",3)
 	elseif (BackgroundTransparency < 0) or (BackgroundTransparency > 1) then error("bad argument #1 to '"..Key.."' (value out of bounds)",3) end
@@ -67,7 +65,7 @@ function NewIndexFunctions.BackgroundTransparency(Object,Key,BackgroundTranspare
 	Object.Draw();
 end
 
-function NewIndexFunctions.BorderColor3(Object,Key,BorderColor3)
+function set.BorderColor3(Object,BorderColor3,__,Key)
 	local BorderColor3Type = type(BorderColor3);
 	if (BorderColor3Type ~= "Color3") then error("bad argument #1 to '"..Key.."' (Color3 expected, got "..BorderColor3Type..")",3) end
 	
@@ -76,7 +74,7 @@ function NewIndexFunctions.BorderColor3(Object,Key,BorderColor3)
 	Object.Draw();
 end
 
-function NewIndexFunctions.BorderOffsetPixel(Object,Key,BorderOffsetPixel)
+function set.BorderOffsetPixel(Object,BorderOffsetPixel,__,Key)
 	local BorderOffsetPixelType = type(BorderOffsetPixel);
 	if (BorderOffsetPixelType ~= "number") then	error("bad argument #1 to '"..Key.."' (number expected, got "..BorderOffsetPixelType..")",3)
 	elseif (BorderOffsetPixel%1 ~= 0) then error ("bad argument #1 to '"..Key.."' (number has no integer representation)",3)
@@ -87,7 +85,7 @@ function NewIndexFunctions.BorderOffsetPixel(Object,Key,BorderOffsetPixel)
 	Object.Draw();
 end
 
-function NewIndexFunctions.BorderSizePixel(Object,Key,BorderSizePixel)
+function set.BorderSizePixel(Object,BorderSizePixel,__,Key)
 	local BorderSizePixelType = type(BorderSizePixel);
 	if (BorderSizePixelType ~= "number") then error("bad argument #1 to '"..Key.."' (number expected, got "..BorderSizePixelType..")",3)
 	elseif (BorderSizePixel%1 ~= 0) then error ("bad argument #1 to '"..Key.."' (number has no integer representation)",3)
@@ -99,7 +97,7 @@ function NewIndexFunctions.BorderSizePixel(Object,Key,BorderSizePixel)
 	Object.Draw();
 end
 
-function NewIndexFunctions.BorderTransparency(Object,Key,BorderTransparency)
+function set.BorderTransparency(Object,BorderTransparency,__,Key)
 	local BorderTransparencyType = type(BorderTransparency);
 	if (BorderTransparencyType ~= "number") then error("bad argument #1 to '"..Key.."' (number expected, got "..BorderTransparencyType..")",3)
 	elseif (BorderTransparency < 0) or (BorderTransparency > 1) then error("bad argument #1 to '"..Key.."' (invalid value)",3) end
@@ -109,13 +107,13 @@ function NewIndexFunctions.BorderTransparency(Object,Key,BorderTransparency)
 	Object.Draw();
 end
 
-function NewIndexFunctions.ClipsDescendants(Object,Key,ClipsDescendants)
+function set.ClipsDescendants(Object,ClipsDescendants,__,Key)
 	local ClipsDescendantsType = type(ClipsDescendants);
 	if (ClipsDescendantsType ~= "boolean") then error("bad argument #1 to '"..Key.."' (boolean expected, got "..ClipsDescendantsType..")",3) end
 	
 	Object.ClipsDescendants = ClipsDescendants;
 	
-	local Children = Object.Children;
+	local Children = Object.children;
 	for i = 1,#Children do
 		local Child = Children[i];
 		
@@ -123,19 +121,19 @@ function NewIndexFunctions.ClipsDescendants(Object,Key,ClipsDescendants)
 	end
 end
 
-function NewIndexFunctions.Parent(Object,_Key,ParentProxy,PreviousParentProxy)
-	if (PreviousParentProxy ~= nil) and (PreviousParentProxy:IsA("GuiBase2D") == true) then
+function set.parent(Object, ParentProxy, PreviousParentProxy, Key)
+	if (PreviousParentProxy ~= nil) and PreviousParentProxy.isA("GuiBase2D") then
 		local PreviousParent = PROXY__OBJ[PreviousParentProxy];
 		
 		PreviousParent.Draw();
 	end
 	
 	
-	if (ParentProxy ~= nil) and (ParentProxy:IsA("GuiBase2D") == true) then
-		local Parent = PROXY__OBJ[ParentProxy];
+	if (ParentProxy ~= nil) and ParentProxy.isA("GuiBase2D") then
+		local parent = Object.parent -- new parent was set above in Instance function -- PROXY__OBJ[ParentProxy];
 		
-		local ParentRenderTargetSize = Parent.RenderTargetSize;
-		if (ParentRenderTargetSize ~= Object.RenderTargetSize) then Functions.RecreateDescendantsRenderTarget(Object,ParentRenderTargetSize) end
+		local ParentRenderTargetSize = parent.RenderTargetSize;
+		if (ParentRenderTargetSize ~= Object.RenderTargetSize) then func.RecreateDescendantsRenderTarget(Object,ParentRenderTargetSize) end
 		
 		local Proxy = OBJ__PROXY[Object];
 		
@@ -144,18 +142,17 @@ function NewIndexFunctions.Parent(Object,_Key,ParentProxy,PreviousParentProxy)
 	end
 end
 
-function NewIndexFunctions.Position(Object,Key,Position)
+function set.Position(Object,Position,__,Key)
 	local PositionType = type(Position);
 	if (PositionType ~= "UDim2") then error("bad argument #1 to '"..Key.."' (UDim2 expected, got "..PositionType..")",3) end
 	
 	Object.Position = Position;
 	
-	local ParentProxy = Object.Parent;
-	if (ParentProxy ~= nil) then
-		local Parent = PROXY__OBJ[ParentProxy];
+	if (Object.parent) then
+		local parent = Object.parent;
 	
-		local ParentAbsolutePositionX,ParentAbsolutePositionY = Parent.AbsolutePosition.unpack();
-		local ParentAbsoluteSizeX,ParentAbsoluteSizeY = Parent.AbsoluteSize.unpack();
+		local ParentAbsolutePositionX,ParentAbsolutePositionY = parent.AbsolutePosition.unpack();
+		local ParentAbsoluteSizeX,ParentAbsoluteSizeY = parent.AbsoluteSize.unpack();
 		
 		local PositionXScale,PositionXOffset,PositionYScale,PositionYOffset = Position.unpack();
 		
@@ -169,18 +166,17 @@ function NewIndexFunctions.Position(Object,Key,Position)
 	end
 end
 
-function NewIndexFunctions.Size(Object,Key,Size)
+function set.Size(Object,Size,__,Key)
 	local SizeType = type(Size);
 	if (SizeType ~= "UDim2") then error("bad argument #1 to '"..Key.."' (UDim2 expected, got "..SizeType..")",3) end
 	
 	
 	Object.Size = Size;
 	
-	local ParentProxy = Object.Parent;
-	if (ParentProxy ~= nil) then -- TO DO ASSERTION AS IN Frame.NewIndexFunctions.Parent
-		local Parent = PROXY__OBJ[ParentProxy];
+	if (Object.parent) then
+		local parent = Object.parent;
 		
-		local ParentAbsoluteSizeX,ParentAbsoluteSizeY = Parent.AbsoluteSize.unpack();
+		local ParentAbsoluteSizeX,ParentAbsoluteSizeY = parent.AbsoluteSize.unpack();
 		
 		local SizeXScale,SizeXOffset,SizeYScale,SizeYOffset = Size.unpack();
 		
@@ -190,7 +186,7 @@ function NewIndexFunctions.Size(Object,Key,Size)
 		);
 		
 		
-		local Children = Object.Children;	local ChildrenNumber = #Children;
+		local Children = Object.children;	local ChildrenNumber = #Children;
 		if (ChildrenNumber > 0) then
 			for i = 1,ChildrenNumber do
 				local Child = Children[i];	local ChildProxy = OBJ__PROXY[Child];
@@ -202,7 +198,7 @@ function NewIndexFunctions.Size(Object,Key,Size)
 	end
 end
 
-function NewIndexFunctions.Visible(Object,Key,Visible)
+function set.Visible(Object,Visible,__,Key)
 	local VisibleType = type(Visible);
 	if (VisibleType ~= "boolean") then error("bad argument #1 to '"..Key.."' (boolean expected, got "..VisibleType..")",3) end
 	
@@ -214,16 +210,14 @@ end
 
 
 GuiObject = {
-	Base = Base,
+	name = name,
+    
+    super = super,
 	
-	Name = Name,
+	func = func,
+	set  = set,
 	
-	Functions = Functions,
-	IndexFunctions = IndexFunctions,
-	NewIndexFunctions = NewIndexFunctions,
+	private  = private,
 	
-	PrivateKeys = PrivateKeys,
-	ReadOnlyKeys = ReadOnlyKeys,
-	
-	New = New
+	new = new,
 }

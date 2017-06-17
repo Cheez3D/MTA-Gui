@@ -118,23 +118,25 @@ function print_file(file, ...)
     fileWrite(file, '\n');
 end
 
-function print_table(t, f, d)
+function print_table(t, f, tab)
     f = f or print;
     
-    d = d or 0;
+    tab = tab or 0;
     
-    for k, v in pairs(t) do
-        if (type(v) == "table") then
-            f("[ ", k, " -> ", v, " ]");
-            
-            print_table(v, f, d+1);
-        else
-            f(string.rep(" ", d), k, " -> ", v);
+    if (next(t)) then
+        for k, v in pairs(t) do
+            if (type(v) == "table") then
+                f(string.rep(' ', tab), "[", k, "->", v, "]");
+                
+                print_table(v, f, tab+4);
+            else
+                f(string.rep(' ', tab), k, "->", v);
+            end
         end
+    else
+        f(string.rep(' ', tab), "EMPTY");
     end
 end
-
-
 
 addCommandHandler("r", function(cmd, ...)
     local code = table.concat({ ... }, ' ');
@@ -144,7 +146,7 @@ addCommandHandler("r", function(cmd, ...)
 end);
 
 addCommandHandler("cls", function()
-    for i = 1, 100 do
+    for i = 1, 256 do
         outputConsole('\n');
     end
 end);

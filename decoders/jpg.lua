@@ -102,5 +102,3 @@ function decode_jpg(bytes)
         image = image,
     }
 end
-
-print(decode_jpg("cursors/arrow.jpg"));

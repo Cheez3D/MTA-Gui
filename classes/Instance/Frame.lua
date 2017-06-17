@@ -3,31 +3,30 @@
 
 
 
-local Base = GuiObject;
+local name = "Frame";
 
-local Name = "Frame";
+local super = GuiObject;
 
-local Functions = {}
-local IndexFunctions = {}
-local NewIndexFunctions = {}
+-- ???
+-- ClassMetaTable = {__index = function(Class,Key) return Class.super[Key] end}
+-- local ReadOnlyKeys = setmetatable({},ClassMetaTable);
+-- ???
 
-local PrivateKeys = {}
-local ReadOnlyKeys = {} -- setmetatable({},ClassMetaTable);
 
--- 2D rotation mouse collision detection
+-- TODO: 2D rotation mouse collision detection
 -- https://www.siggraph.org/education/materials/HyperGraph/modeling/mod_tran/2drota.htm
 
-local function New(Object)
-	Base.New(Object);
+local function new(Object)
+	super.new(Object);
 	
 	Object.AbsolutePosition = Vector2.new();
-	Object.AbsoluteSize = Vector2.new(100,100);
+	Object.AbsoluteSize = Vector2.new(100, 100);
 	
 	Object.Position = UDim2.new();
-	Object.Size = UDim2.new(0,100,0,100);
+	Object.Size = UDim2.new(0, 100, 0, 100);
 	
 	function Object.Draw()
-		local Parent = PROXY__OBJ[Object.Parent];
+		-- local parent = PROXY__OBJ[Object.parent];
 		
 		if (Object.Visible == true) then
 			dxSetRenderTarget(Object.RenderTarget,true);
@@ -57,7 +56,7 @@ local function New(Object)
 			);
 			dxSetBlendMode("modulate_add");
 			
-			local Children = Object.Children;
+			local Children = Object.children;
 			if (Object.ClipsDescendants == true) then
 				for i = 1,#Children do
 					local Child = Children[i];
@@ -72,7 +71,7 @@ local function New(Object)
 				for i = 1,#Children do
 					local Child = Children[i];
 					
-					local ChildRenderTargetSizeX,ChildRenderTargetSizeY = Child.RenderTargetSize:Unpack();
+					local ChildRenderTargetSizeX,ChildRenderTargetSizeY = Child.RenderTargetSize.unpack();
 					dxDrawImage(
 						0,0,ChildRenderTargetSizeX,ChildRenderTargetSizeY,
 						Child.RenderTarget
@@ -84,37 +83,30 @@ local function New(Object)
 			dxSetRenderTarget();
 		end
 		
-		Parent.Draw();
+		Object.parent.Draw();
 	end
 end
 
-Instance.Inherited.Frame = {
-	Base = Base,
+Instance.initializable.Frame = {
+	name = name,
+    
+    super = super,
 	
-	Name = Name,
-	
-	Functions = Functions,
-	IndexFunctions = IndexFunctions,
-	NewIndexFunctions = NewIndexFunctions,
-	
-	PrivateKeys = PrivateKeys,
-	ReadOnlyKeys = ReadOnlyKeys,
-	
-	New = New
+	new = new,
 }
 
 
 
-ScrGui = Instance.New("ScreenGui");
+local scrGui = Instance.new("ScreenGui");
+
+local fr1 = Instance.new("Frame", scrGui);
+fr1.Position = UDim2.new(0.5, -50, 0.5, -50);
 
 
-Fr1 = Instance.New("Frame",ScrGui);	Fr1.Name = "Fr1";
-Fr1.Position = UDim2.new(0.5,-50,0.5,-50);
-
-
--- Fr2 = Instance.New("Frame",Fr1);	Fr2.Name = "Fr2";
--- Fr2.Position = UDim2.New(0,-50,0,-50);
--- Fr2.BackgroundColor3 = Color3.New(223,196,125);
--- Fr2.BorderColor3 = Color3.New();
--- Fr2.BorderSizePixel = 8;
--- Fr2.BorderOffsetPixel = 8;
+-- fr2 = Instance.new("Frame", fr1);
+-- fr2.name = "fr2";
+-- fr2.Position = UDim2.new(0, -50, 0, -50);
+-- fr2.BackgroundColor3 = Color3.new(223, 196, 125);
+-- fr2.BorderColor3 = Color3.new();
+-- fr2.BorderSizePixel = 8;
+-- fr2.BorderOffsetPixel = 8;

@@ -1,4 +1,4 @@
-local DEFAULT_SCHEME = {
+local DEFAULT_CURSORS = {
     ["arrow"]       = "cursors/PulseGlass/arrow.ani",
     ["beam"]        = "cursors/PulseGlass/beam.cur",
     ["busy"]        = "cursors/PulseGlass/busy.ani",
@@ -83,8 +83,9 @@ end
 
 
 
-local func = {}
-local set  = {}
+local name = "Mouse";
+
+local super = Instance;
 
 local private = {
     cursorContainer = true,
@@ -93,7 +94,7 @@ local private = {
     cursorData = true,
 }
 
-local readonly = {
+local readOnly = {
     Move = true,
     
     viewWidth  = true,
@@ -115,7 +116,7 @@ local function new(obj) setCursorAlpha(0);
     
     obj.cursorContainer = {}
     
-    for cursor, path in pairs(DEFAULT_SCHEME) do
+    for cursor, path in pairs(DEFAULT_CURSORS) do
        local data = decode_cursor(path);
         
         if (not data) then
@@ -223,21 +224,17 @@ end
 
 
 
-Instance.Inherited.Mouse = {
-    Base = Instance,
+Instance.initializable.Mouse = {
+    name = name,
     
-    Name = "Mouse",
+    super = super,
     
-    Functions = get,
-    NewIndexFunctions = set,
+    private  = private,
+    readOnly = readOnly,
     
-    PrivateKeys = private,
-    
-    ReadOnlyKeys = readonly,
-    
-    New = new,
+    new = new,
 }
 
+local mouse = Instance.new("Mouse");
 
-
-local Mouse = Instance.New("Mouse");
+Instance.privateClass.Mouse = true;

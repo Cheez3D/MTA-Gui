@@ -1,21 +1,17 @@
-local Base = Instance;
+local name = "GuiBase2D";
 
-local Name = "GuiBase2D";
+local super = Instance;
 
-local Functions = {}
-local IndexFunctions = {}
-local NewIndexFunctions = {}
-
-local PrivateKeys = {
+local private = {
 	-- RenderTarget = true,
 	-- RenderTargetSize = true
 }
-local ReadOnlyKeys = {
+local readOnly = {
 	AbsolutePosition = true,
 	AbsoluteSize = true
 } -- setmetatable({},ClassMetaTable);
 
-local function New(Object)
+local function new(Object)
 	Object.AbsolutePosition = true;
 	Object.AbsoluteSize = true;
 	
@@ -24,16 +20,12 @@ local function New(Object)
 end
 
 GuiBase2D = {
-	Base = Base,
+	name = name,
+    
+    super = super,
 	
-	Name = Name,
+	private  = private,
+	readOnly = readOnly,
 	
-	Functions = Functions,
-	IndexFunctions = IndexFunctions,
-	NewIndexFunctions = NewIndexFunctions,
-	
-	PrivateKeys = PrivateKeys,
-	ReadOnlyKeys = ReadOnlyKeys,
-	
-	New = New
+	new = new,
 }

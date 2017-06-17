@@ -1,10 +1,12 @@
+local name = "Vector2";
+
 local func = {}
 local get  = {}
 
 local new;
 
 local meta = {
-    __metatable = "Vector2",
+    __metatable = name,
     
     
     __index = function(proxy, key)
@@ -28,13 +30,6 @@ local meta = {
     
     __newindex = function(proxy, key)
         error("attempt to modify a read-only key (" ..tostring(key).. ")", 2);
-    end,
-    
-    
-    __tostring = function(proxy)
-        local obj = PROXY__OBJ[proxy];
-        
-        return obj.x.. ", " ..obj.y;
     end,
     
     
@@ -131,6 +126,13 @@ local meta = {
     
     
     -- __eq, -- memoization takes care of it
+    
+    
+    __tostring = function(proxy)
+        local obj = PROXY__OBJ[proxy];
+        
+        return obj.x.. ", " ..obj.y;
+    end,
 }
 
 
@@ -138,9 +140,6 @@ local meta = {
 local MEM_PROXIES = setmetatable({}, { __mode = 'v' });
 
 function new(x, y)
-    
-    -- [ ====================== [ ASSERTION ] ====================== ]
-    
     if (x ~= nil) then
         local xType = type(x);
         
@@ -163,7 +162,7 @@ function new(x, y)
     
     
     
-    local memID = x.. ':' ..y;
+    local memID = x.. ":" ..y;
     
     local proxy = MEM_PROXIES[memID];
     

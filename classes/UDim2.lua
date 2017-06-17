@@ -1,13 +1,13 @@
 -- local UDim = require("UDim");
 
-
+local name = "UDim2";
 
 local func = {}
 
 local new;
 
 local meta = {
-    __metatable = "UDim2",
+    __metatable = name,
     
     
     __index = function(proxy, key)
@@ -15,15 +15,15 @@ local meta = {
         
         local val = obj[key];
         if (val ~= nil) then -- val might be false so compare against nil
-        
-            -- if val is an object then return proxy instead
+            
+            -- convert object to proxy before returning
             if (OBJ__PROXY[val]) then
                 val = OBJ__PROXY[val];
             end
             
             return val;
         end
-    
+
         local func_f = func[key];
         if (func_f) then
             return (function(...) return func_f(obj, ...) end); -- might be able to do memoization here
@@ -32,13 +32,6 @@ local meta = {
     
     __newindex = function(proxy, key)
         error("attempt to modify a read-only key (" ..tostring(key).. ")", 2);
-    end,
-    
-    
-    __tostring = function(proxy)
-        local obj = PROXY__OBJ[proxy];
-        
-        return "{" ..tostring(obj.x).. "}, {" ..tostring(obj.y).. "}";
     end,
     
     
@@ -70,14 +63,19 @@ local meta = {
             obj1OffsetY + obj2OffsetY
         );
     end,
+    
+    
+    __tostring = function(proxy)
+        local obj = PROXY__OBJ[proxy];
+        
+        return "{" ..tostring(obj.x).. "}, {" ..tostring(obj.y).. "}";
+    end,
 }
+
 
 local MEM_PROXIES = setmetatable({}, { __mode = 'v' });
 
 function new(scaleX, offsetX, scaleY, offsetY)
-
-    -- [ ====================== [ ASSERTION ] ====================== ]
-    
     if (scaleX ~= nil) then
         local scaleXType = type(scaleX);
         
@@ -119,8 +117,7 @@ function new(scaleX, offsetX, scaleY, offsetY)
     end
     
     
-    
-    local memID = scaleX.. ':' ..offsetX.. ':' ..scaleY.. ':' ..offsetY;
+    local memID = scaleX.. ":" ..offsetX.. ":" ..scaleY.. ":" ..offsetY;
     
     local proxy = MEM_PROXIES[memID];
     
@@ -143,8 +140,8 @@ end
 
 
 function func.unpack(obj)
-    local scaleX, offsetX = UDim.func.unpack(obj.x);
-    local scaleY, offsetY = UDim.func.unpack(obj.y);
+    local scaleX, offsetX = UDim.func.unpack(PROXY__OBJ[obj.x]);
+    local scaleY, offsetY = UDim.func.unpack(PROXY__OBJ[obj.y]);
     
     return scaleX, offsetX, scaleY, offsetY;
 end

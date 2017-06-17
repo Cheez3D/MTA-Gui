@@ -10,24 +10,27 @@ local INT_MASK   = 2^31;
 
 
 
+local name = "Stream";
+
 local func = {}
 local get  = {}
 local set  = {}
 
 local private = {
-    isFile = true,
+    isClosed = true,
+    isFile   = true,
     
     bytes = true,
 }
 
-local readonly = {
+local readOnly = {
     size = true,
 }
 
 local new;
 
 local meta = {
-    __metatable = "Stream",
+    __metatable = name,
     
     
 	__index = function(proxy, key)
@@ -53,7 +56,7 @@ local meta = {
     end,
 	
 	__newindex = function(proxy, key, val)
-		if (readonly[key]) then
+		if (readOnly[key]) then
             error("attempt to modify a read-only key (" ..tostring(key).. ")", 2);
         end
 		
@@ -75,7 +78,6 @@ function new(bytes)
 	
 	
     local isFile = fileExists(bytes);
-    
     local file;
     
     if (isFile) then
@@ -83,7 +85,8 @@ function new(bytes)
     end
     
 	local obj = {
-        isFile = isFile,
+        isClosed = false,
+        isFile =   isFile,
         
 		bytes = isFile and file or bytes,
 		
@@ -102,6 +105,10 @@ end
 
 
 function func.read(obj, count)
+    if (obj.isClosed) then
+        error("stream is closed", 2);
+    end
+    
     if (count ~= nil) then
         local countType = type(count);
         
@@ -180,7 +187,7 @@ end
 
 
 -- convert unsigned to signed
--- using MASKS to determine if MSB is 1 or 0
+-- using masks to determine if MSB is 1 or 0
 
 function func.read_char(obj)
     local uchar = func.read_uchar(obj);
@@ -205,6 +212,8 @@ function func.close(obj)
     if (obj.isFile) then
         fileClose(obj.bytes);
     end
+    
+    obj.isClosed = true;
 end
 
 
@@ -247,7 +256,7 @@ Stream = {
     set  = set,
     
     private  = private,
-    readonly = readonly,
+    readOnly = readOnly,
     
     new = new,
     
