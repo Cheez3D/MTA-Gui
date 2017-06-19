@@ -72,6 +72,8 @@ local meta = {
 	end
 }
 
+
+
 function new(bytes)
 	local bytesType = type(bytes);
 	if (bytesType ~= "string") then error("bad argument #1 to '" ..__func__.. "' (string expected, got " ..bytesType.. ")",2) end
@@ -85,6 +87,9 @@ function new(bytes)
     end
     
 	local obj = {
+        type = name,
+        
+        
         isClosed = false,
         isFile =   isFile,
         
@@ -251,6 +256,8 @@ end
 
 
 Stream = {
+    name = name,
+    
     func = func,
     get  = get,
     set  = set,
@@ -258,9 +265,9 @@ Stream = {
     private  = private,
     readOnly = readOnly,
     
-    new = new,
-    
     meta = meta,
+    
+    new = new,
 }
 
 -- Stream = setmetatable({}, {

@@ -7,106 +7,137 @@ local name = "Frame";
 
 local super = GuiObject;
 
--- ???
--- ClassMetaTable = {__index = function(Class,Key) return Class.super[Key] end}
--- local ReadOnlyKeys = setmetatable({},ClassMetaTable);
--- ???
+local func = setmetatable({}, { __index = function(tbl, key) return super.func[key] end });
+local get  = setmetatable({}, { __index = function(tbl, key) return super.get [key] end });
+local set  = setmetatable({}, { __index = function(tbl, key) return super.set [key] end });
+
+local private  = setmetatable({}, { __index = function(tbl, key) return super.private [key] end });
+local readOnly = setmetatable({}, { __index = function(tbl, key) return super.readOnly[key] end });
 
 
 -- TODO: 2D rotation mouse collision detection
 -- https://www.siggraph.org/education/materials/HyperGraph/modeling/mod_tran/2drota.htm
 
-local function new(Object)
-	super.new(Object);
+local function new(obj)
+	super.new(obj);
 	
-	Object.AbsolutePosition = Vector2.new();
-	Object.AbsoluteSize = Vector2.new(100, 100);
+	obj.absPos  = PROXY__OBJ[Vector2.new()];
+	obj.absSize = PROXY__OBJ[Vector2.new(100, 100)];
 	
-	Object.Position = UDim2.new();
-	Object.Size = UDim2.new(0, 100, 0, 100);
+	obj.pos  = PROXY__OBJ[UDim2.new()];
+	obj.size = PROXY__OBJ[UDim2.new(0, 100, 0, 100)];
 	
-	function Object.Draw()
-		-- local parent = PROXY__OBJ[Object.parent];
-		
-		if (Object.Visible == true) then
-			dxSetRenderTarget(Object.RenderTarget,true);
-			dxSetBlendMode("modulate_add");
+    
+    
+	function obj.draw()
+		if (obj.visible) then
+            dxSetBlendMode("modulate_add");
+            
+			dxSetRenderTarget(obj.rt, true);
+            
+            local absX,     absY      = Vector2.func.unpack(obj.absPos);
+            local absWidth, absHeight = Vector2.func.unpack(obj.absSize);
 			
-			local AbsolutePosition,AbsoluteSize = Object.AbsolutePosition,Object.AbsoluteSize;
+			local borderOffset = obj.borderOffset;
+			local borderSize   = obj.borderSize;
 			
-			local BorderColor3 = Object.BorderColor3;
-			local BorderOffsetPixel = Object.BorderOffsetPixel;
-			local BorderSizePixel = Object.BorderSizePixel;
-			
-			local BackgroundColor3 = Object.BackgroundColor3;
-			
-			-- Border
+			-- draw border
 			dxDrawRectangle(
-				AbsolutePosition.x-BorderOffsetPixel,AbsolutePosition.y-BorderOffsetPixel,
-				AbsoluteSize.x+2*BorderOffsetPixel,AbsoluteSize.y+2*BorderOffsetPixel,
-				tocolor(BorderColor3.Red,BorderColor3.Green,BorderColor3.Blue,255*(1-Object.BorderTransparency))
+				absX-borderOffset,
+                absY-borderOffset,
+                
+				absWidth  + 2*borderOffset,
+                absHeight + 2*borderOffset,
+                
+				tocolor(obj.borderColor3.r, obj.borderColor3.g, obj.borderColor3.b, 255*(1-obj.borderTransparency))
 			);
 			
-			-- Background
+			-- draw background
 			dxSetBlendMode("overwrite");
+            
 			dxDrawRectangle(
-				AbsolutePosition.x+(BorderSizePixel-BorderOffsetPixel),AbsolutePosition.y+(BorderSizePixel-BorderOffsetPixel),
-				AbsoluteSize.x-2*BorderSizePixel+2*BorderOffsetPixel,AbsoluteSize.y-2*BorderSizePixel+2*BorderOffsetPixel,
-				tocolor(BackgroundColor3.r,BackgroundColor3.g,BackgroundColor3.b,255*(1-Object.BackgroundTransparency))
+				absX+(borderSize-borderOffset),
+                absY+(borderSize-borderOffset),
+                
+				absWidth -2*borderSize+2*borderOffset,
+                absHeight-2*borderSize+2*borderOffset,
+                
+				tocolor(obj.bgColor3.r, obj.bgColor3.g, obj.bgColor3.b, 255*(1-obj.bgTransparency))
 			);
+            
+            -- draw children
 			dxSetBlendMode("modulate_add");
 			
-			local Children = Object.children;
-			if (Object.ClipsDescendants == true) then
-				for i = 1,#Children do
-					local Child = Children[i];
+			if (obj.clipsDescendants) then
+				for i = 1, #obj.children do
+					local child = obj.children[i];
 					
 					dxDrawImageSection(
-						AbsolutePositionX,AbsolutePositionY,AbsoluteSizeX,AbsoluteSizeY,
-						AbsolutePositionX,AbsolutePositionY,AbsoluteSizeX,AbsoluteSizeY,
-						Child.RenderTarget
+						absX, absY, absWidth, absHeight,
+						absX, absY, absWidth, absHeight,
+                        
+						child.rt
 					);
 				end
 			else
-				for i = 1,#Children do
-					local Child = Children[i];
-					
-					local ChildRenderTargetSizeX,ChildRenderTargetSizeY = Child.RenderTargetSize.unpack();
-					dxDrawImage(
-						0,0,ChildRenderTargetSizeX,ChildRenderTargetSizeY,
-						Child.RenderTarget
-					);
+				for i = 1, #obj.children do
+					local child = obj.children[i];
+                    
+					dxDrawImage(0, 0, child.rtSize.x, child.rtSize.y, child.rt);
 				end
 			end
 			
-			dxSetBlendMode("blend");
 			dxSetRenderTarget();
+            
+            dxSetBlendMode("blend");
 		end
 		
-		Object.parent.Draw();
+		obj.parent.draw();
 	end
 end
+
+
 
 Instance.initializable.Frame = {
 	name = name,
     
     super = super,
+    
+    func = func,
+    get  = get,
+    set  = set,
+    
+    private  = private,
+    readOnly = readOnly,
 	
 	new = new,
 }
 
 
 
+
+
+
 local scrGui = Instance.new("ScreenGui");
 
 local fr1 = Instance.new("Frame", scrGui);
-fr1.Position = UDim2.new(0.5, -50, 0.5, -50);
+fr1.pos = UDim2.new(0.5, -50, 0.5, -50);
 
 
--- fr2 = Instance.new("Frame", fr1);
--- fr2.name = "fr2";
--- fr2.Position = UDim2.new(0, -50, 0, -50);
--- fr2.BackgroundColor3 = Color3.new(223, 196, 125);
--- fr2.BorderColor3 = Color3.new();
--- fr2.BorderSizePixel = 8;
--- fr2.BorderOffsetPixel = 8;
+fr2 = Instance.new("Frame", fr1);
+fr2.name = "fr2";
+fr2.pos = UDim2.new(0, -50, 0, -50);
+fr2.bgColor3 = Color3.new(223, 196, 125);
+fr2.borderColor3 = Color3.new();
+fr2.borderSize = 40;
+fr2.borderOffset = 0;
+
+
+-- local v = 0;
+-- addEventHandler("onClientRender", root, function()
+    -- if (v < 300) then
+        -- fr1.pos = UDim2.new(0, v, 0, v);
+        
+        -- v = v+0.5;
+    -- end
+-- end);

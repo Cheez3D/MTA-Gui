@@ -7,206 +7,267 @@ local name = "GuiObject";
 
 local super = GuiBase2D;
 
-local func = {}
-local set  = {}
+local func = setmetatable({}, { __index = function(tbl, key) return super.func[key] end });
+local get  = setmetatable({}, { __index = function(tbl, key) return super.get [key] end });
+local set  = setmetatable({}, { __index = function(tbl, key) return super.set [key] end });
 
-local private = {
-	RecreateDescendantsRenderTarget = true
-}
+local private = setmetatable({
+        updateDescendatsRt = true,
+    },
+    
+    { __index = function(tbl, key) return super.private[key] end }
+);
 
-local function new(Object)
-	super.new(Object);
+local readOnly = setmetatable({}, { __index = function(tbl, key) return super.readOnly[key] end });
+
+
+
+local function new(obj)
+	super.new(obj);
 	
-	Object.BackgroundColor3 = Color3.new(255,255,255);
-	Object.BackgroundTransparency = 0;
+	obj.bgColor3       = PROXY__OBJ[Color3.new(255, 255, 255)];
+	obj.bgTransparency = 0;
 	
-	Object.BorderColor3 = Color3.new(27,42,53);
-	Object.BorderOffsetPixel = 1;
-	Object.BorderSizePixel = 1;
-	Object.BorderTransparency = 0;
+	obj.borderColor3       = PROXY__OBJ[Color3.new(27, 42, 53)];
+	obj.borderOffset       = 1;
+	obj.borderSize         = 1;
+	obj.borderTransparency = 0;
 	
-	Object.ClipsDescendants = false;
+	obj.clipsDescendants = false;
 	
-	Object.Position = true;
-	Object.Size = true;
+	obj.pos  = nil;
+	obj.size = nil;
 	
-	Object.Visible = true;
+	obj.visible = true;
 end
 
 
-function func.RecreateDescendantsRenderTarget(Object,RenderTargetSize)
-	if isElement(Object.RenderTarget) then destroyElement(Object.RenderTarget) end
+
+function func.updateDescendatsRt(obj, rtSize)
+	if isElement(obj.rt) then
+        destroyElement(obj.rt);
+    end
 	
-	local RenderTargetSizeX,RenderTargetSizeY = RenderTargetSize.unpack();
-	Object.RenderTarget = dxCreateRenderTarget(RenderTargetSizeX,RenderTargetSizeY,true);
-	Object.RenderTargetSize = RenderTargetSize;
+	obj.rt     = dxCreateRenderTarget(rtSize.x, rtSize.y, true);
+	obj.rtSize = rtSize;
 	
-	local Children = Object.children;
-	for i = 1,#Children do func.RecreateDescendantsRenderTarget(Children[i],RenderTargetSize) end
+	for i = 1, #obj.children do
+        func.updateDescendatsRt(obj.children[i], rtSize);
+    end
 end
 
 
-function set.BackgroundColor3(Object,BackgroundColor3,__,Key)
-	local BackgroundColor3Type = type(BackgroundColor3);
-	if (BackgroundColor3Type ~= "Color3") then error("bad argument #1 to '"..Key.."' (Color3 expected, got "..BackgroundColor3Type..")",3) end
-	
-	Object.BackgroundColor3 = BackgroundColor3;
-	
-	Object.Draw();
-end
 
-function set.BackgroundTransparency(Object,BackgroundTransparency,__,Key)
-	local BackgroundTransparencyType = type(BackgroundTransparency);
-	if (BackgroundTransparencyType ~= "number") then error("bad argument #1 to '"..Key.."' (number expected, got "..BackgroundTransparencyType..")",3)
-	elseif (BackgroundTransparency < 0) or (BackgroundTransparency > 1) then error("bad argument #1 to '"..Key.."' (value out of bounds)",3) end
+function set.parent(obj, parent, prevParent)
+    local success, result = pcall(super.set.parent, obj, parent, prevParent);
+    if (not success) then error(result, 2) end
+    
+    
+	if (prevParent) and Instance.func.isA(prevParent, "GuiBase2D") then
+        prevParent.draw();
+	end
 	
-	Object.BackgroundTransparency = BackgroundTransparency;
-	
-	Object.Draw();
-end
-
-function set.BorderColor3(Object,BorderColor3,__,Key)
-	local BorderColor3Type = type(BorderColor3);
-	if (BorderColor3Type ~= "Color3") then error("bad argument #1 to '"..Key.."' (Color3 expected, got "..BorderColor3Type..")",3) end
-	
-	Object.BorderColor3 = BorderColor3;
-	
-	Object.Draw();
-end
-
-function set.BorderOffsetPixel(Object,BorderOffsetPixel,__,Key)
-	local BorderOffsetPixelType = type(BorderOffsetPixel);
-	if (BorderOffsetPixelType ~= "number") then	error("bad argument #1 to '"..Key.."' (number expected, got "..BorderOffsetPixelType..")",3)
-	elseif (BorderOffsetPixel%1 ~= 0) then error ("bad argument #1 to '"..Key.."' (number has no integer representation)",3)
-	elseif (BorderOffsetPixel < 0) or (BorderOffsetPixel > Object.BorderSizePixel) then error("bad argument #1 to '"..Key.."' (invalid value)",3) end
-	
-	Object.BorderOffsetPixel = BorderOffsetPixel;
-	
-	Object.Draw();
-end
-
-function set.BorderSizePixel(Object,BorderSizePixel,__,Key)
-	local BorderSizePixelType = type(BorderSizePixel);
-	if (BorderSizePixelType ~= "number") then error("bad argument #1 to '"..Key.."' (number expected, got "..BorderSizePixelType..")",3)
-	elseif (BorderSizePixel%1 ~= 0) then error ("bad argument #1 to '"..Key.."' (number has no integer representation)",3)
-	elseif (BorderSizePixel < 0) then error("bad argument #1 to '"..Key.."' (invalid value)",3) end
-	
-	if (Object.BorderOffsetPixel > BorderSizePixel) then Object.BorderOffsetPixel = BorderSizePixel end
-	Object.BorderSizePixel = BorderSizePixel;
-	
-	Object.Draw();
-end
-
-function set.BorderTransparency(Object,BorderTransparency,__,Key)
-	local BorderTransparencyType = type(BorderTransparency);
-	if (BorderTransparencyType ~= "number") then error("bad argument #1 to '"..Key.."' (number expected, got "..BorderTransparencyType..")",3)
-	elseif (BorderTransparency < 0) or (BorderTransparency > 1) then error("bad argument #1 to '"..Key.."' (invalid value)",3) end
-	
-	Object.BorderTransparency = BorderTransparency;
-	
-	Object.Draw();
-end
-
-function set.ClipsDescendants(Object,ClipsDescendants,__,Key)
-	local ClipsDescendantsType = type(ClipsDescendants);
-	if (ClipsDescendantsType ~= "boolean") then error("bad argument #1 to '"..Key.."' (boolean expected, got "..ClipsDescendantsType..")",3) end
-	
-	Object.ClipsDescendants = ClipsDescendants;
-	
-	local Children = Object.children;
-	for i = 1,#Children do
-		local Child = Children[i];
-		
-		Child.Draw();
+	if (parent) and Instance.func.isA(parent, "GuiBase2D") then
+        
+        -- for example if switching from a ScreenGui to a SurfaceGui which has different rt size
+        -- this also includes the scenario in which obj was just created and has a nil rtSize
+		if (parent.rtSize ~= obj.rtSize) then
+            func.updateDescendatsRt(obj, parent.rtSize);
+        end
+        
+        -- update size and pos (because of relative pos / size)
+        set.pos (obj, obj.pos);
+		set.size(obj, obj.size);
+        
+        obj.draw();
+    else
+        if isElement(obj.rt) then
+            destroyElement(obj.rt);
+        end
+        
+        obj.rt     = nil;
+        obj.rtSize = nil;
 	end
 end
 
-function set.parent(Object, ParentProxy, PreviousParentProxy, Key)
-	if (PreviousParentProxy ~= nil) and PreviousParentProxy.isA("GuiBase2D") then
-		local PreviousParent = PROXY__OBJ[PreviousParentProxy];
-		
-		PreviousParent.Draw();
-	end
+
+function set.bgColor3(obj, bgColor3)
+	local bgColor3Type = type(bgColor3);
+    
+	if (bgColor3Type ~= "Color3") then
+        error("bad argument #1 to 'bgColor3' (Color3 expected, got " ..bgColor3Type.. ")", 2);
+    end
 	
+    
+	obj.bgColor3 = bgColor3;
 	
-	if (ParentProxy ~= nil) and ParentProxy.isA("GuiBase2D") then
-		local parent = Object.parent -- new parent was set above in Instance function -- PROXY__OBJ[ParentProxy];
-		
-		local ParentRenderTargetSize = parent.RenderTargetSize;
-		if (ParentRenderTargetSize ~= Object.RenderTargetSize) then func.RecreateDescendantsRenderTarget(Object,ParentRenderTargetSize) end
-		
-		local Proxy = OBJ__PROXY[Object];
-		
-		Proxy.Position = Object.Position;
-		Proxy.Size = Object.Size;
+	obj.draw();
+end
+
+function set.bgTransparency(obj, bgTransparency)
+	local bgTransparencyType = type(bgTransparency);
+    
+	if (BackgroundTransparencyType ~= "number") then
+        error("bad argument #1 to 'bgTransparency' (number expected, got " ..bgTransparencyType.. ")", 2);
+	elseif (bgTransparency < 0) or (bgTransparency > 1) then
+        error("bad argument #1 to 'bgTransparency' (value out of bounds)", 2);
+    end
+	
+    
+	obj.bgTransparency = bgTransparency;
+	
+	obj.draw();
+end
+
+function set.borderColor3(obj, borderColor3)
+	local borderColor3Type = type(borderColor3);
+    
+	if (borderColor3Type ~= "Color3") then
+        error("bad argument #1 to 'borderColor3' (Color3 expected, got " ..borderColor3Type.. ")", 2);
+    end
+	
+    
+	obj.borderColor3 = borderColor3;
+	
+	obj.draw();
+end
+
+function set.borderOffset(obj, borderOffset)
+	local borderOffsetType = type(borderOffset);
+    
+	if (borderOffsetType ~= "number") then
+        error("bad argument #1 to 'borderOffset' (number expected, got " ..borderOffsetType.. ")", 2);
+	elseif (borderOffset%1 ~= 0) then
+        error("bad argument #1 to 'borderOffset' (number has no integer representation)", 2);
+	elseif (borderOffset < 0) or (borderOffset > obj.borderSize) then
+        error("bad argument #1 to 'borderOffset' (invalid value)", 2);
+    end
+	
+    
+	obj.borderOffset = borderOffset;
+	
+	obj.draw();
+end
+
+function set.borderSize(obj, borderSize)
+	local borderSizeType = type(borderSize);
+    
+	if (borderSizeType ~= "number") then
+        error("bad argument #1 to 'borderSize' (number expected, got " ..borderSizeType.. ")", 2);
+	elseif (borderSize%1 ~= 0) then
+        error ("bad argument #1 to 'borderSize' (number has no integer representation)", 2);
+	elseif (borderSize < 0) then
+        error("bad argument #1 to 'borderSize' (invalid value)", 2);
+    end
+	
+    
+	if (obj.borderOffset > borderSize) then
+        obj.borderOffset = borderSize;
+    end
+    
+	obj.borderSize = borderSize;
+	
+	obj.draw();
+end
+
+function set.borderTransparency(obj, borderTransparency)
+	local borderTransparencyType = type(borderTransparency);
+    
+	if (borderTransparencyType ~= "number") then
+        error("bad argument #1 to 'borderTransparency' (number expected, got " ..borderTransparencyType.. ")", 2);
+	elseif (borderTransparency < 0) or (borderTransparency > 1) then
+        error("bad argument #1 to 'borderTransparency' (invalid value)", 2);
+    end
+	
+    
+	obj.borderTransparency = borderTransparency;
+	
+	obj.draw();
+end
+
+function set.clipsDescendants(obj, clipsDescendants)
+	local clipsDescendantsType = type(clipsDescendants);
+    
+	if (clipsDescendantsType ~= "boolean") then
+        error("bad argument #1 to 'clipsDescendants' (boolean expected, got " ..clipsDescendantsType.. ")", 2);
+    end
+	
+    
+	obj.clipsDescendants = clipsDescendants;
+	
+	for i = 1, #obj.children do
+		obj.children[i].draw();
 	end
 end
 
-function set.Position(Object,Position,__,Key)
-	local PositionType = type(Position);
-	if (PositionType ~= "UDim2") then error("bad argument #1 to '"..Key.."' (UDim2 expected, got "..PositionType..")",3) end
+function set.pos(obj, pos)
+	local posType = type(pos);
+    
+	if (posType ~= "UDim2") then
+        error("bad argument #1 to 'pos' (UDim2 expected, got " ..posType.. ")", 2);
+    end
 	
-	Object.Position = Position;
+    
+	obj.pos = pos;
 	
-	if (Object.parent) then
-		local parent = Object.parent;
-	
-		local ParentAbsolutePositionX,ParentAbsolutePositionY = parent.AbsolutePosition.unpack();
-		local ParentAbsoluteSizeX,ParentAbsoluteSizeY = parent.AbsoluteSize.unpack();
+	if (obj.parent) then
+        local parent = obj.parent;
+        
+		obj.absPos = PROXY__OBJ[Vector2.new(
+			parent.absPos.x+pos.x.offset + parent.absSize.x*pos.x.scale,
+			parent.absPos.y+pos.y.offset + parent.absSize.y*pos.y.scale
+		)];
 		
-		local PositionXScale,PositionXOffset,PositionYScale,PositionYOffset = Position.unpack();
-		
-		Object.AbsolutePosition = Vector2.new(
-			ParentAbsolutePositionX+PositionXOffset+ParentAbsoluteSizeX*PositionXScale,
-			ParentAbsolutePositionY+PositionYOffset+ParentAbsoluteSizeY*PositionYScale
-		);
-		
-		
-		Object.Draw();
+		obj.draw();
 	end
 end
 
-function set.Size(Object,Size,__,Key)
-	local SizeType = type(Size);
-	if (SizeType ~= "UDim2") then error("bad argument #1 to '"..Key.."' (UDim2 expected, got "..SizeType..")",3) end
+function set.size(obj, size)
+	local sizeType = type(size);
+    
+	if (sizeType ~= "UDim2") then
+        error("bad argument #1 to 'size' (UDim2 expected, got " ..sizeType.. ")", 2);
+    end
 	
 	
-	Object.Size = Size;
+	obj.size = size;
 	
-	if (Object.parent) then
-		local parent = Object.parent;
+	if (obj.parent) then
+		local parentAbsWidth, parentAbsHeight = Vector2.func.unpack(obj.parent.absSize);
 		
-		local ParentAbsoluteSizeX,ParentAbsoluteSizeY = parent.AbsoluteSize.unpack();
+		local widthScale, widthOffset, heightScale, heightOffset = UDim2.func.unpack(size);
 		
-		local SizeXScale,SizeXOffset,SizeYScale,SizeYOffset = Size.unpack();
+		obj.absSize = PROXY__OBJ[Vector2.new(
+			widthOffset  + parentAbsWidth *widthScale,
+			heightOffset + parentAbsHeight*heightScale
+		)];
 		
-		Object.AbsoluteSize = Vector2.new(
-			SizeXOffset+ParentAbsoluteSizeX*SizeXScale,
-			SizeYOffset+ParentAbsoluteSizeY*SizeYScale
-		);
-		
-		
-		local Children = Object.children;	local ChildrenNumber = #Children;
-		if (ChildrenNumber > 0) then
-			for i = 1,ChildrenNumber do
-				local Child = Children[i];	local ChildProxy = OBJ__PROXY[Child];
-				
-				ChildProxy.Position = Child.Position;
-				ChildProxy.Size = Child.Size;
+		if (#obj.children > 0) then
+			for i = 1, #obj.children do
+				local child = obj.children[i];
+                
+                set.pos (obj, child.pos);
+				set.size(obj, child.size);
 			end
-		else Object.Draw() end
+		else
+            obj.draw();
+        end
 	end
 end
 
-function set.Visible(Object,Visible,__,Key)
-	local VisibleType = type(Visible);
-	if (VisibleType ~= "boolean") then error("bad argument #1 to '"..Key.."' (boolean expected, got "..VisibleType..")",3) end
+function set.visible(obj, visible)
+	local visibleType = type(visible);
+    
+	if (visibleType ~= "boolean") then
+        error("bad argument #1 to 'visible' (boolean expected, got " ..visibleType.. ")", 2);
+    end
 	
 	
-	Object.Visible = Visible;
+	obj.visible = visible;
 	
-	Object.Draw();
+	obj.draw();
 end
+
 
 
 GuiObject = {
@@ -215,9 +276,11 @@ GuiObject = {
     super = super,
 	
 	func = func,
+    get  = get,
 	set  = set,
 	
 	private  = private,
+    readOnly = readOnly,
 	
 	new = new,
 }

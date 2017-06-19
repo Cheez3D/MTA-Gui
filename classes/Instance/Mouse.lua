@@ -83,28 +83,44 @@ end
 
 
 
+setCursorAlpha(0);
+
+
+
 local name = "Mouse";
 
 local super = Instance;
 
-local private = {
-    cursorContainer = true,
-    
-    cursorFrame = true,
-    cursorData = true,
-}
+local func = setmetatable({}, { __index = function(tbl, key) return super.func[key] end });
+local get  = setmetatable({}, { __index = function(tbl, key) return super.get [key] end });
+local set  = setmetatable({}, { __index = function(tbl, key) return super.set [key] end });
 
-local readOnly = {
-    Move = true,
+local private = setmetatable({
+        cursorContainer = true,
+        
+        cursorFrame = true,
+        cursorData = true,
+    },
     
-    viewWidth  = true,
-    viewHeight = true,
-    
-    x = true,
-    y = true,
-}
+    { __index = function(tbl, key) return super.private[key] end }
+);
 
-local function new(obj) setCursorAlpha(0);
+local readOnly = setmetatable({
+        Move = true,
+        
+        viewWidth  = true,
+        viewHeight = true,
+        
+        x = true,
+        y = true,
+    },
+    
+    { __index = function(tbl, key) return super.readOnly[key] end }
+);
+
+
+
+local function new(obj)
     obj.viewWidth  = SCREEN_WIDTH;
     obj.viewHeight = SCREEN_HEIGHT;
     
@@ -228,6 +244,10 @@ Instance.initializable.Mouse = {
     name = name,
     
     super = super,
+    
+    func = func,
+    get  = get,
+    set  = set,
     
     private  = private,
     readOnly = readOnly,

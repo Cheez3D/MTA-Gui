@@ -63,17 +63,22 @@ function assert(cond, msg, level, ...)
 end
 
 
-local type_ = type;
+local _type = type;
 
 function type(arg)
-    local argType = type_(arg);
+    local argType = _type(arg);
     
     if (argType == "table") then
         argType = getmetatable(arg);
         
-        -- for use with classes (Vector2, UDim, etc.)
-        if (type_(argType) == "string") then return argType;
-        else return "table" end
+        -- for use with classes (Vector2, UDim, etc.) (proxy and object)
+        if (_type(argType) == "string") then
+            return argType;
+        elseif (_type(arg.type) == "string") then
+            return arg.type;
+        else
+            return "table";
+        end
     else
         return argType;
     end
@@ -130,6 +135,14 @@ function print_table(t, f, tab)
                 
                 print_table(v, f, tab+4);
             else
+                if (OBJ__PROXY[k]) then
+                     k = OBJ__PROXY[k];
+                end
+                
+                if (OBJ__PROXY[v]) then
+                     v = OBJ__PROXY[v];
+                end
+                
                 f(string.rep(' ', tab), k, "->", v);
             end
         end

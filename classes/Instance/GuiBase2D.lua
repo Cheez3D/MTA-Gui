@@ -2,28 +2,47 @@ local name = "GuiBase2D";
 
 local super = Instance;
 
-local private = {
-	-- RenderTarget = true,
-	-- RenderTargetSize = true
-}
-local readOnly = {
-	AbsolutePosition = true,
-	AbsoluteSize = true
-} -- setmetatable({},ClassMetaTable);
+local func = setmetatable({}, { __index = function(tbl, key) return super.func[key] end });
+local get  = setmetatable({}, { __index = function(tbl, key) return super.get [key] end });
+local set  = setmetatable({}, { __index = function(tbl, key) return super.set [key] end });
 
-local function new(Object)
-	Object.AbsolutePosition = true;
-	Object.AbsoluteSize = true;
+local private = setmetatable({
+        -- RenderTarget     = true,
+        -- RenderTargetSize = true,
+    },
+    
+    { __index = function(tbl, key) return super.private[key] end }
+);
+
+local readOnly = setmetatable({
+        absPos  = true,
+        absSize = true,
+    },
+    
+    { __index = function(tbl, key) return super.readOnly[key] end }
+);
+
+
+
+local function new(obj)
+	obj.absPos  = nil;
+	obj.absSize = nil;
 	
-	Object.RenderTarget = true;
-	Object.RenderTargetSize = true;
+	obj.rt     = nil;
+	obj.rtSize = nil;
 end
+
+
 
 GuiBase2D = {
 	name = name,
     
     super = super,
 	
+    func = func,
+    get  = get,
+    set  = set,
+    
 	private  = private,
 	readOnly = readOnly,
 	

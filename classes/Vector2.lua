@@ -137,7 +137,7 @@ local meta = {
 
 
 
-local MEM_PROXIES = setmetatable({}, { __mode = 'v' });
+local MEM_PROXIES = setmetatable({}, { __mode = "v" });
 
 function new(x, y)
     if (x ~= nil) then
@@ -162,22 +162,26 @@ function new(x, y)
     
     
     
-    local memID = x.. ":" ..y;
+    local memId = x.. ":" ..y;
     
-    local proxy = MEM_PROXIES[memID];
+    local proxy = MEM_PROXIES[memId];
     
     if (not proxy) then
         
         local obj = {
+            type = name,
+            
+            
             x = x,
             y = y,
         }
         
         proxy = setmetatable({}, meta);
         
-        PROXY__OBJ[proxy] = obj;
+        MEM_PROXIES[memId] = proxy;
         
-        MEM_PROXIES[memID] = proxy;
+        OBJ__PROXY[obj] = proxy;
+        PROXY__OBJ[proxy] = obj;
     end
     
     return proxy;
@@ -213,12 +217,14 @@ end
 
 
 Vector2 = {
+    name = name,
+    
     func = func,
     get  = get,
     
-    new = new,
-    
     meta = meta,
+    
+    new = new,
 }
 
 -- Vector2 = setmetatable({}, {

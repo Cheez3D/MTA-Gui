@@ -68,12 +68,13 @@ local meta = {
     __tostring = function(proxy)
         local obj = PROXY__OBJ[proxy];
         
-        return "{" ..tostring(obj.x).. "}, {" ..tostring(obj.y).. "}";
+        return "{" ..UDim.meta.__tostring(obj.x).. "}, {" ..UDim.meta.__tostring(obj.y).. "}";
     end,
 }
 
 
-local MEM_PROXIES = setmetatable({}, { __mode = 'v' });
+
+local MEM_PROXIES = setmetatable({}, { __mode = "v" });
 
 function new(scaleX, offsetX, scaleY, offsetY)
     if (scaleX ~= nil) then
@@ -117,21 +118,25 @@ function new(scaleX, offsetX, scaleY, offsetY)
     end
     
     
-    local memID = scaleX.. ":" ..offsetX.. ":" ..scaleY.. ":" ..offsetY;
+    local memId = scaleX.. ":" ..offsetX.. ":" ..scaleY.. ":" ..offsetY;
     
-    local proxy = MEM_PROXIES[memID];
+    local proxy = MEM_PROXIES[memId];
     
     if (not proxy) then
         local obj = {
+            type = name,
+            
+            
             x = PROXY__OBJ[UDim.new(scaleX, offsetX)],
             y = PROXY__OBJ[UDim.new(scaleY, offsetY)],
         }
         
         proxy = setmetatable({}, meta);
         
-        PROXY__OBJ[proxy] = obj;
+        MEM_PROXIES[memId] = proxy;
         
-        MEM_PROXIES[memID] = proxy;
+        OBJ__PROXY[obj] = proxy;
+        PROXY__OBJ[proxy] = obj;
     end
     
     return proxy;
@@ -140,8 +145,8 @@ end
 
 
 function func.unpack(obj)
-    local scaleX, offsetX = UDim.func.unpack(PROXY__OBJ[obj.x]);
-    local scaleY, offsetY = UDim.func.unpack(PROXY__OBJ[obj.y]);
+    local scaleX, offsetX = UDim.func.unpack(obj.x);
+    local scaleY, offsetY = UDim.func.unpack(obj.y);
     
     return scaleX, offsetX, scaleY, offsetY;
 end
@@ -149,11 +154,13 @@ end
 
 
 UDim2 = {
+    name = name,
+    
     func = func,
     
-    new = new,
-    
     meta = meta,
+    
+    new = new,
 }
 
 

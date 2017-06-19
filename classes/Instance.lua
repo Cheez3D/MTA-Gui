@@ -1,9 +1,8 @@
 local name = "Instance";
 
 local func = {}
+local get  = {}
 local set  = {}
-
-local setAll = {}
 
 local private = {
     children       = true,
@@ -30,55 +29,43 @@ local meta = {
 		local obj = PROXY__OBJ[proxy];
 		
         
-        -- check if key is private
-		local class = initializable[obj.className];
+        local class = initializable[obj.className];
         
-		while (class) do
-			if (class.private) and (class.private[key]) then -- if key is private but a child with its name exists
-				local child = obj.childrenByName[key];
-                
-				if (child) then
-                    return OBJ__PROXY[child];
-                end
-                
+        local child = obj.childrenByName[key];
+        
+        if (class.private[key]) then
+            if (child) then -- if key is private but a child with key name exists
+                return OBJ__PROXY[child];
+            else
                 return;
-			end
-			
-			class = class.super;
-		end
+            end
+        end
 		
-        
 		local val = obj[key];
         if (val ~= nil) then -- val might be false so compare against nil
-        
-            -- convert object to proxy before returning
-            if (OBJ__PROXY[val]) then
+            if (OBJ__PROXY[val]) then -- convert object to proxy before returning
                 val = OBJ__PROXY[val];
             end
             
             return val;
         end
 		
+        local func_f = class.func[key];
+        if (func_f) then
+            return (function(...)
+                local success, result = pcall(func_f, obj, ...);
+                if (not success) then error(result, 2) end
+                
+                return result;
+            end);
+        end
         
-		local class = initializable[obj.className];
-        
-		while (class) do
-			local func_f = class.func and class.func[key];
-			if (func_f) then
-                return (function(...) return func_f(obj, ...) end);
-            end
-			
-			local get_f = class.get and class.get[key];
-			if (get_f) then
-                return get_f(obj, key);
-            end
-			
-			class = class.super;
-		end
+        local get_f = class.get[key];
+        if (get_f) then
+            return get_f(obj);
+        end
 		
-		local child = obj.childrenByName[key];
-        
-		if (child) then
+        if (child) then
             return OBJ__PROXY[child];
         end
 	end,
@@ -86,36 +73,26 @@ local meta = {
 	__newindex = function(proxy, key, val)
 		local obj = PROXY__OBJ[proxy];
 		
+        -- convert proxy to object before continuing
+        if (PROXY__OBJ[val]) then
+            val = PROXY__OBJ[val];
+        end
+        
 		local prev = obj[key];
-		if (val == prev) then return end -- if trying to set same val then return
+		-- if (val == prev) then return end -- if trying to set same val then return
 		
         
-		local set_fs = {} -- stack of set functions to call
-		
 		local class = initializable[obj.className];
         
-		while (class) do
-			if (class.readOnly) and (class.readOnly[key]) then
-                error("attempt to modify a read-only key (" ..tostring(key).. ")", 2);
-            end
-			
-			local set_f = class.set and class.set[key];
+        local set_f = class.set[key];
+        if (set_f) then
+            local success, result = pcall(set_f, obj, val, prev);
+            if (not success) then error(result, 2) end
             
-			if (set_f) then
-                set_fs[#set_fs+1] = set_f;
-            end
-			
-			class = class.super;
-		end
-        
-        
-        if (#set_fs > 0) then
-            for i = #set_fs, 1, -1 do
-                set_fs[i](obj, val, prev, key);
-            end
-		else
-            error("attempt to modify an invalid key (" ..tostring(key).. ")", 2);
+            return;
         end
+        
+		error("attempt to modify an invalid key (" ..tostring(key).. ")", 2);
 	end,
     
     
@@ -123,8 +100,10 @@ local meta = {
 		local obj = PROXY__OBJ[proxy];
 		
 		return obj.className.. " " ..obj.name;
-	end
+	end,
 }
+
+
 
 function new(className, parentProxy)
 	local classNameType = type(className);
@@ -146,10 +125,13 @@ function new(className, parentProxy)
 	local class = (not privateClass[className]) and initializable[className];
     
 	if (not class) then
-        error("bad argument #1 to '" ..__func__.. "' (invalid class)",2);
+        error("bad argument #1 to '" ..__func__.. "' (invalid class name)", 2);
 	end
     
     local obj = {
+        type = name,
+        
+        
         className = className,
         
         name = className,
@@ -163,10 +145,11 @@ function new(className, parentProxy)
     
     local proxy = setmetatable({}, meta);
     
+    OBJ__PROXY[obj] = proxy;
     PROXY__OBJ[proxy] = obj;
-    OBJ__PROXY[obj]   = proxy;
     
-    proxy.parent = parentProxy;
+    
+    proxy.parent = parentProxy; -- shortcut for eliminating the need to set parent after object creation
     
     return proxy;
 end
@@ -177,7 +160,7 @@ function func.isA(obj, className)
     local classNameType = type(className);
     
     if (classNameType ~= "string") then
-        error("bad argument #2 to '" ..__func__.. "' (string expected, got " ..classNameType.. ")", 2);
+        error("bad argument #1 to 'isA' (string expected, got " ..classNameType.. ")", 2);
     end
     
     
@@ -196,11 +179,11 @@ end
 
 
 
-function set.name(obj, name, prevName, key)
+function set.name(obj, name, prevName)
     local nameType = type(name);
     
     if (nameType ~= "string") then
-        error("bad argument #1 to '" ..key.. "' (string expected, got " ..nameType.. ")", 3);
+        error("bad argument #1 to 'name' (string expected, got " ..nameType.. ")", 2);
     end
     
     
@@ -209,17 +192,18 @@ function set.name(obj, name, prevName, key)
         
         -- if obj is occupying the place in childrenByName then try to find another child with same prevName to replace it
         if (parent.childrenByName[prevName] == obj) then
+            local child;
             
             -- start search from after obj because childrenByName place is occupied by object with smallest index
             for i = obj.index+1, #parent.children do
-                local child = parent.children[i];
+                child = parent.children[i];
                 
                 if (child.name == prevName) then
-                    parent.childrenByName[prevName] = child;
-                    
                     break;
                 end
             end
+            
+            parent.childrenByName[prevName] = child; -- if other child not found it will be set to nil
         end
         
         if (not parent.childrenByName[name]) then
@@ -230,39 +214,33 @@ function set.name(obj, name, prevName, key)
     obj.name = name;
 end
 
-function set.parent(obj, parentProxy, prevParentProxy, key)
+function set.parent(obj, parent, prevParent)
     
-    local parent;
-    
-    if (parentProxy ~= nil) then
-        local parentProxyType = type(parentProxy);
+    if (parent ~= nil) then -- might be false so check against nil for assertion
+        local parentType = type(parent);
         
-        if (parentProxyType ~= "Instance") then
-            error("bad argument #1 to '" ..key.. "' (Instance expected, got " ..parentProxyType.. ")", 3);
+        if (parentType ~= "Instance") then
+            error("bad argument #1 to 'parent' (Instance expected, got " ..parentType.. ")", 2);
         end
         
-        
-        parent = PROXY__OBJ[parentProxy];
         
         -- if trying to set a child to be the parent of its parent
         -- e.g. obj1.parent = obj2; obj2.parent = obj1;
         
         if (obj.childrenByKey[parent]) then
-            error("bad argument #1 to '" ..key.. "' (circular reference)", 3);
+            error("bad argument #1 to 'parent' (circular reference)", 2);
         end
         
         -- if trying to set an object as its own parent
         -- e.g. obj.parent = obj;
         
         if (parent == obj) then
-            error("bad argument #1 to '" ..key.. "' (self parenting)", 3);
+            error("bad argument #1 to 'parent' (self parenting)", 2);
         end
     end
     
     
-    if (prevParentProxy) then
-        
-        local prevParent = PROXY__OBJ[prevParentProxy];
+    if (prevParent) then
         
         -- remove child from children table
         prevParent.children[obj.index] = nil;
@@ -316,16 +294,19 @@ end
 
 
 Instance = {
-    initializable = initializable,
-    privateClass  = privateClass,
+    name = name,
 	
 	func = func,
+    get  = get,
 	set  = set,
-	
-	name = name,
 	
 	private  = private,
 	readOnly = readOnly,
+    
+    initializable = initializable,
+    privateClass  = privateClass,
+    
+    meta = meta,
     
     new = new,
 }

@@ -40,7 +40,7 @@ local meta = {
 
 
 
-local MEM_PROXIES = setmetatable({}, { __mode = 'v' });
+local MEM_PROXIES = setmetatable({}, { __mode = "v" });
 
 function new(r, g, b)
     
@@ -84,12 +84,15 @@ function new(r, g, b)
 	
 	
 	
-	local memID = r.. ":" ..g.. ":" ..b;
+	local memId = r.. ":" ..g.. ":" ..b;
 	
-	local proxy = MEM_PROXIES[memID];
+	local proxy = MEM_PROXIES[memId];
     
 	if (not proxy) then
 		local obj = {
+            type = name,
+            
+            
 			r = r,
             g = g,
             b = b,
@@ -97,9 +100,10 @@ function new(r, g, b)
 		
 		proxy = setmetatable({}, meta);
         
-		PROXY__OBJ[proxy] = obj;
-		
-		MEM_PROXIES[memID] = proxy;
+        MEM_PROXIES[memId] = proxy;
+        
+        OBJ__PROXY[obj] = proxy;
+        PROXY__OBJ[proxy] = obj;
 	end
 	
 	return proxy;
@@ -126,12 +130,14 @@ end
 
 
 Color3 = {
+    name = name,
+    
     func = func,
     get  = get,
     
-    new = new,
-    
     meta = meta,
+    
+    new = new,
 }
 
 -- Color3 = setmetatable({}, {

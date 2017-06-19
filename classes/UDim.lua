@@ -49,18 +49,17 @@ local meta = {
     
     
     __tostring = function(proxy)
-        local obj = PROXY__OBJ[proxy];
+        local obj = PROXY__OBJ[proxy] or proxy; -- check if proxy or obj (used in UDim2 __tostring)
         
         return obj.scale.. ", " ..obj.offset;
     end,
 }
 
 
-local MEM_PROXIES = setmetatable({}, { __mode = 'v' });
+
+local MEM_PROXIES = setmetatable({}, { __mode = "v" });
 
 function new(scale, offset)
-    
-    -- [ ====================== [ ASSERTION ] ====================== ]
     
     if (scale ~= nil) then
         local scaleType = type(scale);
@@ -83,24 +82,25 @@ function new(scale, offset)
     end
     
     
+    local memId = scale.. ":" ..offset;
     
-    local memID = scale.. ":" ..offset;
-    
-    local proxy = MEM_PROXIES[memID];
+    local proxy = MEM_PROXIES[memId];
     
     if (not proxy) then
-        
         local obj = {
+            type = name,
+            
+            
             scale = scale,
             offset = offset,
         }
         
         proxy = setmetatable({}, meta);
         
-        PROXY__OBJ[proxy] = obj;
-        OBJ__PROXY[obj] = proxy;
+        MEM_PROXIES[memId] = proxy;
         
-        MEM_PROXIES[memID] = proxy;
+        OBJ__PROXY[obj] = proxy;
+        PROXY__OBJ[proxy] = obj;
     end
     
     return proxy;
@@ -115,11 +115,13 @@ end
 
 
 UDim = {
+    name = name,
+    
     func = func,
     
-    new = new,
-    
     meta = meta,
+    
+    new = new,
 }
 
 -- UDim = setmetatable({}, {

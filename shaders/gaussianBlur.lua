@@ -131,9 +131,9 @@ end
 
 local IsBlurEnabled = false;
 
-addCommandHandler("blur",function(Command,Radius,Sigma)
+addCommandHandler("blur",function(Command, Radius, Sigma)
     if (IsBlurEnabled) then
-        removeEventHandler("onClientPreRender",root,render);
+        removeEventHandler("onClientPreRender", root, render);
         
         IsBlurEnabled = false;
         
@@ -142,18 +142,18 @@ addCommandHandler("blur",function(Command,Radius,Sigma)
     
     Radius = tonumber(Radius); Sigma = tonumber(Sigma);
     
-    local Limit,Weights,Offsets = compute_kernel(Radius,Sigma);
+    local Limit, Weights, Offsets = compute_kernel(Radius,Sigma);
     
     print("Limit: ",Limit," ");
     print("Weights: ",table.concat(Weights," "));
     print("Offsets: ",table.concat(Offsets," "));
     print("\n");
     
-    dxSetShaderValue(s,"limit",Limit);
-    dxSetShaderValue(s,"weights",Weights);
-    dxSetShaderValue(s,"offsets",Offsets);
+    dxSetShaderValue(s, "limit", Limit);
+    dxSetShaderValue(s, "weights", Weights);
+    dxSetShaderValue(s, "offsets", Offsets);
     
-    addEventHandler("onClientPreRender",root,render);
+    addEventHandler("onClientPreRender", root, render);
     
     IsBlurEnabled = true;
 end);

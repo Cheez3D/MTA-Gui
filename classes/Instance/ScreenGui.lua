@@ -6,44 +6,66 @@ local name = "ScreenGui";
 
 local super = GuiBase2D;
 
-local function new(Object)
-	super.new(Object);
+local func = setmetatable({}, { __index = function(tbl, key) return super.func[key] end });
+local get  = setmetatable({}, { __index = function(tbl, key) return super.get [key] end });
+local set  = setmetatable({}, { __index = function(tbl, key) return super.set [key] end });
+
+local private  = setmetatable({}, { __index = function(tbl, key) return super.private [key] end });
+local readOnly = setmetatable({}, { __index = function(tbl, key) return super.readOnly[key] end });
+
+
+
+local function new(obj)
+	super.new(obj);
 	
-	Object.AbsolutePosition = Vector2.new();
-	Object.AbsoluteSize = Vector2.new(SCREEN_WIDTH, SCREEN_HEIGHT);
+	obj.absPos  = PROXY__OBJ[Vector2.new(0, 0)];
+	obj.absSize = PROXY__OBJ[Vector2.new(SCREEN_WIDTH, SCREEN_HEIGHT)];
 	
-	Object.RootGui = Object;
+	obj.rootGui = obj;
 	
-	function Object.Draw()
-		dxSetRenderTarget(Object.RenderTarget, true);
-		dxSetBlendMode("modulate_add");
+	function obj.draw()
+        dxSetBlendMode("modulate_add");
+        
+		dxSetRenderTarget(obj.rt, true);
 		
-		local Children = Object.children;
-		for i = 1,#Children do
-			dxDrawImage(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, Children[i].RenderTarget);
+		for i = 1, #obj.children do
+			dxDrawImage(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, obj.children[i].rt);
 		end
 		
-		dxSetBlendMode("blend");
 		dxSetRenderTarget();
+        
+        dxSetBlendMode("blend");
 	end
 	
-	Object.RenderTarget = dxCreateRenderTarget(SCREEN_WIDTH, SCREEN_HEIGHT, true);
-	Object.RenderTargetSize = Vector2.new(SCREEN_WIDTH, SCREEN_HEIGHT);
+	obj.rt     = dxCreateRenderTarget(SCREEN_WIDTH, SCREEN_HEIGHT, true);
+	obj.rtSize = PROXY__OBJ[Vector2.new(SCREEN_WIDTH, SCREEN_HEIGHT)];
 	
-	function Object.Render()
+    
+    
+	function obj.render()
 		dxSetBlendMode("add");
 		
-		dxDrawImage(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, Object.RenderTarget);
+		dxDrawImage(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, obj.rt);
 		
 		dxSetBlendMode("blend");
 	end
-	addEventHandler("onClientPreRender", root, Object.Render);
+    
+	addEventHandler("onClientPreRender", root, obj.render);
 end
+
+
 
 Instance.initializable.ScreenGui = {
     name = name,
     
 	super = super,
+    
+    func = func,
+    get  = get,
+    set  = set,
+    
+    private  = private,
+    readOnly = readOnly,
 	
 	new = new,
 }
