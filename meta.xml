@@ -54,6 +54,8 @@
     <file src="cursors/PulseGlass/working.ani"/>
     
     
+    <file src="shaders/nothing.fx"/>
+    <file src="shaders/mask.fx"/>
     <file src="shaders/gaussianBlur.fx"/> <script src="shaders/gaussianBlur.lua" type="client"/>
     <file src="shaders/negative.fx"/>
     
@@ -69,6 +71,7 @@
     <script src="classes/UDim.lua"    type="client"/>
     <script src="classes/UDim2.lua"   type="client"/>
     <script src="classes/Vector2.lua" type="client"/>
+    <script src="classes/Vector3.lua" type="client"/>
     
     <script src="decoders/gif.lua" type="client"/>
     <script src="decoders/jpg.lua" type="client"/>

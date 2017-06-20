@@ -10,7 +10,12 @@ local func = setmetatable({}, { __index = function(tbl, key) return super.func[k
 local get  = setmetatable({}, { __index = function(tbl, key) return super.get [key] end });
 local set  = setmetatable({}, { __index = function(tbl, key) return super.set [key] end });
 
-local private  = setmetatable({}, { __index = function(tbl, key) return super.private [key] end });
+local private  = setmetatable({
+        render = true,
+    },
+    
+    { __index = function(tbl, key) return super.private [key] end }
+);
 local readOnly = setmetatable({}, { __index = function(tbl, key) return super.readOnly[key] end });
 
 
@@ -29,7 +34,11 @@ local function new(obj)
 		dxSetRenderTarget(obj.rt, true);
 		
 		for i = 1, #obj.children do
-			dxDrawImage(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, obj.children[i].rt);
+            local child = obj.children[i];
+            
+            if Instance.func.isA(child, "GuiObject") then
+                dxDrawImage(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, child.shader);
+            end
 		end
 		
 		dxSetRenderTarget();

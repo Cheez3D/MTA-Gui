@@ -1,14 +1,14 @@
-extern texture imageTexture;    
+extern texture image;
 
 
 
-const sampler imageSampler = sampler_state {
-    Texture = <imageTexture>;
+sampler imageSampler = sampler_state {
+    Texture = <image>;
 };
 
 
 
-float4 ps(const float2 texCoord : TEXCOORD0) : COLOR0 { 
+float4 ps(const float2 texCoord : TEXCOORD0) : COLOR0 {
     float4 color = tex2D(imageSampler, texCoord);
     
     color.rgb = 1-color.rgb;
@@ -25,5 +25,5 @@ technique negative {
 }
 
 technique fallback {
-    pass P0 {}
+    pass p0 {}
 }

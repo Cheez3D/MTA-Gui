@@ -37,8 +37,17 @@ local function new(obj)
 	
 	obj.pos  = nil;
 	obj.size = nil;
-	
+    
 	obj.visible = true;
+    
+    
+    obj.absRot      = PROXY__OBJ[Vector3.new(0, 0, 0)];
+    obj.absRotPivot = PROXY__OBJ[Vector2.new(0, 0)];
+    
+    obj.rot      = PROXY__OBJ[Vector3.new(0, 0, 0)];
+    obj.rotPivot = PROXY__OBJ[UDim2.new(0, 0, 0, 0)];
+	
+    obj.shader = dxCreateShader("shaders/nothing.fx");
 end
 
 
@@ -79,6 +88,11 @@ function set.parent(obj, parent, prevParent)
         set.pos (obj, obj.pos);
 		set.size(obj, obj.size);
         
+        -- update rot (for absRot)
+        if Instance.func.isA(parent, "GuiObject") then
+            set.rot(obj, obj.rot);
+        end
+        
         obj.draw();
     else
         if isElement(obj.rt) then
@@ -118,6 +132,7 @@ function set.bgTransparency(obj, bgTransparency)
 	
 	obj.draw();
 end
+
 
 function set.borderColor3(obj, borderColor3)
 	local borderColor3Type = type(borderColor3);
@@ -185,6 +200,7 @@ function set.borderTransparency(obj, borderTransparency)
 	obj.draw();
 end
 
+
 function set.clipsDescendants(obj, clipsDescendants)
 	local clipsDescendantsType = type(clipsDescendants);
     
@@ -200,6 +216,7 @@ function set.clipsDescendants(obj, clipsDescendants)
 	end
 end
 
+
 function set.pos(obj, pos)
 	local posType = type(pos);
     
@@ -210,16 +227,16 @@ function set.pos(obj, pos)
     
 	obj.pos = pos;
 	
-	if (obj.parent) then
-        local parent = obj.parent;
-        
-		obj.absPos = PROXY__OBJ[Vector2.new(
+    local parent = obj.parent;
+    
+	if (parent) and Instance.func.isA(parent, "GuiBase2D") then
+        obj.absPos = PROXY__OBJ[Vector2.new(
 			parent.absPos.x+pos.x.offset + parent.absSize.x*pos.x.scale,
 			parent.absPos.y+pos.y.offset + parent.absSize.y*pos.y.scale
 		)];
-		
-		obj.draw();
 	end
+    
+    obj.draw();
 end
 
 function set.size(obj, size)
@@ -232,28 +249,25 @@ function set.size(obj, size)
 	
 	obj.size = size;
 	
-	if (obj.parent) then
-		local parentAbsWidth, parentAbsHeight = Vector2.func.unpack(obj.parent.absSize);
-		
-		local widthScale, widthOffset, heightScale, heightOffset = UDim2.func.unpack(size);
-		
+    local parent = obj.parent;
+    
+	if (parent) and Instance.func.isA(parent, "GuiBase2D") then
 		obj.absSize = PROXY__OBJ[Vector2.new(
-			widthOffset  + parentAbsWidth *widthScale,
-			heightOffset + parentAbsHeight*heightScale
+			size.x.offset + parent.absSize.x*size.x.scale,
+			size.y.offset + parent.absSize.y*size.y.scale
 		)];
 		
-		if (#obj.children > 0) then
-			for i = 1, #obj.children do
-				local child = obj.children[i];
-                
-                set.pos (obj, child.pos);
-				set.size(obj, child.size);
-			end
-		else
-            obj.draw();
+        for i = 1, #obj.children do
+            local child = obj.children[i];
+            
+            set.pos (obj, child.pos);
+            set.size(obj, child.size); -- TODO: check if updates recursively with more than 2 objects
         end
 	end
+    
+    obj.draw();
 end
+
 
 function set.visible(obj, visible)
 	local visibleType = type(visible);
@@ -266,6 +280,34 @@ function set.visible(obj, visible)
 	obj.visible = visible;
 	
 	obj.draw();
+end
+
+
+function set.rot(obj, rot)
+    local rotType = type(rot);
+    
+    if (rotType ~= "Vector3") then
+        error("bad argument #1 to 'rot' (Vector3 expected, got " ..rotType.. ")", 2);
+    end
+    
+    
+    obj.rot = rot;
+    
+    local parent = obj.parent;
+    
+    if (parent) and Instance.func.isA(parent, "GuiObject") then
+        obj.absRot = PROXY__OBJ[Vector3.new(
+            parent.absRot.x + rot.x,
+            parent.absRot.y + rot.y,
+            parent.absRot.z + rot.z
+        )];
+    else
+        obj.absRot = rot;
+    end
+    
+    dxSetShaderTransform(obj.shader, rot.x, rot.y, rot.z);
+    
+    obj.draw();
 end
 
 

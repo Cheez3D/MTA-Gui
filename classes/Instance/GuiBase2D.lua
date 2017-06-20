@@ -7,8 +7,10 @@ local get  = setmetatable({}, { __index = function(tbl, key) return super.get [k
 local set  = setmetatable({}, { __index = function(tbl, key) return super.set [key] end });
 
 local private = setmetatable({
-        -- RenderTarget     = true,
-        -- RenderTargetSize = true,
+        rt     = true,
+        rtSize = true,
+        
+        draw   = true,
     },
     
     { __index = function(tbl, key) return super.private[key] end }

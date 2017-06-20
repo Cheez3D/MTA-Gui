@@ -1,7 +1,7 @@
 extern texture image; 
 
-technique nothing { 
+technique nothing {
     pass p0 {
-        Texture[0] = image; 
+        Texture[0] = image;
     }
 }

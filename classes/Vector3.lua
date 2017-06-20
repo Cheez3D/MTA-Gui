@@ -1,4 +1,4 @@
-local name = "Vector2";
+local name = "Vector3";
 
 local func = {}
 local get  = {}
@@ -36,14 +36,14 @@ local meta = {
     __add = function(proxy1, proxy2)
         local proxy1Type = type(proxy1);
         
-        if (proxy1Type ~= "Vector2") then
-            error("bad operand #1 to '__add' (Vector2 expected, got " ..proxy1Type.. ")", 2);
+        if (proxy1Type ~= "Vector3") then
+            error("bad operand #1 to '__add' (Vector3 expected, got " ..proxy1Type.. ")", 2);
         end
         
         local proxy2Type = type(proxy2);
         
-        if (proxy2Type ~= "Vector2") then
-            error("bad operand #2 to '__add' (Vector2 expected, got " ..proxy2Type.. ")", 2);
+        if (proxy2Type ~= "Vector3") then
+            error("bad operand #2 to '__add' (Vector3 expected, got " ..proxy2Type.. ")", 2);
         end
         
         
@@ -51,20 +51,20 @@ local meta = {
         local obj1 = PROXY__OBJ[proxy1];
         local obj2 = PROXY__OBJ[proxy2];
         
-        return new(obj1.x + obj2.x, obj1.y + obj2.y);
+        return new(obj1.x + obj2.x, obj1.y + obj2.y, obj1.z + obj2.z);
     end,
     
     __sub = function(proxy1, proxy2)
         local proxy1Type = type(proxy1);
         
-        if (proxy1Type ~= "Vector2") then
-            error("bad operand #1 to '__sub' (Vector2 expected, got " ..proxy1Type.. ")", 2);
+        if (proxy1Type ~= "Vector3") then
+            error("bad operand #1 to '__sub' (Vector3 expected, got " ..proxy1Type.. ")", 2);
         end
         
         local proxy2Type = type(proxy2);
         
-        if (proxy2Type ~= "Vector2") then
-            error("bad operand #2 to '__sub' (Vector2 expected, got " ..proxy2Type.. ")", 2);
+        if (proxy2Type ~= "Vector3") then
+            error("bad operand #2 to '__sub' (Vector3 expected, got " ..proxy2Type.. ")", 2);
         end
         
         
@@ -72,20 +72,20 @@ local meta = {
         local obj1 = PROXY__OBJ[proxy1];
         local obj2 = PROXY__OBJ[proxy2];
         
-        return new(obj1.x - obj2.x, obj1.y - obj2.y);
+        return new(obj1.x - obj2.x, obj1.y - obj2.y, obj1.z - obj2.z);
     end,
     
     __mul = function(proxy1, proxy2)
         local proxy1Type = type(proxy1);
         
-        if (proxy1Type ~= "Vector2") then
-            error("bad operand #1 to '__mul' (Vector2 expected, got " ..proxy1Type.. ")", 2);
+        if (proxy1Type ~= "Vector3") then
+            error("bad operand #1 to '__mul' (Vector3 expected, got " ..proxy1Type.. ")", 2);
         end
         
         local proxy2Type = type(proxy2);
         
-        if (proxy2Type ~= "Vector2") then
-            error("bad operand #2 to '__mul' (Vector2 expected, got " ..proxy2Type.. ")", 2);
+        if (proxy2Type ~= "Vector3") then
+            error("bad operand #2 to '__mul' (Vector3 expected, got " ..proxy2Type.. ")", 2);
         end
         
         
@@ -93,20 +93,20 @@ local meta = {
         local obj1 = PROXY__OBJ[proxy1];
         local obj2 = PROXY__OBJ[proxy2];
         
-        return new(obj1.x*obj2.x, obj1.y*obj2.y);
+        return new(obj1.x*obj2.x, obj1.y*obj2.y, obj1.z*obj2.z);
     end,
     
     __div = function(proxy1, proxy2)
         local proxy1Type = type(proxy1);
         
-        if (proxy1Type ~= "Vector2") then
-            error("bad operand #1 to '__div' (Vector2 expected, got " ..proxy1Type.. ")", 2);
+        if (proxy1Type ~= "Vector3") then
+            error("bad operand #1 to '__div' (Vector3 expected, got " ..proxy1Type.. ")", 2);
         end
         
         local proxy2Type = type(proxy2);
         
-        if (proxy2Type ~= "Vector2") then
-            error("bad operand #2 to '__div' (Vector2 expected, got " ..proxy2Type.. ")", 2);
+        if (proxy2Type ~= "Vector3") then
+            error("bad operand #2 to '__div' (Vector3 expected, got " ..proxy2Type.. ")", 2);
         end
         
         
@@ -114,14 +114,14 @@ local meta = {
         local obj1 = PROXY__OBJ[proxy1];
         local obj2 = PROXY__OBJ[proxy2];
         
-        return new(obj1.x/obj2.x, obj1.y/obj2.y);
+        return new(obj1.x/obj2.x, obj1.y/obj2.y, obj1.z/obj2.z);
     end,
     
     
     __unm = function(proxy)
         local obj = PROXY__OBJ[proxy];
         
-        return new(-obj.x, -obj.y);
+        return new(-obj.x, -obj.y, -obj.z);
     end,
     
     
@@ -131,7 +131,7 @@ local meta = {
     __tostring = function(proxy)
         local obj = PROXY__OBJ[proxy];
         
-        return obj.x.. ", " ..obj.y;
+        return obj.x.. ", " ..obj.y.. ", " ..obj.z;
     end,
 }
 
@@ -139,7 +139,7 @@ local meta = {
 
 local MEM_PROXIES = setmetatable({}, { __mode = "v" });
 
-function new(x, y)
+function new(x, y, z)
     if (x ~= nil) then
         local xType = type(x);
         
@@ -160,9 +160,18 @@ function new(x, y)
         y = 0;
     end
     
+    if (z ~= nil) then
+        local zType = type(z);
+        
+        if (zType ~= "number") then
+            error("bad argument #2 to '" ..__func__.. "' (number expected, got " ..zType.. ")", 2);
+        end
+    else
+        z = 0;
+    end
     
     
-    local memId = x.. ":" ..y;
+    local memId = x.. ":" ..y.. ":" ..z;
     
     local proxy = MEM_PROXIES[memId];
     
@@ -174,6 +183,7 @@ function new(x, y)
             
             x = x,
             y = y,
+            z = z,
         }
         
         proxy = setmetatable({}, meta);
@@ -190,13 +200,13 @@ end
 
 
 function func.unpack(obj)
-    return obj.x, obj.y;
+    return obj.x, obj.y, obj.z;
 end
 
 
 
 function get.magnitude(obj)
-    local mag = math.sqrt(obj.x^2 + obj.y^2);
+    local mag = math.sqrt(obj.x^2 + obj.y^2 + obj.z^2);
     
     obj.magnitude = mag; -- memoize magnitude inside obj
     
@@ -207,7 +217,7 @@ function get.unit(obj)
     -- check if magnitude was already computed and memoized inside obj
     local mag = obj.magnitude or get.magnitude(obj);
     
-    local unit = new(obj.x/mag, obj.y/mag);
+    local unit = new(obj.x/mag, obj.y/mag, obj.z/mag);
     
     obj.unit = unit; -- memoize unit vector inside obj
     
@@ -216,7 +226,7 @@ end
 
 
 
-Vector2 = {
+Vector3 = {
     name = name,
     
     func = func,
@@ -226,92 +236,3 @@ Vector2 = {
     
     new = new,
 }
-
--- Vector2 = setmetatable({}, {
-    -- __metatable = "Vector2",
-    
-    
-    -- __index = function(proxy, key)
-        -- return (key == "new") and new or nil;
-    -- end,
-    
-    -- __newindex = function(proxy, key)
-        -- error("attempt to modify a read-only key (" ..tostring(key).. ")", 2);
-    -- end,
-    
-    
-    -- __call = function(proxy, ...)
-        -- local success, result = pcall(new, ...);
-        
-        -- if (not success) then
-            -- error("call error", 2);
-        -- end
-        
-        -- return result;
-    -- end,
--- });
-
-
-
-
-
-
--- do
-    -- local PROXY__OBJ = {}
-
-    -- local func = {}
-
-    -- local mem = {}
-
-    -- local meta = {
-        -- __index = function(proxy, key)
-            -- local func = func[key];
-            -- if (func) then
-                -- -- local obj = PROXY__OBJ[proxy];
-                
-                -- -- -- if (not mem[func]) then mem[func] = {} end
-                
-                -- -- local f -- = mem[func][obj];
-                -- -- -- if (not f) then
-                    -- -- f = function() return func(obj) end
-                    
-                    -- -- -- mem[func][obj] = f;
-                -- -- -- end
-                
-                -- return func;
-            -- end
-        -- end,
-    -- }
-
-    -- local function new(x, y)
-        -- local obj = {
-            -- x = x,
-            -- y = y,
-        -- }
-        
-        -- local proxy = setmetatable({}, meta);
-
-        -- PROXY__OBJ[proxy] = obj;
-        
-        -- return proxy;
-    -- end
-
-
-    -- function func.print(obj)
-        -- -- print(obj.x, obj.y);
-        
-        -- return true;
-    -- end
-
-
-
-    -- local v = new(3, 4);
-
-    -- local start = getTickCount();
-
-    -- for i = 1, 10000000 do
-        -- v.print();
-    -- end
-
-    -- print(getTickCount()-start);
--- end
