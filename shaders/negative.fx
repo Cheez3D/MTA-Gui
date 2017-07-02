@@ -20,10 +20,12 @@ float4 ps(const float2 texCoord : TEXCOORD0) : COLOR0 {
 
 technique negative {
     pass p0 {
-        PixelShader = compile ps_2_0 ps();
+        PixelShader = compile ps_1_0 ps();
     }
 }
 
 technique fallback {
-    pass p0 {}
+    pass p0 {
+        Texture[0] = image;
+    }
 }

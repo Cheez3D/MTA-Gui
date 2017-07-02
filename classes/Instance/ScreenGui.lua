@@ -23,10 +23,12 @@ local readOnly = setmetatable({}, { __index = function(tbl, key) return super.re
 local function new(obj)
 	super.new(obj);
 	
-	obj.absPos  = PROXY__OBJ[Vector2.new(0, 0)];
 	obj.absSize = PROXY__OBJ[Vector2.new(SCREEN_WIDTH, SCREEN_HEIGHT)];
-	
-	obj.rootGui = obj;
+    
+    obj.absPos = PROXY__OBJ[Vector2.new(0, 0)];
+    
+    obj.absRot      = PROXY__OBJ[Vector3.new(0, 0, 0)];
+    obj.absRotPivot = PROXY__OBJ[Vector2.new(0, 0)];
 	
 	function obj.draw()
         dxSetBlendMode("modulate_add");
@@ -37,7 +39,7 @@ local function new(obj)
             local child = obj.children[i];
             
             if Instance.func.isA(child, "GuiObject") then
-                dxDrawImage(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, child.shader);
+                dxDrawImage(0, 0, obj.absSize.x, obj.absSize.y, child.rt);
             end
 		end
 		
@@ -46,15 +48,14 @@ local function new(obj)
         dxSetBlendMode("blend");
 	end
 	
-	obj.rt     = dxCreateRenderTarget(SCREEN_WIDTH, SCREEN_HEIGHT, true);
-	obj.rtSize = PROXY__OBJ[Vector2.new(SCREEN_WIDTH, SCREEN_HEIGHT)];
+	obj.rt = dxCreateRenderTarget(obj.absSize.x, obj.absSize.y, true); -- TODO: add check for successful creation (dxSetTestMode)
 	
     
     
 	function obj.render()
 		dxSetBlendMode("add");
 		
-		dxDrawImage(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, obj.rt);
+		dxDrawImage(0, 0, obj.absSize.x, obj.absSize.y, obj.rt);
 		
 		dxSetBlendMode("blend");
 	end

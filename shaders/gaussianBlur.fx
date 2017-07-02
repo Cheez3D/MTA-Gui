@@ -84,5 +84,7 @@ technique gaussianBlur {
 }
 
 technique fallback {
-    pass p0 {}
+    pass p0 {
+        Texture[0] = image;
+    }
 }

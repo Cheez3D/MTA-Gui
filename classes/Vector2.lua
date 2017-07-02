@@ -161,7 +161,6 @@ function new(x, y)
     end
     
     
-    
     local memId = x.. ":" ..y;
     
     local proxy = MEM_PROXIES[memId];

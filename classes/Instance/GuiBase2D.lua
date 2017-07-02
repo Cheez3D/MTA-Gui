@@ -8,7 +8,6 @@ local set  = setmetatable({}, { __index = function(tbl, key) return super.set [k
 
 local private = setmetatable({
         rt     = true,
-        rtSize = true,
         
         draw   = true,
     },
@@ -27,11 +26,15 @@ local readOnly = setmetatable({
 
 
 local function new(obj)
+    obj.absPosOrigin = nil;
+    
+    obj.absSize = nil;
 	obj.absPos  = nil;
-	obj.absSize = nil;
+    
+    obj.absRot      = nil;
+    obj.absRotPivot = nil;
 	
-	obj.rt     = nil;
-	obj.rtSize = nil;
+	obj.rt = nil;
 end
 
 

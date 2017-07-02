@@ -79,7 +79,7 @@ local meta = {
         end
         
 		local prev = obj[key];
-		-- if (val == prev) then return end -- if trying to set same val then return
+		if (val == prev) then return end -- if trying to set same val then return
 		
         
 		local class = initializable[obj.className];
@@ -242,17 +242,19 @@ function set.parent(obj, parent, prevParent)
     
     if (prevParent) then
         
-        -- remove child from children table
-        prevParent.children[obj.index] = nil;
+        -- -- remove child from children table (NOT NEEDED, taken care of by loop)
+        -- prevParent.children[obj.index] = nil;
         
-        for i = obj.index+1, #prevParent.children do
+        local childrenCount = #prevParent.children;
+        
+        for i = obj.index+1, childrenCount do
             local child = prevParent.children[i];
             
             child.index = child.index-1;
             prevParent.children[i-1] = child;
         end
         
-        prevParent.children[#prevParent.children] = nil; -- remove last redundant element
+        prevParent.children[childrenCount] = nil; -- remove last redundant element (using childrenCount from before operating on array)
         
         -- remove child from childrenByKey table
         prevParent.childrenByKey[obj] = nil;

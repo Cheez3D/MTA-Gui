@@ -21,90 +21,111 @@ local readOnly = setmetatable({}, { __index = function(tbl, key) return super.re
 local function new(obj)
 	super.new(obj);
 	
-	obj.absPos  = PROXY__OBJ[Vector2.new()];
-	obj.absSize = PROXY__OBJ[Vector2.new(100, 100)];
-	
-	obj.pos  = PROXY__OBJ[UDim2.new()];
-	obj.size = PROXY__OBJ[UDim2.new(0, 100, 0, 100)];
-	
+    obj.size = PROXY__OBJ[UDim2.new(0, 100, 0, 100)];
     
-    
-	function obj.draw()
-		if (obj.visible) then
-            dxSetBlendMode("modulate_add");
-            
-			dxSetRenderTarget(obj.rt, true);
-            
-            local absX,     absY      = Vector2.func.unpack(obj.absPos);
-            local absWidth, absHeight = Vector2.func.unpack(obj.absSize);
-			
-			local borderOffset = obj.borderOffset;
-			local borderSize   = obj.borderSize;
-			
-			-- draw border
-			dxDrawRectangle(
-				absX-borderOffset,
-                absY-borderOffset,
+	obj.pos  = PROXY__OBJ[UDim2.new(0, 0)];
+	
+	function obj.draw(propagate)
+		if (obj.rootGui) then -- if drawable
+            if (obj.visible) then -- TODO: fix visible param not working properly
+                dxSetBlendMode("add");
                 
-				absWidth  + 2*borderOffset,
-                absHeight + 2*borderOffset,
+                dxSetRenderTarget(obj.isRotated and obj.parent.rt or obj.rt, true);
                 
-				tocolor(obj.borderColor3.r, obj.borderColor3.g, obj.borderColor3.b, 255*(1-obj.borderTransparency))
-			);
-			
-			-- draw background
-			dxSetBlendMode("overwrite");
-            
-			dxDrawRectangle(
-				absX+(borderSize-borderOffset),
-                absY+(borderSize-borderOffset),
+                if (obj.debug) then
+                    dxDrawRectangle(0, 0, obj.clipperGui.absSize.x, obj.clipperGui.absSize.y, tocolor(255, 0, 0, 200));
+                end
                 
-				absWidth -2*borderSize+2*borderOffset,
-                absHeight-2*borderSize+2*borderOffset,
                 
-				tocolor(obj.bgColor3.r, obj.bgColor3.g, obj.bgColor3.b, 255*(1-obj.bgTransparency))
-			);
-            
-            -- draw children
-			dxSetBlendMode("modulate_add");
-			
-			if (obj.clipsDescendants) then
-				for i = 1, #obj.children do
-					local child = obj.children[i];
-					
-                    if Instance.func.isA(child, "GuiObject") then
-                        dxDrawImageSection(
-                            absX, absY, absWidth, absHeight,
-                            absX, absY, absWidth, absHeight,
-                            
-                            child.shader
-                        );
-                    end
-				end
-			else
-				for i = 1, #obj.children do
-					local child = obj.children[i];
+                -- [ ===================== [ BORDER ] ===================== ]
+                
+                dxDrawRectangle(
+                    (obj.isRotated and obj.rotDrawOffset.x or 0) + obj.absPos.x-obj.clipperGui.absPos.x - obj.borderSize,
+                    (obj.isRotated and obj.rotDrawOffset.y or 0) + obj.absPos.y-obj.clipperGui.absPos.y - obj.borderSize,
+                    
+                    obj.absSize.x + 2*obj.borderSize,
+                    obj.absSize.y + 2*obj.borderSize,
+                    
+                    tocolor(obj.borderColor3.r, obj.borderColor3.g, obj.borderColor3.b, 255*(1-obj.borderTransparency))
+                );
+                
+                -- [ ===================== [ BACKGROUND ] ===================== ]
+                
+                dxSetBlendMode("overwrite");
+                
+                dxDrawRectangle(
+                    (obj.isRotated and obj.rotDrawOffset.x or 0) + obj.absPos.x-obj.clipperGui.absPos.x,
+                    (obj.isRotated and obj.rotDrawOffset.y or 0) + obj.absPos.y-obj.clipperGui.absPos.y,
+                    
+                    obj.absSize.x, obj.absSize.y,
+                    
+                    tocolor(obj.bgColor3.r, obj.bgColor3.g, obj.bgColor3.b, 255*(1-obj.bgTransparency))
+                );
+                
+                -- [ ===================== [ CHILDREN ] ===================== ]
+                
+                dxSetBlendMode("add");
+                
+                for i = 1, #obj.children do
+                    local child = obj.children[i];
                     
                     if Instance.func.isA(child, "GuiObject") then
-                        dxDrawImage(0, 0, child.rtSize.x, child.rtSize.y, child.shader);
+                        dxDrawImage(
+                            (obj.isRotated and obj.rotDrawOffset.x or 0) + child.clipperGui.absPos.x-obj.clipperGui.absPos.x,
+                            (obj.isRotated and obj.rotDrawOffset.y or 0) + child.clipperGui.absPos.y-obj.clipperGui.absPos.y,
+                            
+                            child.clipperGui.absSize.x, child.clipperGui.absSize.y,
+                            
+                            child.rt
+                        );
                     end
-				end
-			end
-			
-			dxSetRenderTarget();
+                end
+                
+                -- [ ===================== [ ROTATION ] ===================== ]
+                
+                if (obj.isRotated) then
+                    
+                    -- apply rotation through shader transform
+                    dxSetShaderTransform(
+                        GuiObject.SHADER,
+                        
+                        obj.rot.x, obj.rot.y, obj.rot.z,
+                        
+                        ((obj.absRotPivot.x-obj.clipperGui.absPos.x - obj.clipperGui.absSize.x/2)/obj.clipperGui.absSize.x)*2,
+                        ((obj.absRotPivot.y-obj.clipperGui.absPos.y - obj.clipperGui.absSize.y/2)/obj.clipperGui.absSize.y)*2,
+                        0,
+                        
+                        false,
+                        
+                        ((obj.absPos.x-obj.clipperGui.absPos.x + obj.absSize.x/2 - obj.clipperGui.absSize.x/2)/obj.clipperGui.absSize.x)*2,
+                        ((obj.absPos.y-obj.clipperGui.absPos.y + obj.absSize.y/2 - obj.clipperGui.absSize.y/2)/obj.clipperGui.absSize.y)*2,
+                        
+                        false
+                    );
+                    
+                    dxSetShaderValue(GuiObject.SHADER, "image", obj.parent.rt);
+                    
+                    dxSetRenderTarget(obj.rt, true); -- draw rotated result on object rt
+                    
+                    dxDrawImage(-obj.rotDrawOffset.x, -obj.rotDrawOffset.y, obj.rotDrawSize.x, obj.rotDrawSize.y, GuiObject.SHADER);
+                end
+                
+                dxSetRenderTarget();
+                
+                dxSetBlendMode("blend");
+            end
             
-            dxSetBlendMode("blend");
-            
-            
-            dxSetShaderValue(obj.shader, "image", obj.rt); -- dxSetShaderTransform(obj.shader, 0, 0, 30);
+            if (propagate) then
+                obj.parent.draw(true);
+            end
 		end
-		
-        local parent = obj.parent;
-        
-        if (parent) and Instance.func.isA(parent, "GuiBase2D") then
-            parent.draw();
-        end
 	end
+    
+    function obj.propagate()
+        obj.draw();
+        
+        obj.parent.propagate();
+    end
 end
 
 
@@ -129,40 +150,84 @@ Instance.initializable.Frame = {
 
 
 
-local scrGui = Instance.new("ScreenGui");
+scrGui = Instance.new("ScreenGui"); scrGui.name = "scrGui";
 
-local fr1 = Instance.new("Frame", scrGui);
-fr1.pos = UDim2.new(0.5, -50, 0.5, -50);
+fr1 = Instance.new("Frame", scrGui); fr1.name = "fr1";
 
-fr1.rot = Vector3.new(0, 0, 45);
+fr1.pos = UDim2.new(0.6, 0, 0.25, 0);
+fr1.size = UDim2.new(0, 300, 0, 300)
+fr1.borderSize = 5;
 
-fr1.clipsDescendants = true;
+fr1.rotPivot = UDim2.new(1, 0, 1, 0);
+-- fr1.posOrigin = UDim2.new(0.5, 0, 0.5, 0);
 
-fr2 = Instance.new("Frame", fr1);
-fr2.name = "fr2";
-fr2.pos = UDim2.new(0, -50, 0, -50);
+fr2 = Instance.new("Frame", fr1); fr2.name = "fr2";
+
+fr2.pos = UDim2.new(0.5, -25, 0, 10);
 fr2.bgColor3 = Color3.new(223, 196, 125);
-fr2.borderColor3 = Color3.new();
-fr2.borderSize = 40;
-fr2.borderOffset = 0;
-fr2.rot = Vector3.new(0, 0, -30);
-
-print(fr1.absRot);
-print(fr2.absRot);
+fr2.borderColor3 = Color3.new(0, 0, 0);
 
 
+fr3 = Instance.new("Frame", fr2); fr3.name = "fr3";
+fr3.bgColor3 = Color3.new(0, 196, 0);
+fr3.pos = UDim2.new(0.5, 0, 0.5, 0);
 
+fr3.posOrigin = fr1.posOrigin;
+
+fr2.size = UDim2.new(0, 124, 0, 124);
+
+
+
+local srx = guiCreateScrollBar(400, 20,  200, 20, true, false);
+local sry = guiCreateScrollBar(400, 40,  200, 20, true, false);
+local srz = guiCreateScrollBar(400, 60,  200, 20, true, false);
+
+local spx = guiCreateScrollBar(400, 100,  200, 20, true, false); guiScrollBarSetScrollPosition(spx, 50);
+local spy = guiCreateScrollBar(400, 120,  200, 20, true, false); guiScrollBarSetScrollPosition(spy, 50);
+
+local fr = fr2;
+
+addEventHandler("onClientRender", root, function()
+    fr.rotPivot = UDim2.new(guiScrollBarGetScrollPosition(spx)/100, 0, guiScrollBarGetScrollPosition(spy)/100, 0);
+    
+    dxDrawLine(
+        SCREEN_WIDTH/2,
+        SCREEN_HEIGHT/2,
+        
+        fr.absRotPivot.x,
+        fr.absRotPivot.y,
+        
+        tocolor(255, 0, 0), 3
+    );
+    
+    fr.rot = Vector3.new(guiScrollBarGetScrollPosition(srx)/100*360, guiScrollBarGetScrollPosition(sry)/100*360, guiScrollBarGetScrollPosition(srz)/100*360);
+end);
+
+
+-- local u = 360;
 -- local v = 0;
 -- addEventHandler("onClientRender", root, function()
-    -- if (v < 300) then
-        -- fr1.pos = UDim2.new(0, v, 0, v);
+    -- if (v < 720) and (u > 0) then
+        -- fr2.rot = Vector3.new(-v, 0, 0);
+        -- fr3.rot = Vector3.new(v, u, 0);
         
-        -- v = v+0.5;
+        -- fr1.rot = Vector3.new(0, 0, v);
+        
+        -- -- u = u-1;
+        -- v = v+1;
     -- end
 -- end);
 
 
 
+
+
+
+
+-- local rt1 = dxCreateRenderTarget(400, 400, true);
+-- local rt2 = dxCreateRenderTarget(800, 800, true);
+
+-- dxSetRenderTarget()
 
 
 -- [ ================= [ Masking test ] ================= ]
@@ -174,7 +239,7 @@ print(fr2.absRot);
 
 -- local shd = dxCreateShader("shaders/nothing.fx");
 -- dxSetShaderValue(shd, "image", ico.image);
--- dxSetShaderTransform(shd, 0, 0, -30);
+-- dxSetShaderTransform(shd, 30, 30, -30);
 
 -- local rt1 = dxCreateRenderTarget(256, 256, true);
 -- dxSetRenderTarget(rt1);
