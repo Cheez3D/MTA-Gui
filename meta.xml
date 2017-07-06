@@ -83,7 +83,7 @@
     
     <script src="classes/Instance.lua" type="client"/>
     
-    <script src="classes/Instance/Mouse.lua" type="client"/>
+    <!-- <script src="classes/Instance/Mouse.lua" type="client"/> -->
     
     <script src="classes/Instance/GuiBase2D.lua" type="client"/>
     <script src="classes/Instance/GuiObject.lua" type="client"/>

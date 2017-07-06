@@ -28,86 +28,135 @@ local function new(obj)
 	function obj.draw(propagate)
 		if (obj.rootGui) then -- if drawable
             if (obj.visible) then -- TODO: fix visible param not working properly
-                dxSetBlendMode("add");
                 
-                dxSetRenderTarget(obj.isRotated and obj.parent.rt or obj.rt, true);
-                
-                if (obj.debug) then
-                    dxDrawRectangle(0, 0, obj.clipperGui.absSize.x, obj.clipperGui.absSize.y, tocolor(255, 0, 0, 200));
-                end
-                
-                
-                -- [ ===================== [ BORDER ] ===================== ]
-                
-                dxDrawRectangle(
-                    (obj.isRotated and obj.rotDrawOffset.x or 0) + obj.absPos.x-obj.clipperGui.absPos.x - obj.borderSize,
-                    (obj.isRotated and obj.rotDrawOffset.y or 0) + obj.absPos.y-obj.clipperGui.absPos.y - obj.borderSize,
-                    
-                    obj.absSize.x + 2*obj.borderSize,
-                    obj.absSize.y + 2*obj.borderSize,
-                    
-                    tocolor(obj.borderColor3.r, obj.borderColor3.g, obj.borderColor3.b, 255*(1-obj.borderTransparency))
-                );
-                
-                -- [ ===================== [ BACKGROUND ] ===================== ]
-                
-                dxSetBlendMode("overwrite");
-                
-                dxDrawRectangle(
-                    (obj.isRotated and obj.rotDrawOffset.x or 0) + obj.absPos.x-obj.clipperGui.absPos.x,
-                    (obj.isRotated and obj.rotDrawOffset.y or 0) + obj.absPos.y-obj.clipperGui.absPos.y,
-                    
-                    obj.absSize.x, obj.absSize.y,
-                    
-                    tocolor(obj.bgColor3.r, obj.bgColor3.g, obj.bgColor3.b, 255*(1-obj.bgTransparency))
-                );
-                
-                -- [ ===================== [ CHILDREN ] ===================== ]
-                
-                dxSetBlendMode("add");
-                
-                for i = 1, #obj.children do
-                    local child = obj.children[i];
-                    
-                    if Instance.func.isA(child, "GuiObject") then
-                        dxDrawImage(
-                            (obj.isRotated and obj.rotDrawOffset.x or 0) + child.clipperGui.absPos.x-obj.clipperGui.absPos.x,
-                            (obj.isRotated and obj.rotDrawOffset.y or 0) + child.clipperGui.absPos.y-obj.clipperGui.absPos.y,
-                            
-                            child.clipperGui.absSize.x, child.clipperGui.absSize.y,
-                            
-                            child.rt
-                        );
-                    end
-                end
-                
-                -- [ ===================== [ ROTATION ] ===================== ]
+                dxSetBlendMode("modulate_add");
                 
                 if (obj.isRotated) then
+                    dxSetRenderTarget(obj.rootGui.rt, true);
                     
-                    -- apply rotation through shader transform
-                    dxSetShaderTransform(
-                        GuiObject.SHADER,
+                    if (obj.debug) then
+                        dxDrawRectangle(obj.rotRtOffset.x, obj.rotRtOffset.y, obj.clipperGui.absSize.x, obj.clipperGui.absSize.y, tocolor(255, 0, 0, 127.5));
+                    end
+                    
+                    -- border
+                    dxDrawRectangle(
+                        obj.rotRtOffset.x + obj.absPos.x-obj.clipperGui.absPos.x - obj.borderSize,
+                        obj.rotRtOffset.y + obj.absPos.y-obj.clipperGui.absPos.y - obj.borderSize,
                         
-                        obj.rot.x, obj.rot.y, obj.rot.z,
+                        obj.absSize.x + 2*obj.borderSize,
+                        obj.absSize.y + 2*obj.borderSize,
                         
-                        ((obj.absRotPivot.x-obj.clipperGui.absPos.x - obj.clipperGui.absSize.x/2)/obj.clipperGui.absSize.x)*2,
-                        ((obj.absRotPivot.y-obj.clipperGui.absPos.y - obj.clipperGui.absSize.y/2)/obj.clipperGui.absSize.y)*2,
-                        0,
-                        
-                        false,
-                        
-                        ((obj.absPos.x-obj.clipperGui.absPos.x + obj.absSize.x/2 - obj.clipperGui.absSize.x/2)/obj.clipperGui.absSize.x)*2,
-                        ((obj.absPos.y-obj.clipperGui.absPos.y + obj.absSize.y/2 - obj.clipperGui.absSize.y/2)/obj.clipperGui.absSize.y)*2,
-                        
-                        false
+                        tocolor(obj.borderColor3.r, obj.borderColor3.g, obj.borderColor3.b, 255*(1-obj.borderTransparency))
                     );
                     
-                    dxSetShaderValue(GuiObject.SHADER, "image", obj.parent.rt);
+                    -- background
+                    dxSetBlendMode("overwrite");
                     
-                    dxSetRenderTarget(obj.rt, true); -- draw rotated result on object rt
+                    dxDrawRectangle(
+                        obj.rotRtOffset.x + obj.absPos.x-obj.clipperGui.absPos.x,
+                        obj.rotRtOffset.y + obj.absPos.y-obj.clipperGui.absPos.y,
+                        
+                        obj.absSize.x, obj.absSize.y,
+                        
+                        tocolor(obj.bgColor3.r, obj.bgColor3.g, obj.bgColor3.b, 255*(1-obj.bgTransparency))
+                    );
                     
-                    dxDrawImage(-obj.rotDrawOffset.x, -obj.rotDrawOffset.y, obj.rotDrawSize.x, obj.rotDrawSize.y, GuiObject.SHADER);
+                    -- children
+                    dxSetBlendMode("modulate_add");
+                    
+                    for i = 1, #obj.children do
+                        local child = obj.children[i];
+                        
+                        if Instance.func.isA(child, "GuiObject") then
+                            dxDrawImage(
+                                obj.rotRtOffset.x + child.clipperGui.absPos.x-obj.clipperGui.absPos.x,
+                                obj.rotRtOffset.y + child.clipperGui.absPos.y-obj.clipperGui.absPos.y,
+                                
+                                child.clipperGui.absSize.x, child.clipperGui.absSize.y,
+                                
+                                child.rt
+                            );
+                        end
+                    end
+                    
+                    -- rotation
+                    dxSetRenderTarget(obj.rt, true);
+                    
+                    -- if (obj.isRotated3D) then
+                        dxSetShaderTransform(
+                            GuiObject.SHADER,
+                            
+                            obj.rot.x, obj.rot.y, obj.rot.z,
+                            
+                            obj.rotTransfPivot.x, obj.rotTransfPivot.y, obj.rotTransfPivot.z, false,
+                            
+                            obj.rotTransfPerspective.x, obj.rotTransfPerspective.y, false
+                        );
+                        
+                        dxSetShaderValue(GuiObject.SHADER, "image", obj.rootGui.rt);
+                        
+                        dxDrawImage(-obj.rotRtOffset.x, -obj.rotRtOffset.y, obj.rootGui.absSize.x, obj.rootGui.absSize.y, GuiObject.SHADER);
+                        
+                    -- COMMENTED BECAUSE OF TRANSPARENCY COLOR CHANGE ISSUES WHICH CAN BE SOLVED BY SETTING AlphaBlendEnable IN SHADER TO false
+                    -- else
+                        -- dxDrawImage(
+                            -- -obj.rotRtOffset.x, -obj.rotRtOffset.y, obj.rootGui.absSize.x, obj.rootGui.absSize.y,
+                            
+                            -- obj.rootGui.rt,
+                            
+                            -- obj.rot.z,
+                            
+                            -- -obj.clipperGui.absSize.x/2 + obj.absRotPivot.x-obj.clipperGui.absPos.x,
+                            -- -obj.clipperGui.absSize.y/2 + obj.absRotPivot.y-obj.clipperGui.absPos.y
+                        -- );
+                    -- end
+                else
+                    dxSetRenderTarget(obj.rt, true);
+                    
+                    if (obj.debug) then
+                        dxDrawRectangle(0, 0, obj.clipperGui.absSize.x, obj.clipperGui.absSize.y, tocolor(255, 0, 0, 127.5));
+                    end
+                    
+                    -- border
+                    dxDrawRectangle(
+                        obj.absPos.x-obj.clipperGui.absPos.x - obj.borderSize,
+                        obj.absPos.y-obj.clipperGui.absPos.y - obj.borderSize,
+                        
+                        obj.absSize.x + 2*obj.borderSize,
+                        obj.absSize.y + 2*obj.borderSize,
+                        
+                        tocolor(obj.borderColor3.r, obj.borderColor3.g, obj.borderColor3.b, 255*(1-obj.borderTransparency))
+                    );
+                    
+                    -- background
+                    dxSetBlendMode("overwrite");
+                    
+                    dxDrawRectangle(
+                        obj.absPos.x-obj.clipperGui.absPos.x,
+                        obj.absPos.y-obj.clipperGui.absPos.y,
+                        
+                        obj.absSize.x, obj.absSize.y,
+                        
+                        tocolor(obj.bgColor3.r, obj.bgColor3.g, obj.bgColor3.b, 255*(1-obj.bgTransparency))
+                    );
+                    
+                    -- children
+                    dxSetBlendMode("modulate_add");
+                    
+                    for i = 1, #obj.children do
+                        local child = obj.children[i];
+                        
+                        if Instance.func.isA(child, "GuiObject") then
+                            dxDrawImage(
+                                child.clipperGui.absPos.x-obj.clipperGui.absPos.x,
+                                child.clipperGui.absPos.y-obj.clipperGui.absPos.y,
+                                
+                                child.clipperGui.absSize.x, child.clipperGui.absSize.y,
+                                
+                                child.rt
+                            );
+                        end
+                    end
                 end
                 
                 dxSetRenderTarget();
@@ -159,11 +208,10 @@ fr1.size = UDim2.new(0, 300, 0, 300)
 fr1.borderSize = 5;
 
 fr1.rotPivot = UDim2.new(1, 0, 1, 0);
--- fr1.posOrigin = UDim2.new(0.5, 0, 0.5, 0);
 
 fr2 = Instance.new("Frame", fr1); fr2.name = "fr2";
 
-fr2.pos = UDim2.new(0.5, -25, 0, 10);
+fr2.pos = UDim2.new(0.5, 0, 0, 10);
 fr2.bgColor3 = Color3.new(223, 196, 125);
 fr2.borderColor3 = Color3.new(0, 0, 0);
 
@@ -171,10 +219,6 @@ fr2.borderColor3 = Color3.new(0, 0, 0);
 fr3 = Instance.new("Frame", fr2); fr3.name = "fr3";
 fr3.bgColor3 = Color3.new(0, 196, 0);
 fr3.pos = UDim2.new(0.5, 0, 0.5, 0);
-
-fr3.posOrigin = fr1.posOrigin;
-
-fr2.size = UDim2.new(0, 124, 0, 124);
 
 
 
@@ -185,7 +229,7 @@ local srz = guiCreateScrollBar(400, 60,  200, 20, true, false);
 local spx = guiCreateScrollBar(400, 100,  200, 20, true, false); guiScrollBarSetScrollPosition(spx, 50);
 local spy = guiCreateScrollBar(400, 120,  200, 20, true, false); guiScrollBarSetScrollPosition(spy, 50);
 
-local fr = fr2;
+local fr = fr1;
 
 addEventHandler("onClientRender", root, function()
     fr.rotPivot = UDim2.new(guiScrollBarGetScrollPosition(spx)/100, 0, guiScrollBarGetScrollPosition(spy)/100, 0);
@@ -201,20 +245,24 @@ addEventHandler("onClientRender", root, function()
     );
     
     fr.rot = Vector3.new(guiScrollBarGetScrollPosition(srx)/100*360, guiScrollBarGetScrollPosition(sry)/100*360, guiScrollBarGetScrollPosition(srz)/100*360);
+    
+    -- print(fr.rotPivot);
 end);
 
 
--- local u = 360;
--- local v = 0;
+
+
+
+
+-- local v = 100;
+
 -- addEventHandler("onClientRender", root, function()
-    -- if (v < 720) and (u > 0) then
-        -- fr2.rot = Vector3.new(-v, 0, 0);
-        -- fr3.rot = Vector3.new(v, u, 0);
+    -- if (v <= 500) then
+        -- fr1.size = UDim2.new(0, v, 0, v);
         
-        -- fr1.rot = Vector3.new(0, 0, v);
-        
-        -- -- u = u-1;
         -- v = v+1;
+    -- else
+        -- v = 100;
     -- end
 -- end);
 
@@ -260,7 +308,7 @@ end);
     -- dxDrawImage(400, 400, 256, 256, shader);
 -- end);
 
--- [ ================= [ 3D Rotation test ] ================= ]
+-- [ ================= [ Rotation test ] ================= ]
 
 -- local s1 = guiCreateScrollBar(400, 20,  200, 20, true, false);
 -- local s2 = guiCreateScrollBar(400, 40,  200, 20, true, false);
@@ -279,31 +327,11 @@ end);
 -- -- guiScrollBarSetScrollPosition(s7, 50);
 -- -- guiScrollBarSetScrollPosition(s8, 50);
 
--- local ico = decode_ico("decoders/ico/chrome-png.ico");
+-- local ico = decode_ico("decoders/ico/256x256-1bpp.ico");
 -- ico = ico[1];
 
--- local shader = dxCreateShader("shaders/nothing.fx");
--- dxSetShaderValue(shader, "image", ico.image);
-
 -- addEventHandler("onClientRender", root, function()
-    -- dxSetShaderTransform(
-        -- shader,
-        
-        -- guiScrollBarGetScrollPosition(s1)/100*360,
-        -- guiScrollBarGetScrollPosition(s2)/100*360,
-        -- guiScrollBarGetScrollPosition(s3)/100*360,
-        
-        -- ((guiScrollBarGetScrollPosition(s4)/100-0.5)*2*ico.width)/SCREEN_WIDTH,
-        -- ((guiScrollBarGetScrollPosition(s5)/100-0.5)*2*ico.height)/SCREEN_HEIGHT,
-        -- ((guiScrollBarGetScrollPosition(s6)/100-0.5)*2) --,
-        
-        -- -- true,
-        
-        -- -- (guiScrollBarGetScrollPosition(s7)/100-0.5)*2,
-        -- -- (guiScrollBarGetScrollPosition(s8)/100-0.5)*2
-    -- );
-    
-    -- dxDrawImage(400, 400, ico.width, ico.height, shader);
+    -- dxDrawImage(400, 400, ico.width, ico.height, ico.image, guiScrollBarGetScrollPosition(s3)/100*360, -ico.width/2, -ico.height/2);
     
     -- dxDrawLine(
         -- SCREEN_WIDTH/2,
@@ -314,19 +342,4 @@ end);
         
         -- tocolor(0, 255, 0)
     -- );
-    
-    -- print("offX", ((guiScrollBarGetScrollPosition(s4)/100-0.5)*2*ico.width)/SCREEN_WIDTH);
-    -- print("offY", ((guiScrollBarGetScrollPosition(s5)/100-0.5)*2*ico.height)/SCREEN_HEIGHT);
-    -- print("offZ", ((guiScrollBarGetScrollPosition(s6)/100-0.5)*2));
-    -- print("\n");
-    
-    -- -- dxDrawLine(
-        -- -- SCREEN_WIDTH/2,
-        -- -- SCREEN_HEIGHT/2,
-        
-        -- -- 400+guiScrollBarGetScrollPosition(s7)/100*ico.width,
-        -- -- 400+guiScrollBarGetScrollPosition(s8)/100*ico.height,
-        
-        -- -- tocolor(0, 0, 255)
-    -- -- );
 -- end);

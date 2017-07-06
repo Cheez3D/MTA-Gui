@@ -26,6 +26,8 @@ technique negative {
 
 technique fallback {
     pass p0 {
+        AlphaBlendEnable = false;
+        
         Texture[0] = image;
     }
 }

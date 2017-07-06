@@ -7,7 +7,7 @@ local meta = {
     __metatable = name,
     
     
-	__index = function(proxy, key)
+    __index = function(proxy, key)
         local obj = PROXY__OBJ[proxy];
         
         local val = obj[key];
@@ -25,17 +25,17 @@ local meta = {
             return get_f(obj, key);
         end
     end,
-	
-	__newindex = function(proxy, key)
-		error("attempt to modify a read-only key (" ..tostring(key).. ")", 2);
-	end,
+    
+    __newindex = function(proxy, key)
+        error("attempt to modify a read-only key (" ..tostring(key).. ")", 2);
+    end,
     
     
-	__tostring = function(proxy)
-		local obj = PROXY__OBJ[proxy];
-		
-		return obj.r..", "..obj.g..", "..obj.b;
-	end,
+    __tostring = function(proxy)
+        local obj = PROXY__OBJ[proxy];
+        
+        return obj.r..", "..obj.g..", "..obj.b;
+    end,
 }
 
 
@@ -46,73 +46,73 @@ function new(r, g, b)
     
     -- [ ====================== [ ASSERTION ] ====================== ]
     
-	if (r ~= nil) then
-		local rType = type(r);
+    if (r ~= nil) then
+        local rType = type(r);
         
-		if (rType ~= "number") then
+        if (rType ~= "number") then
             error("bad argument #1 to '" ..__func__.. "' (number expected, got " ..rType.. ")", 2);
         elseif (r < 0) or (r > 255) then
             error("bad argument #1 to '" ..__func__.. "' (value out of bounds)", 2);
         end
-	else
-		r = 0;
-	end
-	
-	if (g ~= nil) then
-		local gType = type(g);
+    else
+        r = 0;
+    end
+    
+    if (g ~= nil) then
+        local gType = type(g);
         
-		if (gType ~= "number") then
+        if (gType ~= "number") then
             error("bad argument #2 to '" ..__func__.. "' (number expected, got " ..gType.. ")", 2);
         elseif (g < 0) or (g > 255) then
             error("bad argument #2 to '" ..__func__.. "' (value out of bounds)", 2);
         end
-	else
-		g = 0;
-	end
-	
-	if (b ~= nil) then
-		local bType = type(b);
+    else
+        g = 0;
+    end
+    
+    if (b ~= nil) then
+        local bType = type(b);
         
-		if (bType ~= "number") then
+        if (bType ~= "number") then
             error("bad argument #3 to '" ..__func__.. "' (number expected, got " ..bType.. ")", 2);
         elseif (b < 0) or (b > 255) then
             error("bad argument #3 to '" ..__func__.. "' (value out of bounds)", 2);
         end
-	else
-		b = 0;
-	end
-	
-	
-	
-	local memId = r.. ":" ..g.. ":" ..b;
-	
-	local proxy = MEM_PROXIES[memId];
+    else
+        b = 0;
+    end
     
-	if (not proxy) then
-		local obj = {
+    
+    
+    local memId = r.. ":" ..g.. ":" ..b;
+    
+    local proxy = MEM_PROXIES[memId];
+    
+    if (not proxy) then
+        local obj = {
             type = name,
             
             
-			r = r,
+            r = r,
             g = g,
             b = b,
-		}
-		
-		proxy = setmetatable({}, meta);
+        }
+        
+        proxy = setmetatable({}, meta);
         
         MEM_PROXIES[memId] = proxy;
         
         OBJ__PROXY[obj] = proxy;
         PROXY__OBJ[proxy] = obj;
-	end
-	
-	return proxy;
+    end
+    
+    return proxy;
 end
 
 
 
 function func.unpack(obj)
-	return obj.r, obj.g, obj.b;
+    return obj.r, obj.g, obj.b;
 end
 
 
@@ -121,10 +121,10 @@ function get.hex(obj)
     local hex = 0x10000 * obj.b
               + 0x100   * obj.g
               +           obj.r;
-	
-	obj.hex = hex; -- memoize hex value inside obj
+    
+    obj.hex = hex; -- memoize hex value inside obj
 
-	return hex;
+    return hex;
 end
 
 

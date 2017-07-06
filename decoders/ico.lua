@@ -76,20 +76,17 @@ local decode_bitmap;
 
 function decode_ico(bytes)
     
-    -- [ ====================== [ ASSERTION ] ====================== ]
-    
     local bytesType = type(bytes);
     if (bytesType ~= "string") then
         error("bad argument #1 to '" ..__func__.. "' (string expected, got " ..bytesType.. ")", 2);
     end
-    
-    
     
     local success, stream = pcall(Stream.new, bytes);
     
     if (not success) then
         error("bad argument #1 to '" ..__func__.. "' (could not create stream)\n-> " ..stream, 2);
     end
+    
     
     
     local ICONDIR = {
@@ -100,6 +97,7 @@ function decode_ico(bytes)
         idCount   = stream.read_ushort(),
         idEntries = {}
     }
+    
     
     if (ICONDIR.idReserved ~= 0) then
         error("bad argument #1 to '" ..__func__.. "' (invalid file format)", 2);
@@ -131,6 +129,11 @@ function decode_ico(bytes)
         if (ICONDIRENTRY.bReserved ~= 0) then
             error("bad argument #1 to '" ..__func__.. "' (invalid file format)", 2);
         end
+        
+        -- width and height are stored in a single byte so the possible values are 0-255
+        -- but for a size of 0 the actual size is 256
+        if (ICONDIRENTRY.bWidth == 0)  then ICONDIRENTRY.bWidth  = 256 end
+        if (ICONDIRENTRY.bHeight == 0) then ICONDIRENTRY.bHeight = 256 end
         
         ICONDIR.idEntries[i] = ICONDIRENTRY;
     end
@@ -179,8 +182,8 @@ function decode_ico(bytes)
             width  = width,
             height = height,
             
-            hotspotX = ICONDIR.isCUR and ICONDIRENTRY.wPlanes,
-            hotspotY = ICONDIR.isCUR and ICONDIRENTRY.wBitCount,
+            hotspotX = ICONDIR.isCUR and ICONDIRENTRY.wPlanes   or nil,
+            hotspotY = ICONDIR.isCUR and ICONDIRENTRY.wBitCount or nil,
             
             image = image,
         }
@@ -188,7 +191,7 @@ function decode_ico(bytes)
     
     stream.close();
     
-    
+    -- sorting icos by size
     -- if (#icoVariants > 1) then
         -- table.sort(icoVariants, function(first, second)
             -- return (first.height < second.height) or (first.width < second.width);
@@ -398,8 +401,10 @@ end
 
 
 
--- local ico = decode_ico("decoders/ico/chrome-png.ico");
+-- local ico = decode_ico("decoders/ico/" .. "256x256-1bpp.ico");
 -- ico = ico[1];
+
+-- print_table(ico);
 
 -- addEventHandler("onClientRender", root, function()
     -- dxDrawImage(200, 200, ico.width, ico.height, ico.image);

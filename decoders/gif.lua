@@ -358,11 +358,7 @@ function decode_gif(bytes, ignoreComments)
             dxSetBlendMode("add");
             
             if (not canvas) then
-                canvas = dxCreateRenderTarget(
-                    lsd.canvasWidth, lsd.canvasHeight,
-                    
-                    (version == "89a") -- only version 89a has transparency support
-                );
+                canvas = dxCreateRenderTarget(lsd.canvasWidth, lsd.canvasHeight, version == "89a"); -- only version 89a has transparency support
                 
                 local bgColor = ((gce and gce.isTransparencyEnabled) and 0x00000000) or (gct and gct.bgColor) or 0x00000000;
                 

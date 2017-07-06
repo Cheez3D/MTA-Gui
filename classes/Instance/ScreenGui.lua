@@ -53,7 +53,7 @@ local function new(obj)
     
     
 	function obj.render()
-		dxSetBlendMode("add");
+		dxSetBlendMode("modulate_add");
 		
 		dxDrawImage(0, 0, obj.absSize.x, obj.absSize.y, obj.rt);
 		

@@ -91,7 +91,7 @@ function new(bytes)
         
         
         isClosed = false,
-        isFile =   isFile,
+        isFile   = isFile,
         
 		bytes = isFile and file or bytes,
 		
