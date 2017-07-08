@@ -38,8 +38,14 @@ local function new(obj)
 		for i = 1, #obj.children do
             local child = obj.children[i];
             
-            if Instance.func.isA(child, "GuiObject") then
-                dxDrawImage(0, 0, obj.absSize.x, obj.absSize.y, child.rt);
+            if Instance.func.isA(child, "GuiObject") and (child.rt) then
+                dxDrawImage(
+                    child.clipperGui.absPos.x, child.clipperGui.absPos.y,
+                        
+                    child.clipperGui.absSize.x, child.clipperGui.absSize.y,
+                    
+                    child.rt
+                );
             end
 		end
 		

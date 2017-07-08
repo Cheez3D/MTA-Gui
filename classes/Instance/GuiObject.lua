@@ -1,6 +1,8 @@
 -- local Color3  = require("Color3");
 -- local Vector2 = require("Vector2");
 
+local floor = math.floor;
+
 
 
 local name = "GuiObject";
@@ -56,8 +58,9 @@ local function new(obj)
     obj.posOrigin = PROXY__OBJ[UDim2.new(0, 0, 0, 0)];
 	obj.pos       = nil;
     
-    obj.rot      = PROXY__OBJ[Vector3.new(0, 0, 0)];
-    obj.rotPivot = PROXY__OBJ[UDim2.new(0.5, 0, 0.5, 0)];
+    obj.rot           = PROXY__OBJ[Vector3.new(0, 0, 0)];
+    obj.rotPivot      = PROXY__OBJ[UDim2.new(0.5, 0, 0.5, 0)];
+    obj.rotPivotDepth = 0;
     
     
 	obj.visible = true;
@@ -65,7 +68,7 @@ local function new(obj)
     
     
     obj.isRotated   = false;
-    -- obj.isRotated3D = false;
+    obj.isRotated3D = false;
 end
 
 
@@ -106,7 +109,7 @@ end
 function func.update_rt(obj)
     if isElement(obj.rt) then destroyElement(obj.rt) end -- destroy previous rt to free video memory
     
-    obj.rt = obj.clipperGui and dxCreateRenderTarget(obj.clipperGui.absSize.x, obj.clipperGui.absSize.y, true) or nil;
+    obj.rt = obj.clipperGui and obj.visible and dxCreateRenderTarget(obj.clipperGui.absSize.x, obj.clipperGui.absSize.y, true) or nil;
     
     -- recursively update all children rts
     for i = 1, #obj.children do
@@ -121,8 +124,8 @@ end
 
 function func.update_absSize(obj)
     obj.absSize = obj.rootGui and PROXY__OBJ[Vector2.new(
-        math.floor(obj.size.x.offset + obj.parent.absSize.x*obj.size.x.scale),
-        math.floor(obj.size.y.offset + obj.parent.absSize.y*obj.size.y.scale)
+        floor(obj.size.x.offset + obj.parent.absSize.x*obj.size.x.scale),
+        floor(obj.size.y.offset + obj.parent.absSize.y*obj.size.y.scale)
     )] or nil;
     
     for i = 1, #obj.children do
@@ -137,8 +140,8 @@ end
 
 function func.update_absPos(obj)
     obj.absPos = obj.rootGui and PROXY__OBJ[Vector2.new(
-        math.floor(obj.parent.absPos.x + (obj.pos.x.offset + obj.parent.absSize.x*obj.pos.x.scale) - (obj.posOrigin.x.offset + obj.absSize.x*obj.posOrigin.x.scale)),
-        math.floor(obj.parent.absPos.y + (obj.pos.y.offset + obj.parent.absSize.y*obj.pos.y.scale) - (obj.posOrigin.y.offset + obj.absSize.y*obj.posOrigin.y.scale))
+        floor(obj.parent.absPos.x + (obj.pos.x.offset + obj.parent.absSize.x*obj.pos.x.scale) - (obj.posOrigin.x.offset + obj.absSize.x*obj.posOrigin.x.scale)),
+        floor(obj.parent.absPos.y + (obj.pos.y.offset + obj.parent.absSize.y*obj.pos.y.scale) - (obj.posOrigin.y.offset + obj.absSize.y*obj.posOrigin.y.scale))
     )] or nil;
     
     for i = 1, #obj.children do
@@ -153,17 +156,17 @@ end
 
 function func.update_absRotPivot(obj)
     obj.absRotPivot = obj.rootGui and PROXY__OBJ[Vector2.new(
-        math.floor(obj.absPos.x + (obj.rotPivot.x.offset + obj.absSize.x*obj.rotPivot.x.scale)),
-        math.floor(obj.absPos.y + (obj.rotPivot.y.offset + obj.absSize.y*obj.rotPivot.y.scale))
+        floor(obj.absPos.x + (obj.rotPivot.x.offset + obj.absSize.x*obj.rotPivot.x.scale)),
+        floor(obj.absPos.y + (obj.rotPivot.y.offset + obj.absSize.y*obj.rotPivot.y.scale))
     )] or nil;
     
-    for i = 1, #obj.children do
-        local child = obj.children[i];
+    -- for i = 1, #obj.children do
+        -- local child = obj.children[i];
         
-        if Instance.func.isA(child, "GuiObject") then
-            func.update_absRotPivot(child);
-        end
-    end
+        -- if Instance.func.isA(child, "GuiObject") then
+            -- func.update_absRotPivot(child);
+        -- end
+    -- end
 end
 
 function func.update_rotParams(obj)
@@ -173,18 +176,19 @@ function func.update_rotParams(obj)
     --  so that it can be visible inside the parent)
     
     obj.rotRtOffset = obj.rootGui and obj.isRotated and PROXY__OBJ[Vector2.new(
-        math.floor((obj.rootGui.absSize.x-obj.clipperGui.absSize.x)/2),
-        math.floor((obj.rootGui.absSize.y-obj.clipperGui.absSize.y)/2)
+        floor((obj.rootGui.absSize.x-obj.clipperGui.absSize.x)/2),
+        floor((obj.rootGui.absSize.y-obj.clipperGui.absSize.y)/2)
     )] or nil;
     
     
-    obj.rotTransfPivot = obj.rootGui and obj.isRotated and PROXY__OBJ[Vector3.new(
+    obj.rotTransformPivot = obj.rootGui and obj.isRotated and PROXY__OBJ[Vector3.new(
         2*((-obj.clipperGui.absSize.x/2 + obj.absRotPivot.x-obj.clipperGui.absPos.x)/obj.clipperGui.absSize.x),
         2*((-obj.clipperGui.absSize.y/2 + obj.absRotPivot.y-obj.clipperGui.absPos.y)/obj.clipperGui.absSize.y),
-        0 -- TODO: add rotPivotDepth parameter
+        
+        obj.rotPivotDepth
     )] or nil;
     
-    obj.rotTransfPerspective = obj.rootGui and obj.isRotated and PROXY__OBJ[Vector2.new(
+    obj.rotTransformPerspective = obj.rootGui and obj.isRotated and PROXY__OBJ[Vector2.new(
         2*((-obj.clipperGui.absSize.x/2 + obj.absPos.x-obj.clipperGui.absPos.x + obj.absSize.x/2)/obj.clipperGui.absSize.x),
         2*((-obj.clipperGui.absSize.y/2 + obj.absPos.y-obj.clipperGui.absPos.y + obj.absSize.y/2)/obj.clipperGui.absSize.y)
     )] or nil;
@@ -453,13 +457,12 @@ function set.rot(obj, rot)
     
     obj.rot = rot;
     
-    if     (obj.rot.x == obj.rot.y and obj.rot.y == obj.rot.z) and (obj.rot.x%180 == 0 and obj.rot.y%180 == 0 and obj.rot.z%180 == 0) then obj.isRotated = false;
-    elseif                                                         (obj.rot.x%360 == 0 and obj.rot.y%360 == 0 and obj.rot.z%360 == 0) then obj.isRotated = false;
-    else                                                                                                                                   obj.isRotated = true;
+    if (obj.rot.x == obj.rot.y and obj.rot.y == obj.rot.z) and (obj.rot.x%180 == 0 and obj.rot.y%180 == 0 and obj.rot.z%180 == 0) then obj.isRotated = false;
+    elseif                                                     (obj.rot.x%360 == 0 and obj.rot.y%360 == 0 and obj.rot.z%360 == 0) then obj.isRotated = false;
+    else                                                                                                                               obj.isRotated = true;
     end
     
-    -- obj.isRotated3D = obj.isRotated and (obj.rot.x%360 ~= 0 or obj.rot.y%360 ~= 0);
-    
+    obj.isRotated3D = obj.isRotated and (obj.rot.x%180 ~= 0 or obj.rot.y%180 ~= 0 or obj.rotPivotDepth ~= 0);
     
     func.update_rotParams(obj);
     
@@ -483,6 +486,23 @@ function set.rotPivot(obj, rotPivot)
     obj.draw(true);
 end
 
+function set.rotPivotDepth(obj, rotPivotDepth)
+    local rotPivotDepthType = type(rotPivotDepth);
+    
+	if (rotPivotDepthType ~= "number") then
+        error("bad argument #1 to 'rotPivotDepth' (number expected, got " ..rotPivotDepthType.. ")", 2);
+    end
+    
+    obj.rotPivotDepth = rotPivotDepth;
+    
+    -- obj.isRotated3D = 
+    
+    func.update_rotParams(obj);
+    
+    
+    obj.draw(true);
+end
+
 
 function set.visible(obj, visible)
 	local visibleType = type(visible);
@@ -494,6 +514,16 @@ function set.visible(obj, visible)
 	
 	obj.visible = visible;
 	
+    func.update_rt(obj);
+    
+    for i = 1, #obj.children do
+        local child = obj.children[i];
+        
+        if Instance.func.isA(child, "GuiObject") then
+            func.update(child);
+        end
+    end
+    
     
 	obj.draw(true);
 end

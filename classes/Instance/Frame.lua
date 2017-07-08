@@ -26,9 +26,8 @@ local function new(obj)
 	obj.pos  = PROXY__OBJ[UDim2.new(0, 0)];
 	
 	function obj.draw(propagate)
-		if (obj.rootGui) then -- if drawable
-            if (obj.visible) then -- TODO: fix visible param not working properly
-                
+		if (obj.rootGui) then
+            if (obj.rt) then
                 dxSetBlendMode("modulate_add");
                 
                 if (obj.isRotated) then
@@ -67,7 +66,7 @@ local function new(obj)
                     for i = 1, #obj.children do
                         local child = obj.children[i];
                         
-                        if Instance.func.isA(child, "GuiObject") then
+                        if Instance.func.isA(child, "GuiObject") and (child.rt) then
                             dxDrawImage(
                                 obj.rotRtOffset.x + child.clipperGui.absPos.x-obj.clipperGui.absPos.x,
                                 obj.rotRtOffset.y + child.clipperGui.absPos.y-obj.clipperGui.absPos.y,
@@ -82,34 +81,32 @@ local function new(obj)
                     -- rotation
                     dxSetRenderTarget(obj.rt, true);
                     
-                    -- if (obj.isRotated3D) then
+                    if (obj.isRotated3D) then
                         dxSetShaderTransform(
                             GuiObject.SHADER,
                             
-                            obj.rot.x, obj.rot.y, obj.rot.z,
+                            obj.rot.y, obj.rot.x, obj.rot.z,
                             
-                            obj.rotTransfPivot.x, obj.rotTransfPivot.y, obj.rotTransfPivot.z, false,
+                            obj.rotTransformPivot.x, obj.rotTransformPivot.y, obj.rotTransformPivot.z, false,
                             
-                            obj.rotTransfPerspective.x, obj.rotTransfPerspective.y, false
+                            obj.rotTransformPerspective.x, obj.rotTransformPerspective.y, false
                         );
-                        
-                        dxSetShaderValue(GuiObject.SHADER, "image", obj.rootGui.rt);
-                        
-                        dxDrawImage(-obj.rotRtOffset.x, -obj.rotRtOffset.y, obj.rootGui.absSize.x, obj.rootGui.absSize.y, GuiObject.SHADER);
-                        
-                    -- COMMENTED BECAUSE OF TRANSPARENCY COLOR CHANGE ISSUES WHICH CAN BE SOLVED BY SETTING AlphaBlendEnable IN SHADER TO false
-                    -- else
-                        -- dxDrawImage(
-                            -- -obj.rotRtOffset.x, -obj.rotRtOffset.y, obj.rootGui.absSize.x, obj.rootGui.absSize.y,
+                    else
+                        dxSetShaderTransform(
+                            GuiObject.SHADER,
                             
-                            -- obj.rootGui.rt,
+                            obj.rot.y, obj.rot.x, obj.rot.z,
                             
-                            -- obj.rot.z,
+                            obj.rotTransformPivot.x, obj.rotTransformPivot.y, obj.rotTransformPivot.z, false
                             
-                            -- -obj.clipperGui.absSize.x/2 + obj.absRotPivot.x-obj.clipperGui.absPos.x,
-                            -- -obj.clipperGui.absSize.y/2 + obj.absRotPivot.y-obj.clipperGui.absPos.y
-                        -- );
-                    -- end
+                            -- if object is not rotated 3d (i.e. rotation on x and y flips the object or object is only rotated on z axis)
+                            -- then do not use rotTransformPerspective to avoid blurring
+                        );
+                    end
+                    
+                    dxSetShaderValue(GuiObject.SHADER, "image", obj.rootGui.rt);
+                    
+                    dxDrawImage(-obj.rotRtOffset.x, -obj.rotRtOffset.y, obj.rootGui.absSize.x, obj.rootGui.absSize.y, GuiObject.SHADER);
                 else
                     dxSetRenderTarget(obj.rt, true);
                     
@@ -146,7 +143,7 @@ local function new(obj)
                     for i = 1, #obj.children do
                         local child = obj.children[i];
                         
-                        if Instance.func.isA(child, "GuiObject") then
+                        if Instance.func.isA(child, "GuiObject") and (child.rt) then
                             dxDrawImage(
                                 child.clipperGui.absPos.x-obj.clipperGui.absPos.x,
                                 child.clipperGui.absPos.y-obj.clipperGui.absPos.y,
@@ -169,12 +166,6 @@ local function new(obj)
             end
 		end
 	end
-    
-    function obj.propagate()
-        obj.draw();
-        
-        obj.parent.propagate();
-    end
 end
 
 
@@ -203,8 +194,8 @@ scrGui = Instance.new("ScreenGui"); scrGui.name = "scrGui";
 
 fr1 = Instance.new("Frame", scrGui); fr1.name = "fr1";
 
-fr1.pos = UDim2.new(0.6, 0, 0.25, 0);
-fr1.size = UDim2.new(0, 300, 0, 300)
+fr1.pos = UDim2.new(0.5, 0, 0.5, 0);
+fr1.size = UDim2.new(0, 300, 0, 300);
 fr1.borderSize = 5;
 
 fr1.rotPivot = UDim2.new(1, 0, 1, 0);
@@ -228,30 +219,99 @@ local srz = guiCreateScrollBar(400, 60,  200, 20, true, false);
 
 local spx = guiCreateScrollBar(400, 100,  200, 20, true, false); guiScrollBarSetScrollPosition(spx, 50);
 local spy = guiCreateScrollBar(400, 120,  200, 20, true, false); guiScrollBarSetScrollPosition(spy, 50);
+local spz = guiCreateScrollBar(400, 140,  200, 20, true, false); guiScrollBarSetScrollPosition(spz, 50);
 
 local fr = fr1;
+
+local x, y, z = fr.absPos.x, fr.absPos.y, 0;
 
 addEventHandler("onClientRender", root, function()
     fr.rotPivot = UDim2.new(guiScrollBarGetScrollPosition(spx)/100, 0, guiScrollBarGetScrollPosition(spy)/100, 0);
     
-    dxDrawLine(
-        SCREEN_WIDTH/2,
-        SCREEN_HEIGHT/2,
+    -- fr.rotPivotDepth = (guiScrollBarGetScrollPosition(spz)/100-0.5)*8;
+    
+    -- dxDrawLine(
+        -- SCREEN_WIDTH/2,
+        -- SCREEN_HEIGHT/2,
         
-        fr.absRotPivot.x,
-        fr.absRotPivot.y,
+        -- fr.absRotPivot.x,
+        -- fr.absRotPivot.y,
         
-        tocolor(255, 0, 0), 3
-    );
+        -- tocolor(255, 0, 0), 3
+    -- );
     
     fr.rot = Vector3.new(guiScrollBarGetScrollPosition(srx)/100*360, guiScrollBarGetScrollPosition(sry)/100*360, guiScrollBarGetScrollPosition(srz)/100*360);
     
-    -- print(fr.rotPivot);
+    
+    local ang = guiScrollBarGetScrollPosition(srx)/100*2*math.pi;
+    
+    local s = math.sin(ang);
+    local c = math.cos(ang);
+    
+    local nx = x-fr.absRotPivot.x;
+    local ny = y-fr.absRotPivot.y;
+    local nz = z;
+    
+    -- local nx1 = nx * c - ny * s;
+    -- local ny1 = nx * s + ny * c;
+    
+    local nx1 = nx;
+    local ny1 = ny*c-nz*s;
+    local nz1 = ny*s+nz*c;
+    
+    nx1 = nx1+fr.absRotPivot.x;
+    ny1 = ny1+fr.absRotPivot.y;
+    nz1 = nz1;
+    
+    local cx = fr.absPos.x+fr.absSize.x/2;
+    local cy = fr.absPos.y+fr.absSize.y/2;
+    
+    dxDrawLine(
+        fr.absRotPivot.x,
+        fr.absRotPivot.y,
+        
+        cx+(1000/(nz1+1000))*(nx1-cx),-- nx1+(nz1/1000)*(fr.absPos.x+fr.absSize.x/2-nx1),
+        cy+(1000/(nz1+1000))*(ny1-cy),-- ny1+(nz1/1000)*(fr.absPos.y+fr.absSize.y/2-ny1),
+        
+        tocolor(0, 255, 0), 3
+    );
+    
+    print(fr.rot);
 end);
 
 
+TOP-DOWN VIEW OF SCREEN SLICED AT AN ARBITRARY Y VALUE
 
-
+                           (cx, cy, pz)                      (px, py, pz)
+                                        (C')-------------(P)
+                                         |               /
+                                         |              /
+                                         |             /
+                                         |            /
+(SCREEN) [============================= (C)---------(S) =====================]
+                            (cx, cy, 0)  |          /   (sx, sy, 0)
+                                         |         /
+                                         |        /
+                                         |       /
+                                         |      /
+                 (z)                     |     /
+                  ^                      |    /
+                  |                      |   /
+                  +---> (x)              |  /
+                                         | /
+                                         |/
+                                        (E)
+                                            (cx, cy, -1000)
+                            
+(E) -> eye (empirically found out that for dxSetShaderTransform eye is 1000 pixels in front of the screen)
+       (actually, stuff starts to disappear from sight at values >= 900 px, but for calculation purposes 1000 is used)
+(C) -> center of the rectangle that is used as the perspective point in dxSetShaderTransform
+       (located at (absPos.x+absSize.x/2, absPos.y+absSize.y/2))
+(P) -> point obtained by applying rotation to rectangle vertex
+(S) -> point that will be visible on screen after dxSetShaderTransform is applied
+       (this is the point whose sx and sy coordinates we need to find)
+       
+Using the fact that the triangles (EPC') and (ESC) are similar we can calculate the coordinates of (S)
 
 
 -- local v = 100;

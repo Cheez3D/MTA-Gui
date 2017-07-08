@@ -217,7 +217,11 @@ function get.unit(obj)
     -- check if magnitude was already computed and memoized inside obj
     local mag = obj.magnitude or get.magnitude(obj);
     
-    local unit = new(obj.x/mag, obj.y/mag, obj.z/mag);
+    if (mag == 0) then return end
+    
+    local invMag = 1/mag;
+    
+    local unit = new(obj.x*invMag, obj.y*invMag, obj.z*invMag);
     
     obj.unit = unit; -- memoize unit vector inside obj
     
