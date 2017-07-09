@@ -15,12 +15,6 @@ local meta = {
         
         local val = obj[key];
         if (val ~= nil) then -- val might be false so compare against nil
-            
-            -- convert object to proxy before returning
-            if (OBJ__PROXY[val]) then
-                val = OBJ__PROXY[val];
-            end
-            
             return val;
         end
 
@@ -68,7 +62,7 @@ local meta = {
     __tostring = function(proxy)
         local obj = PROXY__OBJ[proxy];
         
-        return "{" ..UDim.meta.__tostring(obj.x).. "}, {" ..UDim.meta.__tostring(obj.y).. "}";
+        return "{" ..tostring(obj.x).. "}, {" ..tostring(obj.y).. "}";
     end,
 }
 
@@ -127,8 +121,8 @@ function new(scaleX, offsetX, scaleY, offsetY)
             type = name,
             
             
-            x = PROXY__OBJ[UDim.new(scaleX, offsetX)],
-            y = PROXY__OBJ[UDim.new(scaleY, offsetY)],
+            x = UDim.new(scaleX, offsetX),
+            y = UDim.new(scaleY, offsetY),
         }
         
         proxy = setmetatable({}, meta);
@@ -145,8 +139,8 @@ end
 
 
 function func.unpack(obj)
-    local scaleX, offsetX = UDim.func.unpack(obj.x);
-    local scaleY, offsetY = UDim.func.unpack(obj.y);
+    local scaleX, offsetX = obj.x.unpack();
+    local scaleY, offsetY = obj.y.unpack();
     
     return scaleX, offsetX, scaleY, offsetY;
 end

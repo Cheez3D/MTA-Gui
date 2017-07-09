@@ -49,7 +49,7 @@ local meta = {
     
     
     __tostring = function(proxy)
-        local obj = PROXY__OBJ[proxy] or proxy; -- check if proxy or obj (used in UDim2 __tostring)
+        local obj = PROXY__OBJ[proxy];
         
         return obj.scale.. ", " ..obj.offset;
     end,
@@ -91,7 +91,7 @@ function new(scale, offset)
             type = name,
             
             
-            scale = scale,
+            scale  = scale,
             offset = offset,
         }
         

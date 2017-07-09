@@ -14,18 +14,7 @@ local get  = setmetatable({}, { __index = function(tbl, key) return super.get [k
 local set  = setmetatable({}, { __index = function(tbl, key) return super.set [key] end });
 
 local private = setmetatable({
-        update_rootGui = true,
         
-        update_clipperGui = true,
-        update_rt         = true,
-        
-        update_absSize = true,
-        
-        update_absPos       = true,
-        
-        update_absRotPivot = true,
-        
-        update = true,
     },
     
     { __index = function(tbl, key) return super.private[key] end }
@@ -34,7 +23,11 @@ local private = setmetatable({
 local readOnly = setmetatable({}, { __index = function(tbl, key) return super.readOnly[key] end });
 
 
+
 local MAX_BORDER_SIZE = 64;
+
+local ROT_NEAR_Z_PLANE = 1000;
+
 
 local SHADER = dxCreateShader("shaders/nothing.fx"); -- TODO: add check for successful creation (dxSetTestMode)
 
@@ -43,10 +36,10 @@ local SHADER = dxCreateShader("shaders/nothing.fx"); -- TODO: add check for succ
 local function new(obj)
 	super.new(obj);
 	
-	obj.bgColor3       = PROXY__OBJ[Color3.new(255, 255, 255)];
+	obj.bgColor3       = Color3.new(255, 255, 255);
 	obj.bgTransparency = 0;
 	
-	obj.borderColor3       = PROXY__OBJ[Color3.new(27, 42, 53)];
+	obj.borderColor3       = Color3.new(27, 42, 53);
 	obj.borderSize         = 1;
 	obj.borderTransparency = 0;
 	
@@ -55,11 +48,11 @@ local function new(obj)
     
     obj.size = nil;
     
-    obj.posOrigin = PROXY__OBJ[UDim2.new(0, 0, 0, 0)];
+    obj.posOrigin = UDim2.new(0, 0, 0, 0);
 	obj.pos       = nil;
     
-    obj.rot           = PROXY__OBJ[Vector3.new(0, 0, 0)];
-    obj.rotPivot      = PROXY__OBJ[UDim2.new(0.5, 0, 0.5, 0)];
+    obj.rot           = Vector3.new(0, 0, 0);
+    obj.rotPivot      = UDim2.new(0.5, 0, 0.5, 0);
     obj.rotPivotDepth = 0;
     
     
@@ -123,10 +116,10 @@ end
 
 
 function func.update_absSize(obj)
-    obj.absSize = obj.rootGui and PROXY__OBJ[Vector2.new(
+    obj.absSize = obj.rootGui and Vector2.new(
         floor(obj.size.x.offset + obj.parent.absSize.x*obj.size.x.scale),
         floor(obj.size.y.offset + obj.parent.absSize.y*obj.size.y.scale)
-    )] or nil;
+    ) or nil;
     
     for i = 1, #obj.children do
         local child = obj.children[i];
@@ -139,10 +132,10 @@ end
 
 
 function func.update_absPos(obj)
-    obj.absPos = obj.rootGui and PROXY__OBJ[Vector2.new(
+    obj.absPos = obj.rootGui and Vector2.new(
         floor(obj.parent.absPos.x + (obj.pos.x.offset + obj.parent.absSize.x*obj.pos.x.scale) - (obj.posOrigin.x.offset + obj.absSize.x*obj.posOrigin.x.scale)),
         floor(obj.parent.absPos.y + (obj.pos.y.offset + obj.parent.absSize.y*obj.pos.y.scale) - (obj.posOrigin.y.offset + obj.absSize.y*obj.posOrigin.y.scale))
-    )] or nil;
+    ) or nil;
     
     for i = 1, #obj.children do
         local child = obj.children[i];
@@ -155,10 +148,10 @@ end
 
 
 function func.update_absRotPivot(obj)
-    obj.absRotPivot = obj.rootGui and PROXY__OBJ[Vector2.new(
+    obj.absRotPivot = obj.rootGui and Vector2.new(
         floor(obj.absPos.x + (obj.rotPivot.x.offset + obj.absSize.x*obj.rotPivot.x.scale)),
         floor(obj.absPos.y + (obj.rotPivot.y.offset + obj.absSize.y*obj.rotPivot.y.scale))
-    )] or nil;
+    ) or nil;
     
     -- for i = 1, #obj.children do
         -- local child = obj.children[i];
@@ -175,23 +168,23 @@ function func.update_rotParams(obj)
     -- (something will be seen as cut off only when it is drawn outside of the rootGui rt boundaries and the object is rotated
     --  so that it can be visible inside the parent)
     
-    obj.rotRtOffset = obj.rootGui and obj.isRotated and PROXY__OBJ[Vector2.new(
+    obj.rotRtOffset = obj.rootGui and obj.isRotated and Vector2.new(
         floor((obj.rootGui.absSize.x-obj.clipperGui.absSize.x)/2),
         floor((obj.rootGui.absSize.y-obj.clipperGui.absSize.y)/2)
-    )] or nil;
+    ) or nil;
     
     
-    obj.rotTransformPivot = obj.rootGui and obj.isRotated and PROXY__OBJ[Vector3.new(
+    obj.rotTransformPivot = obj.rootGui and obj.isRotated and Vector3.new(
         2*((-obj.clipperGui.absSize.x/2 + obj.absRotPivot.x-obj.clipperGui.absPos.x)/obj.clipperGui.absSize.x),
         2*((-obj.clipperGui.absSize.y/2 + obj.absRotPivot.y-obj.clipperGui.absPos.y)/obj.clipperGui.absSize.y),
         
-        obj.rotPivotDepth
-    )] or nil;
+        obj.rotPivotDepth/ROT_NEAR_Z_PLANE
+    ) or nil;
     
-    obj.rotTransformPerspective = obj.rootGui and obj.isRotated and PROXY__OBJ[Vector2.new(
+    obj.rotTransformPerspective = obj.rootGui and obj.isRotated and Vector2.new(
         2*((-obj.clipperGui.absSize.x/2 + obj.absPos.x-obj.clipperGui.absPos.x + obj.absSize.x/2)/obj.clipperGui.absSize.x),
         2*((-obj.clipperGui.absSize.y/2 + obj.absPos.y-obj.clipperGui.absPos.y + obj.absSize.y/2)/obj.clipperGui.absSize.y)
-    )] or nil;
+    ) or nil;
     
     for i = 1, #obj.children do
         local child = obj.children[i];
@@ -457,12 +450,19 @@ function set.rot(obj, rot)
     
     obj.rot = rot;
     
-    if (obj.rot.x == obj.rot.y and obj.rot.y == obj.rot.z) and (obj.rot.x%180 == 0 and obj.rot.y%180 == 0 and obj.rot.z%180 == 0) then obj.isRotated = false;
-    elseif                                                     (obj.rot.x%360 == 0 and obj.rot.y%360 == 0 and obj.rot.z%360 == 0) then obj.isRotated = false;
-    else                                                                                                                               obj.isRotated = true;
+    if     (obj.rot.x == obj.rot.y and obj.rot.y == obj.rot.z) and (obj.rot.x%180 == 0) then obj.isRotated = false;
+    elseif (obj.rot.x%360 == 0 and obj.rot.y%360 == 0 and obj.rot.z%360 == 0)           then obj.isRotated = false;
+    else                                                                                     obj.isRotated = true;
     end
     
-    obj.isRotated3D = obj.isRotated and (obj.rot.x%180 ~= 0 or obj.rot.y%180 ~= 0 or obj.rotPivotDepth ~= 0);
+    if (obj.isRotated) then
+        if     (obj.rotPivotDepth == 0) and (obj.rot.x%180 == 0 and obj.rot.y%180 == 0) then obj.isRotated3D = false;
+        elseif (obj.rot.x == obj.rot.y) and (obj.rot.x%180 == 0)                        then obj.isRotated3D = false;
+        else                                                                                 obj.isRotated3D = true;
+        end
+    else
+        obj.isRotated3D = false;
+    end
     
     func.update_rotParams(obj);
     

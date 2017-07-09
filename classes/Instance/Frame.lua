@@ -21,9 +21,9 @@ local readOnly = setmetatable({}, { __index = function(tbl, key) return super.re
 local function new(obj)
 	super.new(obj);
 	
-    obj.size = PROXY__OBJ[UDim2.new(0, 100, 0, 100)];
+    obj.size = UDim2.new(0, 100, 0, 100);
     
-	obj.pos  = PROXY__OBJ[UDim2.new(0, 0)];
+	obj.pos  = UDim2.new(0, 0);
 	
 	function obj.draw(propagate)
 		if (obj.rootGui) then
@@ -221,24 +221,26 @@ local spx = guiCreateScrollBar(400, 100,  200, 20, true, false); guiScrollBarSet
 local spy = guiCreateScrollBar(400, 120,  200, 20, true, false); guiScrollBarSetScrollPosition(spy, 50);
 local spz = guiCreateScrollBar(400, 140,  200, 20, true, false); guiScrollBarSetScrollPosition(spz, 50);
 
-local fr = fr1;
+local fr = fr2;
 
 local x, y, z = fr.absPos.x, fr.absPos.y, 0;
+
+local v1 = Vector3.new(fr.absPos.x, fr.absPos.y, 0);
 
 addEventHandler("onClientRender", root, function()
     fr.rotPivot = UDim2.new(guiScrollBarGetScrollPosition(spx)/100, 0, guiScrollBarGetScrollPosition(spy)/100, 0);
     
-    -- fr.rotPivotDepth = (guiScrollBarGetScrollPosition(spz)/100-0.5)*8;
+    fr.rotPivotDepth = (guiScrollBarGetScrollPosition(spz)/100-0.5)*2*750;
     
-    -- dxDrawLine(
-        -- SCREEN_WIDTH/2,
-        -- SCREEN_HEIGHT/2,
+    dxDrawLine(
+        SCREEN_WIDTH/2,
+        SCREEN_HEIGHT/2,
         
-        -- fr.absRotPivot.x,
-        -- fr.absRotPivot.y,
+        fr.absRotPivot.x,
+        fr.absRotPivot.y,
         
-        -- tocolor(255, 0, 0), 3
-    -- );
+        tocolor(255, 0, 0), 3
+    );
     
     fr.rot = Vector3.new(guiScrollBarGetScrollPosition(srx)/100*360, guiScrollBarGetScrollPosition(sry)/100*360, guiScrollBarGetScrollPosition(srz)/100*360);
     
@@ -248,71 +250,100 @@ addEventHandler("onClientRender", root, function()
     local s = math.sin(ang);
     local c = math.cos(ang);
     
-    local nx = x-fr.absRotPivot.x;
-    local ny = y-fr.absRotPivot.y;
-    local nz = z;
+    -- local offset = Vector3.new(fr.absRotPivot.x, fr.absRotPivot.y --[[, fr.absRotPivotDepth]]);
     
-    -- local nx1 = nx * c - ny * s;
-    -- local ny1 = nx * s + ny * c;
+    -- local v1_1 = Vector3.new(
+        -- v1.x-fr.absRotPivot.x,
+        -- v1.y-fr.absRotPivot.y,
+        -- v1.z--[[-fr.absRotPivotDepth]]
+    -- );
     
-    local nx1 = nx;
-    local ny1 = ny*c-nz*s;
-    local nz1 = ny*s+nz*c;
+    -- local v1_2 = Vector3.new(
+        -- v1_1.x,
+        -- v1_1.y*c-v1_1.z*s,
+        -- v1_1.y*s+v1_1.z*c
+    -- );
     
-    nx1 = nx1+fr.absRotPivot.x;
-    ny1 = ny1+fr.absRotPivot.y;
-    nz1 = nz1;
+    -- local v1_3 = Vector3.new(
+        -- v1_2.x+fr.absRotPivot.x,
+        -- v1_2.y+fr.absRotPivot.y,
+        -- v1_2.z--[[+fr.absRotPivotDepth]]
+    -- );
     
     local cx = fr.absPos.x+fr.absSize.x/2;
     local cy = fr.absPos.y+fr.absSize.y/2;
     
-    dxDrawLine(
-        fr.absRotPivot.x,
-        fr.absRotPivot.y,
+    -- dxDrawLine(
+        -- fr.absRotPivot.x,
+        -- fr.absRotPivot.y,
         
-        cx+(1000/(nz1+1000))*(nx1-cx),-- nx1+(nz1/1000)*(fr.absPos.x+fr.absSize.x/2-nx1),
-        cy+(1000/(nz1+1000))*(ny1-cy),-- ny1+(nz1/1000)*(fr.absPos.y+fr.absSize.y/2-ny1),
+        -- cx+(1000/(v1_3.z+1000))*(v1_3.x-cx),
+        -- cy+(1000/(v1_3.z+1000))*(v1_3.y-cy),
         
-        tocolor(0, 255, 0), 3
-    );
+        -- tocolor(0, 255, 0), 3
+    -- );
     
-    print(fr.rot);
+    -- print(fr.rot);
 end);
 
+-- REFERENCES:
+-- http://www.scratchapixel.com/lessons/mathematics-physics-for-computer-graphics/geometry/how-does-matrix-work-part-1
+-- https://www.siggraph.org/education/materials/HyperGraph/modeling/mod_tran/3drota.htm
+-- http://www.petesqbsite.com/sections/tutorials/tuts/perspective.html
 
-TOP-DOWN VIEW OF SCREEN SLICED AT AN ARBITRARY Y VALUE
-
-                           (cx, cy, pz)                      (px, py, pz)
-                                        (C')-------------(P)
-                                         |               /
-                                         |              /
-                                         |             /
-                                         |            /
-(SCREEN) [============================= (C)---------(S) =====================]
-                            (cx, cy, 0)  |          /   (sx, sy, 0)
-                                         |         /
-                                         |        /
-                                         |       /
-                                         |      /
-                 (z)                     |     /
-                  ^                      |    /
-                  |                      |   /
-                  +---> (x)              |  /
-                                         | /
-                                         |/
-                                        (E)
-                                            (cx, cy, -1000)
-                            
-(E) -> eye (empirically found out that for dxSetShaderTransform eye is 1000 pixels in front of the screen)
-       (actually, stuff starts to disappear from sight at values >= 900 px, but for calculation purposes 1000 is used)
-(C) -> center of the rectangle that is used as the perspective point in dxSetShaderTransform
-       (located at (absPos.x+absSize.x/2, absPos.y+absSize.y/2))
-(P) -> point obtained by applying rotation to rectangle vertex
-(S) -> point that will be visible on screen after dxSetShaderTransform is applied
-       (this is the point whose sx and sy coordinates we need to find)
-       
-Using the fact that the triangles (EPC') and (ESC) are similar we can calculate the coordinates of (S)
-
+-- +------------------------------------------------------------------------------------------------------------+
+-- | PERSPECTIVE PROJECTION                                                                                     |
+-- +------------------------------------------------------------------------------------------------------------+
+-- | TOP-DOWN VIEW OF SCREEN SLICED AT AN ARBITRARY Y VALUE                                                     |
+-- +------------------------------------------------------------------------------------------------------------+
+-- |                                                                                                            |
+-- |                                   (cx, cy, pz)                      (px, py, pz)                           |
+-- |                                                (C')-------------(P)                                        |
+-- |                                                 |               /                                          |
+-- |                                                 |              /                                           |
+-- |                                                 |             /                                            |
+-- |                                                 |            /                                             |
+-- |        (SCREEN) [============================= (C)---------(S) =====================]                      |
+-- |                                    (cx, cy, 0)  |          /   (sx, sy, 0)                                 |
+-- |                                                 |         /                                                |
+-- |                                                 |        /                                                 |
+-- |                                                 |       /                                                  |
+-- |                                                 |      /                                                   |
+-- |                         (z)                     |     /                                                    |
+-- |                          ^                      |    /                                                     |
+-- |                          |                      |   /                                                      |
+-- |                          +---> (x)              |  /                                                       |
+-- |                                                 | /                                                        |
+-- |                                                 |/                                                         |
+-- |                                                (E)                                                         |
+-- |                                                    (cx, cy, -1000)                                         |
+-- |                                                                                                            |
+-- +------------------------------------------------------------------------------------------------------------+
+-- |                                                                                                            |
+-- | (E) -> eye (empirically found out that for dxSetShaderTransform eye is 1000 pixels in front of the screen) |
+-- |        (actually, stuff starts to disappear from sight at values >= 900 px,                                |
+-- |         but I've noticed that the position is the most accurate when 1000 is used)                         |
+-- |                                                                                                            |
+-- | (C) -> center of the rectangle that is used as the perspective point in dxSetShaderTransform               |
+-- |        (located at (absPos.x+absSize.x/2, absPos.y+absSize.y/2))                                           |
+-- |                                                                                                            |
+-- | (P) -> point obtained by applying rotation to rectangle vertex                                             |
+-- |                                                                                                            |
+-- | (S) -> point that will be visible on screen after dxSetShaderTransform is applied                          |
+-- |        (this is the point whose sx and sy coordinates we need to find)                                     |
+-- |                                                                                                            |
+-- +------------------------------------------------------------------------------------------------------------+
+-- |                                                                                                            |
+-- | Using the fact that the triangles (EPC') and (ESC) are similar we can calculate the coordinates of (S):    |
+-- |                                                                                                            |
+-- |                                   CS/C'P = CE/C'E =>                                                       |
+-- |                                => (sx-cx)/(px-cx) = (0-(-1000))/(pz-(-1000)) =>                            |
+-- |                                => (sx-cx)/(px-cx) = 1000/(pz+1000) =>                                      |
+-- |                                => sx-cx = (1000/(pz+1000))*(px-cx) =>                                      |
+-- |                                                                                                            |
+-- |                                => sx = cx + (1000/(pz+1000))*(px-cx)                                       |
+-- |                                                                                                            |
+-- +------------------------------------------------------------------------------------------------------------+
 
 -- local v = 100;
 

@@ -43,7 +43,7 @@ local meta = {
 		
 		local val = obj[key];
         if (val ~= nil) then -- val might be false so compare against nil
-            if (OBJ__PROXY[val]) then -- convert object to proxy before returning
+            if (OBJ__PROXY[val] and type(val) == "Instance") then -- convert object to proxy before returning (only for Instance objects)
                 val = OBJ__PROXY[val];
             end
             
@@ -73,8 +73,8 @@ local meta = {
 	__newindex = function(proxy, key, val)
 		local obj = PROXY__OBJ[proxy];
 		
-        -- convert proxy to object before continuing
-        if (PROXY__OBJ[val]) then
+        -- convert proxy to object before continuing (only for Instance objects)
+        if (PROXY__OBJ[val] and type(val) == "Instance") then
             val = PROXY__OBJ[val];
         end
         
@@ -241,7 +241,6 @@ function set.parent(obj, parent, prevParent)
     
     
     if (prevParent) then
-        
         -- -- remove child from children table (NOT NEEDED, taken care of by loop)
         -- prevParent.children[obj.index] = nil;
         

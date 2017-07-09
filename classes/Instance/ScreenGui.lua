@@ -23,12 +23,12 @@ local readOnly = setmetatable({}, { __index = function(tbl, key) return super.re
 local function new(obj)
 	super.new(obj);
 	
-	obj.absSize = PROXY__OBJ[Vector2.new(SCREEN_WIDTH, SCREEN_HEIGHT)];
+	obj.absSize = Vector2.new(SCREEN_WIDTH, SCREEN_HEIGHT);
     
-    obj.absPos = PROXY__OBJ[Vector2.new(0, 0)];
+    obj.absPos = Vector2.new(0, 0);
     
-    obj.absRot      = PROXY__OBJ[Vector3.new(0, 0, 0)];
-    obj.absRotPivot = PROXY__OBJ[Vector2.new(0, 0)];
+    obj.absRot      = Vector3.new(0, 0, 0);
+    obj.absRotPivot = Vector2.new(0, 0);
 	
 	function obj.draw()
         dxSetBlendMode("modulate_add");
