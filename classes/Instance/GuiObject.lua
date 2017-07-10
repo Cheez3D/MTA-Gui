@@ -24,9 +24,12 @@ local readOnly = setmetatable({}, { __index = function(tbl, key) return super.re
 
 
 
-local MAX_BORDER_SIZE = 64;
+local MAX_BORDER_SIZE = 100;
 
-local ROT_NEAR_Z_PLANE = 1000;
+local ROT_NEAR_Z_PLANE = -1000;
+local ROT_FAR_Z_PLANE  =  9000;
+
+local ROT_PIVOT_DEPTH_UNIT = 1000;
 
 
 local SHADER = dxCreateShader("shaders/nothing.fx"); -- TODO: add check for successful creation (dxSetTestMode)
@@ -152,14 +155,24 @@ function func.update_absRotPivot(obj)
         floor(obj.absPos.x + (obj.rotPivot.x.offset + obj.absSize.x*obj.rotPivot.x.scale)),
         floor(obj.absPos.y + (obj.rotPivot.y.offset + obj.absSize.y*obj.rotPivot.y.scale))
     ) or nil;
-    
-    -- for i = 1, #obj.children do
-        -- local child = obj.children[i];
-        
-        -- if Instance.func.isA(child, "GuiObject") then
-            -- func.update_absRotPivot(child);
-        -- end
-    -- end
+end
+
+function func.update_isRotated(obj)
+    if     (obj.rot.x == obj.rot.y and obj.rot.y == obj.rot.z) and (obj.rot.x%180 == 0) then obj.isRotated = false;
+    elseif (obj.rot.x%360 == 0 and obj.rot.y%360 == 0 and obj.rot.z%360 == 0)           then obj.isRotated = false;
+    else                                                                                     obj.isRotated = true;
+    end
+end
+
+function func.update_isRotated3D(obj)
+    if (obj.isRotated) then
+        if     (obj.rotPivotDepth == 0) and (obj.rot.x%180 == 0 and obj.rot.y%180 == 0) then obj.isRotated3D = false;
+        elseif (obj.rot.x == obj.rot.y) and (obj.rot.x%180 == 0)                        then obj.isRotated3D = false;
+        else                                                                                 obj.isRotated3D = true;
+        end
+    else
+        obj.isRotated3D = false;
+    end
 end
 
 function func.update_rotParams(obj)
@@ -178,7 +191,7 @@ function func.update_rotParams(obj)
         2*((-obj.clipperGui.absSize.x/2 + obj.absRotPivot.x-obj.clipperGui.absPos.x)/obj.clipperGui.absSize.x),
         2*((-obj.clipperGui.absSize.y/2 + obj.absRotPivot.y-obj.clipperGui.absPos.y)/obj.clipperGui.absSize.y),
         
-        obj.rotPivotDepth/ROT_NEAR_Z_PLANE
+        obj.rotPivotDepth/ROT_PIVOT_DEPTH_UNIT
     ) or nil;
     
     obj.rotTransformPerspective = obj.rootGui and obj.isRotated and Vector2.new(
@@ -296,14 +309,12 @@ function set.borderSize(obj, borderSize)
     
 	if (borderSizeType ~= "number") then
         error("bad argument #1 to 'borderSize' (number expected, got " ..borderSizeType.. ")", 2);
-	elseif (borderSize%1 ~= 0) then
-        error ("bad argument #1 to 'borderSize' (number has no integer representation)", 2);
 	elseif (borderSize < 0) or (borderSize > MAX_BORDER_SIZE) then
         error("bad argument #1 to 'borderSize' (value out of bounds)", 2);
     end
 	
     
-	obj.borderSize = borderSize;
+	obj.borderSize = floor(borderSize);
 	
     
 	obj.draw(true);
@@ -450,20 +461,8 @@ function set.rot(obj, rot)
     
     obj.rot = rot;
     
-    if     (obj.rot.x == obj.rot.y and obj.rot.y == obj.rot.z) and (obj.rot.x%180 == 0) then obj.isRotated = false;
-    elseif (obj.rot.x%360 == 0 and obj.rot.y%360 == 0 and obj.rot.z%360 == 0)           then obj.isRotated = false;
-    else                                                                                     obj.isRotated = true;
-    end
-    
-    if (obj.isRotated) then
-        if     (obj.rotPivotDepth == 0) and (obj.rot.x%180 == 0 and obj.rot.y%180 == 0) then obj.isRotated3D = false;
-        elseif (obj.rot.x == obj.rot.y) and (obj.rot.x%180 == 0)                        then obj.isRotated3D = false;
-        else                                                                                 obj.isRotated3D = true;
-        end
-    else
-        obj.isRotated3D = false;
-    end
-    
+    func.update_isRotated(obj);
+    func.update_isRotated3D(obj);
     func.update_rotParams(obj);
     
     
@@ -491,12 +490,13 @@ function set.rotPivotDepth(obj, rotPivotDepth)
     
 	if (rotPivotDepthType ~= "number") then
         error("bad argument #1 to 'rotPivotDepth' (number expected, got " ..rotPivotDepthType.. ")", 2);
+    elseif (rotPivotDepth < ROT_NEAR_Z_PLANE) or (rotPivotDepth > ROT_FAR_Z_PLANE) then
+        error("bad argument #1 to 'rotPivotDepth' (value out of bounds)", 2);
     end
     
     obj.rotPivotDepth = rotPivotDepth;
     
-    -- obj.isRotated3D = 
-    
+    func.update_isRotated3D(obj);
     func.update_rotParams(obj);
     
     

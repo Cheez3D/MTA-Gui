@@ -198,8 +198,6 @@ fr1.pos = UDim2.new(0.5, 0, 0.5, 0);
 fr1.size = UDim2.new(0, 300, 0, 300);
 fr1.borderSize = 5;
 
-fr1.rotPivot = UDim2.new(1, 0, 1, 0);
-
 fr2 = Instance.new("Frame", fr1); fr2.name = "fr2";
 
 fr2.pos = UDim2.new(0.5, 0, 0, 10);
@@ -219,7 +217,7 @@ local srz = guiCreateScrollBar(400, 60,  200, 20, true, false);
 
 local spx = guiCreateScrollBar(400, 100,  200, 20, true, false); guiScrollBarSetScrollPosition(spx, 50);
 local spy = guiCreateScrollBar(400, 120,  200, 20, true, false); guiScrollBarSetScrollPosition(spy, 50);
-local spz = guiCreateScrollBar(400, 140,  200, 20, true, false); guiScrollBarSetScrollPosition(spz, 50);
+local spz = guiCreateScrollBar(400, 140,  200, 20, true, false); guiScrollBarSetScrollPosition(spz, 10);
 
 local fr = fr2;
 
@@ -230,7 +228,7 @@ local v1 = Vector3.new(fr.absPos.x, fr.absPos.y, 0);
 addEventHandler("onClientRender", root, function()
     fr.rotPivot = UDim2.new(guiScrollBarGetScrollPosition(spx)/100, 0, guiScrollBarGetScrollPosition(spy)/100, 0);
     
-    fr.rotPivotDepth = (guiScrollBarGetScrollPosition(spz)/100-0.5)*2*750;
+    fr.rotPivotDepth = (guiScrollBarGetScrollPosition(spz)/100)*10000-1000;
     
     dxDrawLine(
         SCREEN_WIDTH/2,
