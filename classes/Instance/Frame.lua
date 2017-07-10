@@ -161,9 +161,7 @@ local function new(obj)
                 dxSetBlendMode("blend");
             end
             
-            if (propagate) then
-                obj.parent.draw(true);
-            end
+            if (propagate) then obj.parent.draw(true) end
 		end
 	end
 end
@@ -219,9 +217,8 @@ local spx = guiCreateScrollBar(400, 100,  200, 20, true, false); guiScrollBarSet
 local spy = guiCreateScrollBar(400, 120,  200, 20, true, false); guiScrollBarSetScrollPosition(spy, 50);
 local spz = guiCreateScrollBar(400, 140,  200, 20, true, false); guiScrollBarSetScrollPosition(spz, 10);
 
-local fr = fr2;
+local fr = fr1;
 
-local x, y, z = fr.absPos.x, fr.absPos.y, 0;
 
 local v1 = Vector3.new(fr.absPos.x, fr.absPos.y, 0);
 
@@ -243,43 +240,54 @@ addEventHandler("onClientRender", root, function()
     fr.rot = Vector3.new(guiScrollBarGetScrollPosition(srx)/100*360, guiScrollBarGetScrollPosition(sry)/100*360, guiScrollBarGetScrollPosition(srz)/100*360);
     
     
-    local ang = guiScrollBarGetScrollPosition(srx)/100*2*math.pi;
+    local angx = guiScrollBarGetScrollPosition(srx)/100*2*math.pi;
+    local angy = guiScrollBarGetScrollPosition(sry)/100*2*math.pi;
+    local angz = guiScrollBarGetScrollPosition(srz)/100*2*math.pi;
     
-    local s = math.sin(ang);
-    local c = math.cos(ang);
+    local sinx = math.sin(angx);
+    local cosx = math.cos(angx);
     
-    -- local offset = Vector3.new(fr.absRotPivot.x, fr.absRotPivot.y --[[, fr.absRotPivotDepth]]);
+    local siny = math.sin(angy);
+    local cosy = math.cos(angy);
     
-    -- local v1_1 = Vector3.new(
-        -- v1.x-fr.absRotPivot.x,
-        -- v1.y-fr.absRotPivot.y,
-        -- v1.z--[[-fr.absRotPivotDepth]]
-    -- );
+    local sinz = math.sin(angz);
+    local cosz = math.cos(angz);
     
-    -- local v1_2 = Vector3.new(
-        -- v1_1.x,
-        -- v1_1.y*c-v1_1.z*s,
-        -- v1_1.y*s+v1_1.z*c
-    -- );
+    local rotx = Matrix3x3.new(
+        1, 0,     0,
+        0, cosx, -sinx,
+        0, sinx,  cosx
+    );
     
-    -- local v1_3 = Vector3.new(
-        -- v1_2.x+fr.absRotPivot.x,
-        -- v1_2.y+fr.absRotPivot.y,
-        -- v1_2.z--[[+fr.absRotPivotDepth]]
-    -- );
+    local roty = Matrix3x3.new(
+         cosy, 0, siny,
+         0,    1, 0,
+        -siny, 0, cosy
+    );
     
-    local cx = fr.absPos.x+fr.absSize.x/2;
-    local cy = fr.absPos.y+fr.absSize.y/2;
+    local rotz = Matrix3x3.new(
+        cosz, -sinz, 0,
+        sinz,  cosz, 0,
+        0,     0,    1
+    );
     
-    -- dxDrawLine(
-        -- fr.absRotPivot.x,
-        -- fr.absRotPivot.y,
+    
+    local v1_1 = v1-fr.absRotPivot;
+    
+    local v1_2 = roty*rotx*rotz*v1_1;
+    
+    local v1_3 = v1_2+fr.absRotPivot;
+    
+    
+    dxDrawLine(
+        fr.absRotPivot.x,
+        fr.absRotPivot.y,
         
-        -- cx+(1000/(v1_3.z+1000))*(v1_3.x-cx),
-        -- cy+(1000/(v1_3.z+1000))*(v1_3.y-cy),
+        fr.absRotPerspective.x+(1000/(v1_3.z+1000))*(v1_3.x-fr.absRotPerspective.x),
+        fr.absRotPerspective.y+(1000/(v1_3.z+1000))*(v1_3.y-fr.absRotPerspective.y),
         
-        -- tocolor(0, 255, 0), 3
-    -- );
+        tocolor(0, 255, 0), 3
+    );
     
     -- print(fr.rot);
 end);
@@ -322,8 +330,7 @@ end);
 -- |        (actually, stuff starts to disappear from sight at values >= 900 px,                                |
 -- |         but I've noticed that the position is the most accurate when 1000 is used)                         |
 -- |                                                                                                            |
--- | (C) -> center of the rectangle that is used as the perspective point in dxSetShaderTransform               |
--- |        (located at (absPos.x+absSize.x/2, absPos.y+absSize.y/2))                                           |
+-- | (C) -> perspective point that is used in dxSetShaderTransform (located at absRotPerspective)               |
 -- |                                                                                                            |
 -- | (P) -> point obtained by applying rotation to rectangle vertex                                             |
 -- |                                                                                                            |

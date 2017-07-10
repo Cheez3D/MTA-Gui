@@ -85,9 +85,9 @@ do
 					assert(ObjectProxy_ == ObjectProxy,"function call without a colon",2);
 				
 					do
-						local ListenerType = type(Listener);
+						local Listener_t = type(Listener);
 						
-						assert(ListenerType == "function","bad argument #1 to 'Connect' (function expected, got "..ListenerType..")",2);
+						assert(Listener_t == "function","bad argument #1 to 'Connect' (function expected, got "..Listener_t..")",2);
 					end
 					
 					

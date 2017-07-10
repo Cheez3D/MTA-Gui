@@ -43,14 +43,11 @@ local meta = {
 local MEM_PROXIES = setmetatable({}, { __mode = "v" });
 
 function new(r, g, b)
-    
-    -- [ ====================== [ ASSERTION ] ====================== ]
-    
     if (r ~= nil) then
-        local rType = type(r);
+        local r_t = type(r);
         
-        if (rType ~= "number") then
-            error("bad argument #1 to '" ..__func__.. "' (number expected, got " ..rType.. ")", 2);
+        if (r_t ~= "number") then
+            error("bad argument #1 to '" ..__func__.. "' (number expected, got " ..r_t.. ")", 2);
         elseif (r < 0) or (r > 255) then
             error("bad argument #1 to '" ..__func__.. "' (value out of bounds)", 2);
         end
@@ -59,10 +56,10 @@ function new(r, g, b)
     end
     
     if (g ~= nil) then
-        local gType = type(g);
+        local g_t = type(g);
         
-        if (gType ~= "number") then
-            error("bad argument #2 to '" ..__func__.. "' (number expected, got " ..gType.. ")", 2);
+        if (g_t ~= "number") then
+            error("bad argument #2 to '" ..__func__.. "' (number expected, got " ..g_t.. ")", 2);
         elseif (g < 0) or (g > 255) then
             error("bad argument #2 to '" ..__func__.. "' (value out of bounds)", 2);
         end
@@ -71,17 +68,16 @@ function new(r, g, b)
     end
     
     if (b ~= nil) then
-        local bType = type(b);
+        local b_t = type(b);
         
-        if (bType ~= "number") then
-            error("bad argument #3 to '" ..__func__.. "' (number expected, got " ..bType.. ")", 2);
+        if (b_t ~= "number") then
+            error("bad argument #3 to '" ..__func__.. "' (number expected, got " ..b_t.. ")", 2);
         elseif (b < 0) or (b > 255) then
             error("bad argument #3 to '" ..__func__.. "' (value out of bounds)", 2);
         end
     else
         b = 0;
     end
-    
     
     
     local memId = r.. ":" ..g.. ":" ..b;
@@ -118,13 +114,11 @@ end
 
 
 function get.hex(obj)
-    local hex = 0x10000 * obj.b
-              + 0x100   * obj.g
-              +           obj.r;
-    
-    obj.hex = hex; -- memoize hex value inside obj
+    obj.hex = 0x10000 * obj.b
+            + 0x100   * obj.g
+            +           obj.r;
 
-    return hex;
+    return obj.hex;
 end
 
 

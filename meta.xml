@@ -66,12 +66,13 @@
     <script src="require.lua"  type="shared"/>
     <script src="isolator.lua" type="shared"/>
     
-    <script src="classes/Stream.lua"  type="client"/>
-    <script src="classes/Color3.lua"  type="client"/>
-    <script src="classes/UDim.lua"    type="client"/>
-    <script src="classes/UDim2.lua"   type="client"/>
-    <script src="classes/Vector2.lua" type="client"/>
-    <script src="classes/Vector3.lua" type="client"/>
+    <script src="classes/Stream.lua"    type="client"/>
+    <script src="classes/Color3.lua"    type="client"/>
+    <script src="classes/Matrix3x3.lua" type="client"/>
+    <script src="classes/UDim.lua"      type="client"/>
+    <script src="classes/UDim2.lua"     type="client"/>
+    <script src="classes/Vector2.lua"   type="client"/>
+    <script src="classes/Vector3.lua"   type="client"/>
     
     <script src="decoders/gif.lua" type="client"/>
     <script src="decoders/jpg.lua" type="client"/>

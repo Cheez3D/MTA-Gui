@@ -34,16 +34,16 @@ local meta = {
     
     
     __add = function(proxy1, proxy2)
-        local proxy1Type = type(proxy1);
+        local proxy1_t = type(proxy1);
         
-        if (proxy1Type ~= "Vector3") then
-            error("bad operand #1 to '__add' (Vector3 expected, got " ..proxy1Type.. ")", 2);
+        if (proxy1_t ~= "Vector3") then
+            error("bad operand #1 to '__add' (Vector3 expected, got " ..proxy1_t.. ")", 2);
         end
         
-        local proxy2Type = type(proxy2);
+        local proxy2_t = type(proxy2);
         
-        if (proxy2Type ~= "Vector3") then
-            error("bad operand #2 to '__add' (Vector3 expected, got " ..proxy2Type.. ")", 2);
+        if (proxy2_t ~= "Vector3") then
+            error("bad operand #2 to '__add' (Vector3 expected, got " ..proxy2_t.. ")", 2);
         end
         
         
@@ -55,16 +55,16 @@ local meta = {
     end,
     
     __sub = function(proxy1, proxy2)
-        local proxy1Type = type(proxy1);
+        local proxy1_t = type(proxy1);
         
-        if (proxy1Type ~= "Vector3") then
-            error("bad operand #1 to '__sub' (Vector3 expected, got " ..proxy1Type.. ")", 2);
+        if (proxy1_t ~= "Vector3") then
+            error("bad operand #1 to '__sub' (Vector3 expected, got " ..proxy1_t.. ")", 2);
         end
         
-        local proxy2Type = type(proxy2);
+        local proxy2_t = type(proxy2);
         
-        if (proxy2Type ~= "Vector3") then
-            error("bad operand #2 to '__sub' (Vector3 expected, got " ..proxy2Type.. ")", 2);
+        if (proxy2_t ~= "Vector3") then
+            error("bad operand #2 to '__sub' (Vector3 expected, got " ..proxy2_t.. ")", 2);
         end
         
         
@@ -76,16 +76,16 @@ local meta = {
     end,
     
     __mul = function(proxy1, proxy2)
-        local proxy1Type = type(proxy1);
+        local proxy1_t = type(proxy1);
         
-        if (proxy1Type ~= "Vector3") then
-            error("bad operand #1 to '__mul' (Vector3 expected, got " ..proxy1Type.. ")", 2);
+        if (proxy1_t ~= "Vector3") then
+            error("bad operand #1 to '__mul' (Vector3 expected, got " ..proxy1_t.. ")", 2);
         end
         
-        local proxy2Type = type(proxy2);
+        local proxy2_t = type(proxy2);
         
-        if (proxy2Type ~= "Vector3") then
-            error("bad operand #2 to '__mul' (Vector3 expected, got " ..proxy2Type.. ")", 2);
+        if (proxy2_t ~= "Vector3" and proxy2_t ~= "Matrix3x3") then
+            error("bad operand #2 to '__mul' (Vector3 or Matrix3x3 expected, got " ..proxy2_t.. ")", 2);
         end
         
         
@@ -93,20 +93,28 @@ local meta = {
         local obj1 = PROXY__OBJ[proxy1];
         local obj2 = PROXY__OBJ[proxy2];
         
+        if (proxy2_t == "Matrix3x3") then
+            return new(
+                obj1.x*obj2.m00 + obj1.y*obj2.m10 + obj1.z*obj2.m20,
+                obj1.x*obj2.m01 + obj1.y*obj2.m11 + obj1.z*obj2.m21,
+                obj1.x*obj2.m02 + obj1.y*obj2.m12 + obj1.z*obj2.m22
+            );
+        end
+        
         return new(obj1.x*obj2.x, obj1.y*obj2.y, obj1.z*obj2.z);
     end,
     
     __div = function(proxy1, proxy2)
-        local proxy1Type = type(proxy1);
+        local proxy1_t = type(proxy1);
         
-        if (proxy1Type ~= "Vector3") then
-            error("bad operand #1 to '__div' (Vector3 expected, got " ..proxy1Type.. ")", 2);
+        if (proxy1_t ~= "Vector3") then
+            error("bad operand #1 to '__div' (Vector3 expected, got " ..proxy1_t.. ")", 2);
         end
         
-        local proxy2Type = type(proxy2);
+        local proxy2_t = type(proxy2);
         
-        if (proxy2Type ~= "Vector3") then
-            error("bad operand #2 to '__div' (Vector3 expected, got " ..proxy2Type.. ")", 2);
+        if (proxy2_t ~= "Vector3") then
+            error("bad operand #2 to '__div' (Vector3 expected, got " ..proxy2_t.. ")", 2);
         end
         
         
@@ -141,30 +149,30 @@ local MEM_PROXIES = setmetatable({}, { __mode = "v" });
 
 function new(x, y, z)
     if (x ~= nil) then
-        local xType = type(x);
+        local x_t = type(x);
         
-        if (xType ~= "number") then
-            error("bad argument #1 to '" ..__func__.. "' (number expected, got " ..xType.. ")", 2);
+        if (x_t ~= "number") then
+            error("bad argument #1 to '" ..__func__.. "' (number expected, got " ..x_t.. ")", 2);
         end
     else
         x = 0;
     end
     
     if (y ~= nil) then
-        local yType = type(y);
+        local y_t = type(y);
         
-        if (yType ~= "number") then
-            error("bad argument #2 to '" ..__func__.. "' (number expected, got " ..yType.. ")", 2);
+        if (y_t ~= "number") then
+            error("bad argument #2 to '" ..__func__.. "' (number expected, got " ..y_t.. ")", 2);
         end
     else
         y = 0;
     end
     
     if (z ~= nil) then
-        local zType = type(z);
+        local z_t = type(z);
         
-        if (zType ~= "number") then
-            error("bad argument #2 to '" ..__func__.. "' (number expected, got " ..zType.. ")", 2);
+        if (z_t ~= "number") then
+            error("bad argument #2 to '" ..__func__.. "' (number expected, got " ..z_t.. ")", 2);
         end
     else
         z = 0;
@@ -176,7 +184,6 @@ function new(x, y, z)
     local proxy = MEM_PROXIES[memId];
     
     if (not proxy) then
-        
         local obj = {
             type = name,
             
@@ -205,27 +212,20 @@ end
 
 
 
-function get.magnitude(obj)
-    local mag = math.sqrt(obj.x^2 + obj.y^2 + obj.z^2);
+function get.mag(obj)
+    obj.mag = math.sqrt(obj.x^2 + obj.y^2 + obj.z^2);
     
-    obj.magnitude = mag; -- memoize magnitude inside obj
-    
-    return mag;
+    return obj.mag;
 end
 
 function get.unit(obj)
-    -- check if magnitude was already computed and memoized inside obj
-    local mag = obj.magnitude or get.magnitude(obj);
+    local mag = obj.mag or get.mag(obj); -- check if magnitude was already computed and memoized inside obj
     
     if (mag == 0) then return end
     
-    local invMag = 1/mag;
+    obj.unit = new(obj.x/mag, obj.y/mag, obj.z/mag);
     
-    local unit = new(obj.x*invMag, obj.y*invMag, obj.z*invMag);
-    
-    obj.unit = unit; -- memoize unit vector inside obj
-    
-    return unit;
+    return obj.unit;
 end
 
 

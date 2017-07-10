@@ -30,16 +30,16 @@ local meta = {
     
     
     __add = function(proxy1, proxy2)
-        local proxy1Type = type(proxy1);
+        local proxy1_t = type(proxy1);
         
-        if (proxy1Type ~= "UDim2") then
-            error("bad operand #1 to '__add' (UDim2 expected, got " ..proxy1Type.. ")", 2);
+        if (proxy1_t ~= "UDim2") then
+            error("bad operand #1 to '__add' (UDim2 expected, got " ..proxy1_t.. ")", 2);
         end
         
-        local proxy2Type = type(proxy2);
+        local proxy2_t = type(proxy2);
         
-        if (proxy2Type ~= "UDim2") then
-            error("bad operand #2 to '__add' (UDim2 expected, got " ..proxy2Type.. ")", 2);
+        if (proxy2_t ~= "UDim2") then
+            error("bad operand #2 to '__add' (UDim2 expected, got " ..proxy2_t.. ")", 2);
         end
         
         
@@ -72,40 +72,40 @@ local MEM_PROXIES = setmetatable({}, { __mode = "v" });
 
 function new(scaleX, offsetX, scaleY, offsetY)
     if (scaleX ~= nil) then
-        local scaleXType = type(scaleX);
+        local scaleX_t = type(scaleX);
         
-        if (scaleXType ~= "number") then
-            error("bad argument #1 to '" ..__func__.. "' (number expected, got " ..scaleXType.. ")", 2);
+        if (scaleX_t ~= "number") then
+            error("bad argument #1 to '" ..__func__.. "' (number expected, got " ..scaleX_t.. ")", 2);
         end
     else
         scaleX = 0;
     end
     
     if (offsetX ~= nil) then
-        local offsetXType = type(offsetX);
+        local offsetX_t = type(offsetX);
         
-        if (offsetXType ~= "number") then
-            error("bad argument #2 to '" ..__func__.. "' (number expected, got " ..offsetXType.. ")", 2);
+        if (offsetX_t ~= "number") then
+            error("bad argument #2 to '" ..__func__.. "' (number expected, got " ..offsetX_t.. ")", 2);
         end
     else
         offsetX = 0;
     end
     
     if (scaleY ~= nil) then
-        local scaleYType = type(scaleY);
+        local scaleY_t = type(scaleY);
         
-        if (scaleYType ~= "number") then
-            error("bad argument #3 to '" ..__func__.. "' (number expected, got " ..scaleYType.. ")", 2);
+        if (scaleY_t ~= "number") then
+            error("bad argument #3 to '" ..__func__.. "' (number expected, got " ..scaleY_t.. ")", 2);
         end
     else
         scaleY = 0;
     end
     
     if (offsetY ~= nil) then
-        local offsetYType = type(offsetY);
+        local offsetY_t = type(offsetY);
         
-        if (offsetYType ~= "number") then
-            error("bad argument #4 to '" ..__func__.. "' (number expected, got " ..offsetYType.. ")", 2);
+        if (offsetY_t ~= "number") then
+            error("bad argument #4 to '" ..__func__.. "' (number expected, got " ..offsetY_t.. ")", 2);
         end
     else
         offsetY = 0;
@@ -139,10 +139,7 @@ end
 
 
 function func.unpack(obj)
-    local scaleX, offsetX = obj.x.unpack();
-    local scaleY, offsetY = obj.y.unpack();
-    
-    return scaleX, offsetX, scaleY, offsetY;
+    return obj.x.scale, obj.x.offset, obj.y.scale, obj.y.offset;
 end
 
 

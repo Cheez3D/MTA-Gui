@@ -106,17 +106,17 @@ local meta = {
 
 
 function new(className, parentProxy)
-	local classNameType = type(className);
+	local className_t = type(className);
     
-	if (classNameType ~= "string") then
-        error("bad argument #1 to '" ..__func__.. "' (string expected, got " ..classNameType.. ")", 2);
+	if (className_t ~= "string") then
+        error("bad argument #1 to '" ..__func__.. "' (string expected, got " ..className_t.. ")", 2);
     end
 	
 	if (parentProxy ~= nil) then
-		local parentProxyType = type(parentProxy);
+		local parentProxy_t = type(parentProxy);
         
-		if (parentProxyType ~= "Instance") then
-            error("bad argument #2 to '" ..__func__.. "' (Instance expected, got " ..parentProxyType.. ")", 2);
+		if (parentProxy_t ~= "Instance") then
+            error("bad argument #2 to '" ..__func__.. "' (Instance expected, got " ..parentProxy_t.. ")", 2);
         end
 	end
 	
@@ -157,10 +157,10 @@ end
 
 
 function func.isA(obj, className)
-    local classNameType = type(className);
+    local className_t = type(className);
     
-    if (classNameType ~= "string") then
-        error("bad argument #1 to 'isA' (string expected, got " ..classNameType.. ")", 2);
+    if (className_t ~= "string") then
+        error("bad argument #1 to 'isA' (string expected, got " ..className_t.. ")", 2);
     end
     
     
@@ -180,10 +180,10 @@ end
 
 
 function set.name(obj, name, prevName)
-    local nameType = type(name);
+    local name_t = type(name);
     
-    if (nameType ~= "string") then
-        error("bad argument #1 to 'name' (string expected, got " ..nameType.. ")", 2);
+    if (name_t ~= "string") then
+        error("bad argument #1 to 'name' (string expected, got " ..name_t.. ")", 2);
     end
     
     
@@ -217,10 +217,10 @@ end
 function set.parent(obj, parent, prevParent)
     
     if (parent ~= nil) then -- might be false so check against nil for assertion
-        local parentType = type(parent);
+        local parent_t = type(parent);
         
-        if (parentType ~= "Instance") then
-            error("bad argument #1 to 'parent' (Instance expected, got " ..parentType.. ")", 2);
+        if (parent_t ~= "Instance") then
+            error("bad argument #1 to 'parent' (Instance expected, got " ..parent_t.. ")", 2);
         end
         
         

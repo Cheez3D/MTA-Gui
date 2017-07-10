@@ -28,16 +28,16 @@ local meta = {
     
     
     __add = function(proxy1, proxy2)
-        local proxy1Type = type(proxy1);
+        local proxy1_t = type(proxy1);
         
-        if (proxy1Type ~= "UDim") then
-            error("bad operand #1 to '__add' (UDim expected, got " ..proxy1Type.. ")", 2);
+        if (proxy1_t ~= "UDim") then
+            error("bad operand #1 to '__add' (UDim expected, got " ..proxy1_t.. ")", 2);
         end
         
-        local proxy2Type = type(proxy2);
+        local proxy2_t = type(proxy2);
         
-        if (proxy2Type ~= "UDim") then
-            error("bad operand #2 to '__add' (UDim expected, got " ..proxy2Type.. ")", 2);
+        if (proxy2_t ~= "UDim") then
+            error("bad operand #2 to '__add' (UDim expected, got " ..proxy2_t.. ")", 2);
         end
         
         
@@ -62,20 +62,20 @@ local MEM_PROXIES = setmetatable({}, { __mode = "v" });
 function new(scale, offset)
     
     if (scale ~= nil) then
-        local scaleType = type(scale);
+        local scale_t = type(scale);
         
-        if (scaleType ~= "number") then
-            error("bad argument #1 to '" ..__func__.. "' (number expected, got " ..scaleType.. ")", 2);
+        if (scale_t ~= "number") then
+            error("bad argument #1 to '" ..__func__.. "' (number expected, got " ..scale_t.. ")", 2);
         end
     else
         scale = 0;
     end
     
     if (offset ~= nil) then
-        local offsetType = type(offset);
+        local offset_t = type(offset);
         
-        if (offsetType ~= "number") then
-            error("bad argument #1 to '" ..__func__.. "' (number expected, got " ..offsetType.. ")", 2);
+        if (offset_t ~= "number") then
+            error("bad argument #1 to '" ..__func__.. "' (number expected, got " ..offset_t.. ")", 2);
         end
     else
         offset = 0;

@@ -75,8 +75,8 @@ local meta = {
 
 
 function new(bytes)
-	local bytesType = type(bytes);
-	if (bytesType ~= "string") then error("bad argument #1 to '" ..__func__.. "' (string expected, got " ..bytesType.. ")",2) end
+	local bytes_t = type(bytes);
+	if (bytes_t ~= "string") then error("bad argument #1 to '" ..__func__.. "' (string expected, got " ..bytes_t.. ")",2) end
 	
 	
     local isFile = fileExists(bytes);
@@ -115,10 +115,10 @@ function func.read(obj, count)
     end
     
     if (count ~= nil) then
-        local countType = type(count);
+        local count_t = type(count);
         
-        if (countType ~= "number") then
-            error("bad argument #1 to '" ..__func__.. "' (number expected, got " ..countType.. ")", 2);
+        if (count_t ~= "number") then
+            error("bad argument #1 to '" ..__func__.. "' (number expected, got " ..count_t.. ")", 2);
         elseif (count < 0) then
             error("bad argument #1 to '" ..__func__.. "' (value out of bounds)", 2);
         end
@@ -147,10 +147,10 @@ end
 
 function func.read_ushort(obj, bigEndian)
     if (bigEndian ~= nil) then
-        local bigEndianType = type(bigEndian);
+        local bigEndian_t = type(bigEndian);
         
-        if (bigEndianType ~= "boolean") then
-            error("bad argument #1 to '" ..__func__.. "' (boolean expected, got " ..bigEndianType.. ")", 2);
+        if (bigEndian_t ~= "boolean") then
+            error("bad argument #1 to '" ..__func__.. "' (boolean expected, got " ..bigEndian_t.. ")", 2);
         end
     else
         bigEndian = false;
@@ -169,10 +169,10 @@ end
 
 function func.read_uint(obj, bigEndian)
     if (bigEndian ~= nil) then
-        local bigEndianType = type(bigEndian);
+        local bigEndian_t = type(bigEndian);
         
-        if (bigEndianType ~= "boolean") then
-            error("bad argument #1 to '" ..__func__.. "' (boolean expected, got " ..bigEndianType.. ")", 2);
+        if (bigEndian_t ~= "boolean") then
+            error("bad argument #1 to '" ..__func__.. "' (boolean expected, got " ..bigEndian_t.. ")", 2);
         end
     else
         bigEndian = false;
@@ -234,10 +234,10 @@ end
 
 
 function set.pos(obj, key, pos)
-    local posType = type(pos);
+    local pos_t = type(pos);
     
-    if (posType ~= "number") then
-        error("bad argument #1 to '" ..key.. "' (number expected, got " ..posType.. ")", 3);
+    if (pos_t ~= "number") then
+        error("bad argument #1 to '" ..key.. "' (number expected, got " ..pos_t.. ")", 3);
     end
     
     pos = math.floor(pos);
