@@ -21,52 +21,66 @@ local readOnly = setmetatable({}, { __index = function(tbl, key) return super.re
 
 
 local function new(obj)
-	super.new(obj);
-	
-	obj.absSize = Vector2.new(SCREEN_WIDTH, SCREEN_HEIGHT);
+    super.new(obj);
+    
+    obj.absSize = Vector2.new(SCREEN_WIDTH, SCREEN_HEIGHT);
     
     obj.absPos = Vector2.new(0, 0);
     
     obj.absRot      = Vector3.new(0, 0, 0);
     obj.absRotPivot = Vector2.new(0, 0);
-	
-	function obj.draw()
+    
+    function obj.draw()
         dxSetBlendMode("modulate_add");
         
-		dxSetRenderTarget(obj.rt, true);
-		
-		for i = 1, #obj.children do
+        dxSetRenderTarget(obj.rt, true);
+        
+        for i = 1, #obj.children do
             local child = obj.children[i];
             
             if Instance.func.isA(child, "GuiObject") and (child.rt) then
                 dxDrawImage(
-                    child.clipperGui.absPos.x, child.clipperGui.absPos.y,
+                    child.absPos.x-obj.absPos.x - child.borderSize,
+                    child.absPos.y-obj.absPos.y - child.borderSize,
                         
-                    child.clipperGui.absSize.x, child.clipperGui.absSize.y,
+                    child.absSize.x + 2*child.borderSize,
+                    child.absSize.y + 2*child.borderSize,
                     
                     child.rt
                 );
+                
+                if Instance.func.isA(child, "GuiContainer") --[[and (child.container)]] then
+                    dxDrawImage(
+                        child.containerGui.absPos.x-obj.absPos.x,
+                        child.containerGui.absPos.y-obj.absPos.y,
+                        
+                        child.containerGui.absSize.x,
+                        child.containerGui.absSize.y,
+                        
+                        child.container
+                    );
+                end
             end
-		end
-		
-		dxSetRenderTarget();
+        end
+        
+        dxSetRenderTarget();
         
         dxSetBlendMode("blend");
-	end
-	
-	obj.rt = dxCreateRenderTarget(obj.absSize.x, obj.absSize.y, true); -- TODO: add check for successful creation (dxSetTestMode)
-	
+    end
+    
+    obj.rt = dxCreateRenderTarget(obj.absSize.x, obj.absSize.y, true); -- TODO: add check for successful creation (dxSetTestMode)
     
     
-	function obj.render()
-		dxSetBlendMode("modulate_add");
-		
-		dxDrawImage(0, 0, obj.absSize.x, obj.absSize.y, obj.rt);
-		
-		dxSetBlendMode("blend");
-	end
     
-	addEventHandler("onClientPreRender", root, obj.render);
+    function obj.render()
+        dxSetBlendMode("modulate_add");
+        
+        dxDrawImage(0, 0, obj.absSize.x, obj.absSize.y, obj.rt);
+        
+        dxSetBlendMode("blend");
+    end
+    
+    addEventHandler("onClientPreRender", root, obj.render);
 end
 
 
@@ -74,7 +88,7 @@ end
 Instance.initializable.ScreenGui = {
     name = name,
     
-	super = super,
+    super = super,
     
     func = func,
     get  = get,
@@ -82,6 +96,6 @@ Instance.initializable.ScreenGui = {
     
     private  = private,
     readOnly = readOnly,
-	
-	new = new,
+    
+    new = new,
 }

@@ -25,9 +25,9 @@ local meta = {
     __metatable = name,
     
     
-	__index = function(proxy, key)
-		local obj = PROXY__OBJ[proxy];
-		
+    __index = function(proxy, key)
+        local obj = PROXY__OBJ[proxy];
+        
         
         local class = initializable[obj.className];
         
@@ -40,8 +40,8 @@ local meta = {
                 return;
             end
         end
-		
-		local val = obj[key];
+        
+        local val = obj[key];
         if (val ~= nil) then -- val might be false so compare against nil
             if (OBJ__PROXY[val] and type(val) == "Instance") then -- convert object to proxy before returning (only for Instance objects)
                 val = OBJ__PROXY[val];
@@ -49,7 +49,7 @@ local meta = {
             
             return val;
         end
-		
+        
         local func_f = class.func[key];
         if (func_f) then
             return (function(...)
@@ -64,69 +64,69 @@ local meta = {
         if (get_f) then
             return get_f(obj);
         end
-		
+        
         if (child) then
             return OBJ__PROXY[child];
         end
-	end,
+    end,
     
-	__newindex = function(proxy, key, val)
-		local obj = PROXY__OBJ[proxy];
-		
+    __newindex = function(proxy, key, val)
+        local obj = PROXY__OBJ[proxy];
+        
         -- convert proxy to object before continuing (only for Instance objects)
         if (PROXY__OBJ[val] and type(val) == "Instance") then
             val = PROXY__OBJ[val];
         end
         
-		local prev = obj[key];
-		if (val == prev) then return end -- if trying to set same val then return
-		
+        local prev = obj[key];
+        if (val == prev) then return end -- if trying to set same val then return
         
-		local class = initializable[obj.className];
+        
+        local class = initializable[obj.className];
         
         local set_f = class.set[key];
         if (set_f) then
-            local success, result = pcall(set_f, obj, val, prev);
+            local success, result = pcall(set_f, obj, val, prev, 1);
             if (not success) then error(result, 2) end
             
             return;
         end
         
-		error("attempt to modify an invalid key (" ..tostring(key).. ")", 2);
-	end,
+        error("attempt to modify an invalid key (" ..tostring(key).. ")", 2);
+    end,
     
     
-	__tostring = function(proxy)
-		local obj = PROXY__OBJ[proxy];
-		
-		return obj.className.. " " ..obj.name;
-	end,
+    __tostring = function(proxy)
+        local obj = PROXY__OBJ[proxy];
+        
+        return obj.className.. " " ..obj.name;
+    end,
 }
 
 
 
 function new(className, parentProxy)
-	local className_t = type(className);
+    local className_t = type(className);
     
-	if (className_t ~= "string") then
+    if (className_t ~= "string") then
         error("bad argument #1 to '" ..__func__.. "' (string expected, got " ..className_t.. ")", 2);
     end
-	
-	if (parentProxy ~= nil) then
-		local parentProxy_t = type(parentProxy);
+    
+    if (parentProxy ~= nil) then
+        local parentProxy_t = type(parentProxy);
         
-		if (parentProxy_t ~= "Instance") then
+        if (parentProxy_t ~= "Instance") then
             error("bad argument #2 to '" ..__func__.. "' (Instance expected, got " ..parentProxy_t.. ")", 2);
         end
-	end
-	
+    end
     
     
-	local class = (not privateClass[className]) and initializable[className];
     
-	if (not class) then
+    local class = (not privateClass[className]) and initializable[className];
+    
+    if (not class) then
         error("bad argument #1 to '" ..__func__.. "' (invalid class name)", 2);
-	end
+    end
     
     local obj = {
         type = name,
@@ -296,13 +296,13 @@ end
 
 Instance = {
     name = name,
-	
-	func = func,
+    
+    func = func,
     get  = get,
-	set  = set,
-	
-	private  = private,
-	readOnly = readOnly,
+    set  = set,
+    
+    private  = private,
+    readOnly = readOnly,
     
     initializable = initializable,
     privateClass  = privateClass,
@@ -313,15 +313,15 @@ Instance = {
 }
 
 -- Instance = setmetatable({}, {
-	-- __call = function(_Proxy,...)
-		-- local Success,Result = pcall(Class.New,...);
-		-- if (Success == false) then error(fromat_pcall_error(Result),2) end
-		
-		-- return Result;
-	-- end,
-	-- __index = Class,
-	-- __metatable = "Instance",
-	-- __newindex = function(_Proxy,Key)
-		-- error("attempt to modify a read-only key ("..tostring(Key)..")",2);
-	-- end
+    -- __call = function(_Proxy,...)
+        -- local Success,Result = pcall(Class.New,...);
+        -- if (Success == false) then error(fromat_pcall_error(Result),2) end
+        
+        -- return Result;
+    -- end,
+    -- __index = Class,
+    -- __metatable = "Instance",
+    -- __newindex = function(_Proxy,Key)
+        -- error("attempt to modify a read-only key ("..tostring(Key)..")",2);
+    -- end
 -- });

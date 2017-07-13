@@ -38,35 +38,34 @@ local SHADER = dxCreateShader("shaders/nothing.fx"); -- TODO: add check for succ
 
 
 local function new(obj)
-	super.new(obj);
-	
-	obj.bgColor3       = Color3.new(255, 255, 255);
-	obj.bgTransparency = 0;
-	
-	obj.borderColor3       = Color3.new(27, 42, 53);
-	obj.borderSize         = 1;
-	obj.borderTransparency = 0;
-	
-	obj.clipsDescendants = true;
-	
+    super.new(obj);
+    
+    obj.bgColor3       = Color3.new(255, 255, 255);
+    obj.bgTransparency = 0;
+    
+    obj.borderColor3       = Color3.new(27, 42, 53);
+    obj.borderSize         = 1;
+    obj.borderTransparency = 0;
     
     obj.size = nil;
     
     obj.posOrigin = UDim2.new(0, 0, 0, 0);
-	obj.pos       = nil;
+    obj.pos       = nil;
     
     obj.rot            = Vector3.new(0, 0, 0);
     obj.rotPivot       = UDim2.new(0.5, 0, 0.5, 0);
     obj.rotPerspective = UDim2.new(0.5, 0, 0.5, 0);
     obj.rotPivotDepth  = 0;
     
-    
-	obj.visible = true;
+    obj.visible = true;
     
     
     
     obj.isRotated   = false;
     obj.isRotated3D = false;
+    
+    
+    -- function obj.draw() end
 end
 
 
@@ -99,21 +98,6 @@ function func.update_clipperGui(obj)
         
         if Instance.func.isA(child, "GuiObject") then
             func.update_clipperGui(child);
-        end
-    end
-end
-
-function func.update_rt(obj)
-    if isElement(obj.rt) then destroyElement(obj.rt) end -- destroy previous rt to free video memory
-    
-    obj.rt = obj.clipperGui and obj.visible and dxCreateRenderTarget(obj.clipperGui.absSize.x, obj.clipperGui.absSize.y, true) or nil;
-    
-    -- recursively update all children rts
-    for i = 1, #obj.children do
-        local child = obj.children[i];
-        
-        if Instance.func.isA(child, "GuiObject") then
-            func.update_rt(child);
         end
     end
 end
@@ -219,6 +203,22 @@ function func.update_rotParams(obj)
 end
 
 
+function func.update_rt(obj)
+    if isElement(obj.rt) then destroyElement(obj.rt) end
+    
+    obj.rt = obj.rootGui and obj.visible and dxCreateRenderTarget(obj.absSize.x + 2*obj.borderSize, obj.absSize.y + 2*obj.borderSize, true) or nil;
+    
+    -- recursively update all children rts
+    for i = 1, #obj.children do
+        local child = obj.children[i];
+        
+        if Instance.func.isA(child, "GuiObject") then
+            func.update_rt(child);
+        end
+    end
+end
+
+
 function func.update(obj)
     for i = 1, #obj.children do
         local child = obj.children[i];
@@ -234,20 +234,17 @@ end
 
 
 
-function set.parent(obj, parent, prevParent)
-    local success, result = pcall(super.set.parent, obj, parent, prevParent);
+function set.parent(obj, parent, prev, k)
+    local success, result = pcall(super.set.parent, obj, parent, prev, k+1);
     if (not success) then error(result, 2) end
     
     
-	if (prevParent and Instance.func.isA(prevParent, "GuiBase2D")) then
-        prevParent.draw(true);
-	end
-	
+    if (prev and Instance.func.isA(prev, "GuiBase2D")) then
+        prev.draw(true);
+    end
+    
     
     func.update_rootGui(obj);
-    
-    func.update_clipperGui(obj);
-    func.update_rt(obj);
     
     func.update_absSize(obj);
     
@@ -257,135 +254,123 @@ function set.parent(obj, parent, prevParent)
     func.update_absRotPerspective(obj);
     func.update_rotParams(obj);
     
-    for i = 1, #obj.children do
-        local child = obj.children[i];
-        
-        if Instance.func.isA(child, "GuiObject") then
-            func.update(child);
+    func.update_rt(obj);
+    
+    
+    if (k == 1) then
+        for i = 1, #obj.children do
+            local child = obj.children[i];
+            
+            if Instance.func.isA(child, "GuiObject") then
+                func.update(child);
+            end
         end
+        
+        obj.draw(true);
     end
-    
-    
-    obj.draw(true);
 end
 
 
 function set.bgColor3(obj, bgColor3)
-	local bgColor3_t = type(bgColor3);
+    local bgColor3_t = type(bgColor3);
     
-	if (bgColor3_t ~= "Color3") then
+    if (bgColor3_t ~= "Color3") then
         error("bad argument #1 to 'bgColor3' (Color3 expected, got " ..bgColor3_t.. ")", 2);
     end
-	
     
-	obj.bgColor3 = bgColor3;
-	
     
-	obj.draw(true);
+    obj.bgColor3 = bgColor3;
+    
+    
+    obj.draw(true);
 end
 
 function set.bgTransparency(obj, bgTransparency)
-	local bgTransparency_t = type(bgTransparency);
+    local bgTransparency_t = type(bgTransparency);
     
-	if (bgTransparency_t ~= "number") then
+    if (bgTransparency_t ~= "number") then
         error("bad argument #1 to 'bgTransparency' (number expected, got " ..bgTransparency_t.. ")", 2);
-	elseif (bgTransparency < 0) or (bgTransparency > 1) then
+    elseif (bgTransparency < 0) or (bgTransparency > 1) then
         error("bad argument #1 to 'bgTransparency' (value out of bounds)", 2);
     end
-	
     
-	obj.bgTransparency = bgTransparency;
-	
     
-	obj.draw(true);
-end
-
-
-function set.borderColor3(obj, borderColor3)
-	local borderColor3_t = type(borderColor3);
-    
-	if (borderColor3_t ~= "Color3") then
-        error("bad argument #1 to 'borderColor3' (Color3 expected, got " ..borderColor3_t.. ")", 2);
-    end
-	
-    
-	obj.borderColor3 = borderColor3;
-	
-    
-	obj.draw(true);
-end
-
-function set.borderSize(obj, borderSize)
-	local borderSize_t = type(borderSize);
-    
-	if (borderSize_t ~= "number") then
-        error("bad argument #1 to 'borderSize' (number expected, got " ..borderSize_t.. ")", 2);
-	elseif (borderSize < 0) or (borderSize > MAX_BORDER_SIZE) then
-        error("bad argument #1 to 'borderSize' (value out of bounds)", 2);
-    end
-	
-    
-	obj.borderSize = floor(borderSize);
-	
-    
-	obj.draw(true);
-end
-
-function set.borderTransparency(obj, borderTransparency)
-	local borderTransparency_t = type(borderTransparency);
-    
-	if (borderTransparency_t ~= "number") then
-        error("bad argument #1 to 'borderTransparency' (number expected, got " ..borderTransparency_t.. ")", 2);
-	elseif (borderTransparency < 0) or (borderTransparency > 1) then
-        error("bad argument #1 to 'borderTransparency' (invalid value)", 2);
-    end
-	
-    
-	obj.borderTransparency = borderTransparency;
-	
-    
-	obj.draw(true);
-end
-
-
-function set.clipsDescendants(obj, clipsDescendants)
-	local clipsDescendants_t = type(clipsDescendants);
-    
-	if (clipsDescendants_t ~= "boolean") then
-        error("bad argument #1 to 'clipsDescendants' (boolean expected, got " ..clipsDescendants_t.. ")", 2);
-    end
-	
-    
-	obj.clipsDescendants = clipsDescendants;
-	
-    for i = 1, #obj.children do
-        local child = obj.children[i];
-        
-        if Instance.func.isA(child, "GuiObject") then
-            func.update_clipperGui(child);
-            func.update_rt(child);
-            
-            func.update_rotParams(child);
-            
-            func.update(child);
-        end
-	end
+    obj.bgTransparency = bgTransparency;
     
     
     obj.draw(true);
 end
 
 
-function set.size(obj, size)
-	local size_t = type(size);
+function set.borderColor3(obj, borderColor3)
+    local borderColor3_t = type(borderColor3);
     
-	if (size_t ~= "UDim2") then
+    if (borderColor3_t ~= "Color3") then
+        error("bad argument #1 to 'borderColor3' (Color3 expected, got " ..borderColor3_t.. ")", 2);
+    end
+    
+    
+    obj.borderColor3 = borderColor3;
+    
+    
+    obj.draw(true);
+end
+
+function set.borderSize(obj, borderSize)
+    local borderSize_t = type(borderSize);
+    
+    if (borderSize_t ~= "number") then
+        error("bad argument #1 to 'borderSize' (number expected, got " ..borderSize_t.. ")", 2);
+    elseif (borderSize < 0) or (borderSize > MAX_BORDER_SIZE) then
+        error("bad argument #1 to 'borderSize' (value out of bounds)", 2);
+    end
+    
+    
+    obj.borderSize = floor(borderSize);
+    
+    
+    func.update_rt(obj);
+    
+    
+    for i = 1, #obj.children do
+        local child = obj.children[i];
+        
+        if Instance.func.isA(child, "GuiObject") then
+            func.update(child);
+        end
+    end
+    
+    obj.draw(true);
+end
+
+function set.borderTransparency(obj, borderTransparency)
+    local borderTransparency_t = type(borderTransparency);
+    
+    if (borderTransparency_t ~= "number") then
+        error("bad argument #1 to 'borderTransparency' (number expected, got " ..borderTransparency_t.. ")", 2);
+    elseif (borderTransparency < 0) or (borderTransparency > 1) then
+        error("bad argument #1 to 'borderTransparency' (invalid value)", 2);
+    end
+    
+    
+    obj.borderTransparency = borderTransparency;
+    
+    
+    obj.draw(true);
+end
+
+
+function set.size(obj, size, prev, k)
+    local size_t = type(size);
+    
+    if (size_t ~= "UDim2") then
         error("bad argument #1 to 'size' (UDim2 expected, got " ..size_t.. ")", 2);
     end
-	
-	
-	obj.size = size;
-	
+    
+    
+    obj.size = size;
+    
+    
     func.update_absSize(obj);
     
     func.update_absPos(obj);
@@ -394,37 +379,41 @@ function set.size(obj, size)
     func.update_absRotPerspective(obj);
     func.update_rotParams(obj);
     
-    for i = 1, #obj.children do
-        local child = obj.children[i];
-        
-        if Instance.func.isA(child, "GuiObject") then
-            func.update_rt(child);
+    func.update_rt(obj);
+    
+    
+    if (k == 1) then
+        for i = 1, #obj.children do
+            local child = obj.children[i];
             
-            func.update(child);
+            if Instance.func.isA(child, "GuiObject") then
+                func.update(child);
+            end
         end
+        
+        obj.draw(true);
     end
-    
-    
-    obj.draw(true);
 end
 
 
 function set.pos(obj, pos)
-	local pos_t = type(pos);
+    local pos_t = type(pos);
     
-	if (pos_t ~= "UDim2") then
+    if (pos_t ~= "UDim2") then
         error("bad argument #1 to 'pos' (UDim2 expected, got " ..pos_t.. ")", 2);
     end
-	
     
-	obj.pos = pos;
-	
+    
+    obj.pos = pos;
+    
+    
     func.update_absPos(obj);
     
     func.update_absRotPivot(obj);
     func.update_absRotPerspective(obj);
     func.update_rotParams(obj);
     
+    
     for i = 1, #obj.children do
         local child = obj.children[i];
         
@@ -432,7 +421,6 @@ function set.pos(obj, pos)
             func.update(child);
         end
     end
-    
     
     obj.draw(true);
 end
@@ -440,18 +428,20 @@ end
 function set.posOrigin(obj, posOrigin)
     local posOrigin_t = type(posOrigin);
     
-	if (posOrigin_t ~= "UDim2") then
+    if (posOrigin_t ~= "UDim2") then
         error("bad argument #1 to 'pos' (UDim2 expected, got " ..posOrigin_t.. ")", 2);
     end
     
     
     obj.posOrigin = posOrigin;
     
+    
     func.update_absPos(obj);
     
     func.update_absRotPivot(obj);
     func.update_absRotPerspective(obj);
     func.update_rotParams(obj);
+    
     
     for i = 1, #obj.children do
         local child = obj.children[i];
@@ -460,7 +450,6 @@ function set.posOrigin(obj, posOrigin)
             func.update(child);
         end
     end
-    
     
     obj.draw(true);
 end
@@ -476,6 +465,7 @@ function set.rot(obj, rot)
     
     obj.rot = rot;
     
+    
     func.update_isRotated(obj);
     func.update_isRotated3D(obj);
     func.update_rotParams(obj);
@@ -487,11 +477,12 @@ end
 function set.rotPivot(obj, rotPivot)
     local rotPivot_t = type(rotPivot);
     
-	if (rotPivot_t ~= "UDim2") then
+    if (rotPivot_t ~= "UDim2") then
         error("bad argument #1 to 'rotPivot' (UDim2 expected, got " ..rotPivot_t.. ")", 2);
     end
     
     obj.rotPivot = rotPivot;
+    
     
     func.update_absRotPivot(obj);
     func.update_rotParams(obj);
@@ -503,13 +494,14 @@ end
 function set.rotPivotDepth(obj, rotPivotDepth)
     local rotPivotDepth_t = type(rotPivotDepth);
     
-	if (rotPivotDepth_t ~= "number") then
+    if (rotPivotDepth_t ~= "number") then
         error("bad argument #1 to 'rotPivotDepth' (number expected, got " ..rotPivotDepth_t.. ")", 2);
     elseif (rotPivotDepth <= ROT_ACTUAL_NEAR_Z_PLANE/2 or rotPivotDepth > ROT_FAR_Z_PLANE/2) then
         error("bad argument #1 to 'rotPivotDepth' (value out of bounds)", 2);
     end
     
     obj.rotPivotDepth = rotPivotDepth;
+    
     
     func.update_absRotPivot(obj);
     func.update_isRotated3D(obj);
@@ -522,12 +514,13 @@ end
 function set.rotPerspective(obj, rotPerspective)
     local rotPerspective_t = type(rotPerspective);
     
-	if (rotPerspective_t ~= "UDim2") then
+    if (rotPerspective_t ~= "UDim2") then
         error("bad argument #1 to 'rotPerspective' (UDim2 expected, got " ..rotPerspective_t.. ")", 2);
     end
     
     
     obj.rotPerspective = rotPerspective;
+    
     
     func.update_absRotPerspective(obj);
     func.update_rotParams(obj);
@@ -537,32 +530,44 @@ function set.rotPerspective(obj, rotPerspective)
 end
 
 
-function set.visible(obj, visible)
-	local visible_t = type(visible);
+function set.visible(obj, visible, prev, k)
+    local visible_t = type(visible);
     
-	if (visible_t ~= "boolean") then
+    if (visible_t ~= "boolean") then
         error("bad argument #1 to 'visible' (boolean expected, got " ..visible_t.. ")", 2);
     end
-	
-	
-	obj.visible = visible;
-	
+    
+    
+    obj.visible = visible;
+    
+    
     func.update_rt(obj);
     
-    for i = 1, #obj.children do
-        local child = obj.children[i];
-        
-        if Instance.func.isA(child, "GuiObject") then
-            func.update(child);
+    
+    if (k == 1) then
+        if (visible) then
+            for i = 1, #obj.children do
+                local child = obj.children[i];
+                
+                if Instance.func.isA(child, "GuiObject") then
+                    func.update(child);
+                end
+            end
         end
+        
+        obj.draw(true);
     end
-    
-    
-	obj.draw(true);
 end
 
 
 function set.debug(obj, debug)
+    local debug_t = type(debug);
+    
+    if (debug_t ~= "boolean") then
+        error("bad argument #1 to 'debug' (boolean expected, got " ..debug_t.. ")", 2);
+    end
+    
+    
     obj.debug = debug;
     
     
@@ -570,19 +575,20 @@ function set.debug(obj, debug)
 end
 
 
+
 GuiObject = {
-	name = name,
+    name = name,
     
     super = super,
-	
-	func = func,
+    
+    func = func,
     get  = get,
-	set  = set,
-	
-	private  = private,
+    set  = set,
+    
+    private  = private,
     readOnly = readOnly,
-	
-	new = new,
+    
+    new = new,
     
     
     SHADER = SHADER,

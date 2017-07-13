@@ -29,27 +29,27 @@ local function new(obj)
     obj.absPosOrigin = nil;
     
     obj.absSize = nil;
-	obj.absPos  = nil;
+    obj.absPos  = nil;
     
     obj.absRot      = nil;
     obj.absRotPivot = nil;
-	
-	obj.rt = nil;
+    
+    obj.rt = nil;
 end
 
 
 
 GuiBase2D = {
-	name = name,
+    name = name,
     
     super = super,
-	
+    
     func = func,
     get  = get,
     set  = set,
     
-	private  = private,
-	readOnly = readOnly,
-	
-	new = new,
+    private  = private,
+    readOnly = readOnly,
+    
+    new = new,
 }

@@ -33,7 +33,7 @@ local meta = {
     __metatable = name,
     
     
-	__index = function(proxy, key)
+    __index = function(proxy, key)
         if (private[key]) then return end
         
         
@@ -54,31 +54,31 @@ local meta = {
             return get_f(obj, key);
         end
     end,
-	
-	__newindex = function(proxy, key, val)
-		if (readOnly[key]) then
+    
+    __newindex = function(proxy, key, val)
+        if (readOnly[key]) then
             error("attempt to modify a read-only key (" ..tostring(key).. ")", 2);
         end
-		
         
-		local obj = PROXY__OBJ[proxy];
-		
-		local set_f = set[key];
-		if (set_f) then
-			local prev = obj[key];
-			
-			set_f(obj, key, val, prev);
-		end
-	end
+        
+        local obj = PROXY__OBJ[proxy];
+        
+        local set_f = set[key];
+        if (set_f) then
+            local prev = obj[key];
+            
+            set_f(obj, key, val, prev);
+        end
+    end
 }
 
 
 
 function new(bytes)
-	local bytes_t = type(bytes);
-	if (bytes_t ~= "string") then error("bad argument #1 to '" ..__func__.. "' (string expected, got " ..bytes_t.. ")",2) end
-	
-	
+    local bytes_t = type(bytes);
+    if (bytes_t ~= "string") then error("bad argument #1 to '" ..__func__.. "' (string expected, got " ..bytes_t.. ")",2) end
+    
+    
     local isFile = fileExists(bytes);
     local file;
     
@@ -86,25 +86,25 @@ function new(bytes)
         file = fileOpen(bytes, true);
     end
     
-	local obj = {
+    local obj = {
         type = name,
         
         
         isClosed = false,
         isFile   = isFile,
         
-		bytes = isFile and file or bytes,
-		
-		pos = 0,
+        bytes = isFile and file or bytes,
+        
+        pos = 0,
         
         size = isFile and fileGetSize(file) or #bytes,
-	}
-	
-	local proxy = setmetatable({}, meta);
+    }
     
-	PROXY__OBJ[proxy] = obj;
-	
-	return proxy;
+    local proxy = setmetatable({}, meta);
+    
+    PROXY__OBJ[proxy] = obj;
+    
+    return proxy;
 end
 
 

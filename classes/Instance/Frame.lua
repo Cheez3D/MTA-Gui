@@ -5,7 +5,7 @@
 
 local name = "Frame";
 
-local super = GuiObject;
+local super = GuiContainer;
 
 local func = setmetatable({}, { __index = function(tbl, key) return super.func[key] end });
 local get  = setmetatable({}, { __index = function(tbl, key) return super.get [key] end });
@@ -15,50 +15,47 @@ local private  = setmetatable({}, { __index = function(tbl, key) return super.pr
 local readOnly = setmetatable({}, { __index = function(tbl, key) return super.readOnly[key] end });
 
 
--- TODO: 2D rotation mouse collision detection
--- https://www.siggraph.org/education/materials/HyperGraph/modeling/mod_tran/2drota.htm
 
 local function new(obj)
-	super.new(obj);
-	
+    super.new(obj);
+    
     obj.size = UDim2.new(0, 100, 0, 100);
     
-	obj.pos  = UDim2.new(0, 0);
-	
-	function obj.draw(propagate)
-		if (obj.rootGui) then
+    obj.pos  = UDim2.new(0, 0);
+    
+    function obj.draw(propagate)
+        if (obj.rootGui) then
             if (obj.rt) then
                 dxSetBlendMode("modulate_add");
                 
+                dxSetRenderTarget(obj.isRotated and obj.rootGui.rt or obj.rt, true);
+                
+                -- border
+                dxDrawRectangle(
+                    0,
+                    0,
+                    
+                    obj.absSize.x + 2*obj.borderSize,
+                    obj.absSize.y + 2*obj.borderSize,
+                    
+                    tocolor(obj.borderColor3.r, obj.borderColor3.g, obj.borderColor3.b, 255*(1-obj.borderTransparency))
+                );
+                
+                -- background
+                dxSetBlendMode("overwrite");
+                
+                dxDrawRectangle(
+                    obj.borderSize,
+                    obj.borderSize,
+                    
+                    obj.absSize.x,
+                    obj.absSize.y,
+                    
+                    tocolor(obj.bgColor3.r, obj.bgColor3.g, obj.bgColor3.b, 255*(1-obj.bgTransparency))
+                );
+                
                 if (obj.isRotated) then
-                    dxSetRenderTarget(obj.rootGui.rt, true);
-                    
-                    if (obj.debug) then
-                        dxDrawRectangle(obj.rotRtOffset.x, obj.rotRtOffset.y, obj.clipperGui.absSize.x, obj.clipperGui.absSize.y, tocolor(255, 0, 0, 127.5));
-                    end
-                    
-                    -- border
-                    dxDrawRectangle(
-                        obj.rotRtOffset.x + obj.absPos.x-obj.clipperGui.absPos.x - obj.borderSize,
-                        obj.rotRtOffset.y + obj.absPos.y-obj.clipperGui.absPos.y - obj.borderSize,
-                        
-                        obj.absSize.x + 2*obj.borderSize,
-                        obj.absSize.y + 2*obj.borderSize,
-                        
-                        tocolor(obj.borderColor3.r, obj.borderColor3.g, obj.borderColor3.b, 255*(1-obj.borderTransparency))
-                    );
-                    
-                    -- background
-                    dxSetBlendMode("overwrite");
-                    
-                    dxDrawRectangle(
-                        obj.rotRtOffset.x + obj.absPos.x-obj.clipperGui.absPos.x,
-                        obj.rotRtOffset.y + obj.absPos.y-obj.clipperGui.absPos.y,
-                        
-                        obj.absSize.x, obj.absSize.y,
-                        
-                        tocolor(obj.bgColor3.r, obj.bgColor3.g, obj.bgColor3.b, 255*(1-obj.bgTransparency))
-                    );
+                    -- dxSetRenderTarget(obj.rootGui.rt, true);
                     
                     -- children
                     dxSetBlendMode("modulate_add");
@@ -108,50 +105,42 @@ local function new(obj)
                     
                     dxDrawImage(-obj.rotRtOffset.x, -obj.rotRtOffset.y, obj.rootGui.absSize.x, obj.rootGui.absSize.y, GuiObject.SHADER);
                 else
-                    dxSetRenderTarget(obj.rt, true);
-                    
-                    if (obj.debug) then
-                        dxDrawRectangle(0, 0, obj.clipperGui.absSize.x, obj.clipperGui.absSize.y, tocolor(255, 0, 0, 127.5));
-                    end
-                    
-                    -- border
-                    dxDrawRectangle(
-                        obj.absPos.x-obj.clipperGui.absPos.x - obj.borderSize,
-                        obj.absPos.y-obj.clipperGui.absPos.y - obj.borderSize,
-                        
-                        obj.absSize.x + 2*obj.borderSize,
-                        obj.absSize.y + 2*obj.borderSize,
-                        
-                        tocolor(obj.borderColor3.r, obj.borderColor3.g, obj.borderColor3.b, 255*(1-obj.borderTransparency))
-                    );
-                    
-                    -- background
-                    dxSetBlendMode("overwrite");
-                    
-                    dxDrawRectangle(
-                        obj.absPos.x-obj.clipperGui.absPos.x,
-                        obj.absPos.y-obj.clipperGui.absPos.y,
-                        
-                        obj.absSize.x, obj.absSize.y,
-                        
-                        tocolor(obj.bgColor3.r, obj.bgColor3.g, obj.bgColor3.b, 255*(1-obj.bgTransparency))
-                    );
+                    -- dxSetRenderTarget(obj.rt, true);
                     
                     -- children
                     dxSetBlendMode("modulate_add");
+                    
+                    dxSetRenderTarget(obj.container, true);
+                    
+                    if (obj.debug) then
+                        dxDrawRectangle(0, 0, obj.containerGui.absSize.x, obj.containerGui.absSize.y, tocolor(255, 255, 0, 127.5));
+                    end
                     
                     for i = 1, #obj.children do
                         local child = obj.children[i];
                         
                         if Instance.func.isA(child, "GuiObject") and (child.rt) then
                             dxDrawImage(
-                                child.clipperGui.absPos.x-obj.clipperGui.absPos.x,
-                                child.clipperGui.absPos.y-obj.clipperGui.absPos.y,
+                                child.absPos.x-obj.containerGui.absPos.x - child.borderSize,
+                                child.absPos.y-obj.containerGui.absPos.y - child.borderSize,
                                 
-                                child.clipperGui.absSize.x, child.clipperGui.absSize.y,
+                                child.absSize.x + 2*child.borderSize,
+                                child.absSize.y + 2*child.borderSize,
                                 
                                 child.rt
                             );
+                            
+                            if Instance.func.isA(child, "GuiContainer") and (child.container) then
+                                dxDrawImage(
+                                    child.containerGui.absPos.x-obj.containerGui.absPos.x,
+                                    child.containerGui.absPos.y-obj.containerGui.absPos.y,
+                                    
+                                    child.containerGui.absSize.x,
+                                    child.containerGui.absSize.y,
+                                    
+                                    child.container
+                                );
+                            end
                         end
                     end
                 end
@@ -162,14 +151,14 @@ local function new(obj)
             end
             
             if (propagate) then obj.parent.draw(true) end
-		end
-	end
+        end
+    end
 end
 
 
 
 Instance.initializable.Frame = {
-	name = name,
+    name = name,
     
     super = super,
     
@@ -179,8 +168,8 @@ Instance.initializable.Frame = {
     
     private  = private,
     readOnly = readOnly,
-	
-	new = new,
+    
+    new = new,
 }
 
 
@@ -209,88 +198,88 @@ fr3.pos = UDim2.new(0.5, 0, 0.5, 0);
 
 
 
-local srx = guiCreateScrollBar(400, 20,  200, 20, true, false);
-local sry = guiCreateScrollBar(400, 40,  200, 20, true, false);
-local srz = guiCreateScrollBar(400, 60,  200, 20, true, false);
+-- local srx = guiCreateScrollBar(400, 20,  200, 20, true, false);
+-- local sry = guiCreateScrollBar(400, 40,  200, 20, true, false);
+-- local srz = guiCreateScrollBar(400, 60,  200, 20, true, false);
 
-local spx = guiCreateScrollBar(400, 100,  200, 20, true, false); guiScrollBarSetScrollPosition(spx, 50);
-local spy = guiCreateScrollBar(400, 120,  200, 20, true, false); guiScrollBarSetScrollPosition(spy, 50);
-local spz = guiCreateScrollBar(400, 140,  200, 20, true, false); guiScrollBarSetScrollPosition(spz, 10);
+-- local spx = guiCreateScrollBar(400, 100,  200, 20, true, false); guiScrollBarSetScrollPosition(spx, 50);
+-- local spy = guiCreateScrollBar(400, 120,  200, 20, true, false); guiScrollBarSetScrollPosition(spy, 50);
+-- local spz = guiCreateScrollBar(400, 140,  200, 20, true, false); guiScrollBarSetScrollPosition(spz, 10);
 
-local fr = fr1;
+-- local fr = fr1;
 
 
-local v1 = Vector3.new(fr.absPos.x, fr.absPos.y, 0);
+-- local v1 = Vector3.new(fr.absPos.x, fr.absPos.y, 0);
 
-addEventHandler("onClientRender", root, function()
-    fr.rotPivot = UDim2.new(guiScrollBarGetScrollPosition(spx)/100, 0, guiScrollBarGetScrollPosition(spy)/100, 0);
+-- addEventHandler("onClientRender", root, function()
+    -- fr.rotPivot = UDim2.new(guiScrollBarGetScrollPosition(spx)/100, 0, guiScrollBarGetScrollPosition(spy)/100, 0);
     
-    fr.rotPivotDepth = (guiScrollBarGetScrollPosition(spz)/100)*10000-1000;
+    -- fr.rotPivotDepth = ((guiScrollBarGetScrollPosition(spz)/100)*10000-1000)/2;
     
-    dxDrawLine(
-        SCREEN_WIDTH/2,
-        SCREEN_HEIGHT/2,
+    -- dxDrawLine(
+        -- SCREEN_WIDTH/2,
+        -- SCREEN_HEIGHT/2,
         
-        fr.absRotPivot.x,
-        fr.absRotPivot.y,
+        -- fr.absRotPivot.x,
+        -- fr.absRotPivot.y,
         
-        tocolor(255, 0, 0), 3
-    );
+        -- tocolor(255, 0, 0), 3
+    -- );
     
-    fr.rot = Vector3.new(guiScrollBarGetScrollPosition(srx)/100*360, guiScrollBarGetScrollPosition(sry)/100*360, guiScrollBarGetScrollPosition(srz)/100*360);
-    
-    
-    local angx = guiScrollBarGetScrollPosition(srx)/100*2*math.pi;
-    local angy = guiScrollBarGetScrollPosition(sry)/100*2*math.pi;
-    local angz = guiScrollBarGetScrollPosition(srz)/100*2*math.pi;
-    
-    local sinx = math.sin(angx);
-    local cosx = math.cos(angx);
-    
-    local siny = math.sin(angy);
-    local cosy = math.cos(angy);
-    
-    local sinz = math.sin(angz);
-    local cosz = math.cos(angz);
-    
-    local rotx = Matrix3x3.new(
-        1, 0,     0,
-        0, cosx, -sinx,
-        0, sinx,  cosx
-    );
-    
-    local roty = Matrix3x3.new(
-         cosy, 0, siny,
-         0,    1, 0,
-        -siny, 0, cosy
-    );
-    
-    local rotz = Matrix3x3.new(
-        cosz, -sinz, 0,
-        sinz,  cosz, 0,
-        0,     0,    1
-    );
+    -- fr.rot = Vector3.new(guiScrollBarGetScrollPosition(srx)/100*360, guiScrollBarGetScrollPosition(sry)/100*360, guiScrollBarGetScrollPosition(srz)/100*360);
     
     
-    local v1_1 = v1-fr.absRotPivot;
+    -- local angx = guiScrollBarGetScrollPosition(srx)/100*2*math.pi;
+    -- local angy = guiScrollBarGetScrollPosition(sry)/100*2*math.pi;
+    -- local angz = guiScrollBarGetScrollPosition(srz)/100*2*math.pi;
     
-    local v1_2 = roty*rotx*rotz*v1_1;
+    -- local sinx = math.sin(angx);
+    -- local cosx = math.cos(angx);
     
-    local v1_3 = v1_2+fr.absRotPivot;
+    -- local siny = math.sin(angy);
+    -- local cosy = math.cos(angy);
+    
+    -- local sinz = math.sin(angz);
+    -- local cosz = math.cos(angz);
+    
+    -- local rotx = Matrix3x3.new(
+        -- 1, 0,     0,
+        -- 0, cosx, -sinx,
+        -- 0, sinx,  cosx
+    -- );
+    
+    -- local roty = Matrix3x3.new(
+         -- cosy, 0, siny,
+         -- 0,    1, 0,
+        -- -siny, 0, cosy
+    -- );
+    
+    -- local rotz = Matrix3x3.new(
+        -- cosz, -sinz, 0,
+        -- sinz,  cosz, 0,
+        -- 0,     0,    1
+    -- );
     
     
-    dxDrawLine(
-        fr.absRotPivot.x,
-        fr.absRotPivot.y,
+    -- local v1_1 = v1-fr.absRotPivot;
+    
+    -- local v1_2 = roty*rotx*rotz*v1_1;
+    
+    -- local v1_3 = v1_2+fr.absRotPivot;
+    
+    
+    -- dxDrawLine(
+        -- fr.absRotPivot.x,
+        -- fr.absRotPivot.y,
         
-        fr.absRotPerspective.x+(1000/(v1_3.z+1000))*(v1_3.x-fr.absRotPerspective.x),
-        fr.absRotPerspective.y+(1000/(v1_3.z+1000))*(v1_3.y-fr.absRotPerspective.y),
+        -- fr.absRotPerspective.x+(1000/(v1_3.z+1000))*(v1_3.x-fr.absRotPerspective.x),
+        -- fr.absRotPerspective.y+(1000/(v1_3.z+1000))*(v1_3.y-fr.absRotPerspective.y),
         
-        tocolor(0, 255, 0), 3
-    );
-    
-    -- print(fr.rot);
-end);
+        -- tocolor(0, 255, 0), 3
+    -- );
+-- end);
+
+
 
 -- REFERENCES:
 -- http://www.scratchapixel.com/lessons/mathematics-physics-for-computer-graphics/geometry/how-does-matrix-work-part-1
@@ -349,6 +338,8 @@ end);
 -- |                                => sx = cx + (1000/(pz+1000))*(px-cx)                                       |
 -- |                                                                                                            |
 -- +------------------------------------------------------------------------------------------------------------+
+
+
 
 -- local v = 100;
 

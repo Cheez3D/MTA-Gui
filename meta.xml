@@ -56,7 +56,7 @@
     
     <file src="shaders/nothing.fx"/>
     <file src="shaders/mask.fx"/>
-    <file src="shaders/gaussianBlur.fx"/> <script src="shaders/gaussianBlur.lua" type="client"/>
+    <file src="shaders/gaussianBlur.fx"/> <!-- <script src="shaders/gaussianBlur.lua" type="client"/> -->
     <file src="shaders/negative.fx"/>
     
     
@@ -86,11 +86,12 @@
     
     <!-- <script src="classes/Instance/Mouse.lua" type="client"/> -->
     
-    <script src="classes/Instance/GuiBase2D.lua" type="client"/>
-    <script src="classes/Instance/GuiObject.lua" type="client"/>
-    <script src="classes/Instance/ScreenGui.lua" type="client"/>
-    <script src="classes/Instance/Frame.lua"     type="client"/>
-    <script src="classes/Instance/Image.lua"     type="client"/>
+    <script src="classes/Instance/GuiBase2D.lua"    type="client"/>
+    <script src="classes/Instance/GuiObject.lua"    type="client"/>
+    <script src="classes/Instance/GuiContainer.lua" type="client"/>
+    <script src="classes/Instance/ScreenGui.lua"    type="client"/>
+    <script src="classes/Instance/Frame.lua"        type="client"/>
+    <script src="classes/Instance/Image.lua"        type="client"/>
     
     
     <script src="init-end.lua" type="client"/>

@@ -31,7 +31,7 @@ technique _mask {
         // SrcBlend  = SrcAlpha;
         // DestBlend = InvSrcAlpha;
         
-        PixelShader = compile ps_1_0 ps();
+        PixelShader = compile ps_2_0 ps();
     }
 }
 
