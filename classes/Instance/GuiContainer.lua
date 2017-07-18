@@ -26,6 +26,7 @@ function func.update_containerGui(obj)
         or                                 obj.parent.containerGui
     ) or nil;
     
+    
     for i = 1, #obj.children do
         local child = obj.children[i];
         
@@ -33,6 +34,14 @@ function func.update_containerGui(obj)
             func.update_containerGui(child);
         end
     end
+end
+
+function func.update_containerTransformPivot(obj)
+    
+end
+
+function func.update_containerTransformPerspective(obj)
+    
 end
 
 function func.update_container(obj)
@@ -44,6 +53,7 @@ function func.update_container(obj)
         
         true
     ) or nil;
+    
     
     for i = 1, #obj.children do
         local child = obj.children[i];
@@ -65,13 +75,7 @@ function set.parent(obj, parent, prev, k)
     func.update_container(obj);
     
     
-    for i = 1, #obj.children do
-        local child = obj.children[i];
-        
-        if Instance.func.isA(child, "GuiObject") then
-            GuiObject.func.update(child);
-        end
-    end
+    GuiObject.func.update(obj);
     
     obj.draw(true);
 end
@@ -85,13 +89,7 @@ function set.size(obj, size, prev, k)
     func.update_container(obj);
     
     
-    for i = 1, #obj.children do
-        local child = obj.children[i];
-        
-        if Instance.func.isA(child, "GuiObject") then
-            GuiObject.func.update(child);
-        end
-    end
+    GuiObject.func.update(obj);
     
     obj.draw(true);
 end
@@ -106,13 +104,7 @@ function set.visible(obj, visible, prev, k)
     
     
     if (visible) then
-        for i = 1, #obj.children do
-            local child = obj.children[i];
-            
-            if Instance.func.isA(child, "GuiObject") then
-                GuiObject.func.update(child);
-            end
-        end
+        GuiObject.func.update(obj);
     end
     
     obj.draw(true);
@@ -134,13 +126,7 @@ function set.clipsDescendants(obj, clipsDescendants)
     func.update_container(obj);
     
     
-    for i = 1, #obj.children do
-        local child = obj.children[i];
-        
-        if Instance.func.isA(child, "GuiObject") then
-            func.update(child);
-        end
-    end
+    GuiObject.func.update(obj);
     
     obj.draw(true);
 end

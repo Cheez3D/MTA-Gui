@@ -26,17 +26,19 @@ local function new(obj)
     function obj.draw(propagate)
         if (obj.rootGui) then
             if (obj.rt) then
-                dxSetBlendMode("modulate_add");
+                dxSetBlendMode("add");
                 
-                dxSetRenderTarget(obj.isRotated and obj.rootGui.rt or obj.rt, true);
+                dxSetRenderTarget(obj.rt, true);
+                
+                if (obj.debug) then
+                    dxDrawRectangle(0, 0, obj.rtAbsSize.x, obj.rtAbsSize.y, tocolor(255, 0, 255, 127.5));
+                end
                 
                 -- border
                 dxDrawRectangle(
-                    0,
-                    0,
+                    GuiObject.RT_ADDITIONAL_MARGIN, GuiObject.RT_ADDITIONAL_MARGIN,
                     
-                    obj.absSize.x + 2*obj.borderSize,
-                    obj.absSize.y + 2*obj.borderSize,
+                    obj.absSize.x+2*obj.borderSize, obj.absSize.y+2*obj.borderSize,
                     
                     tocolor(obj.borderColor3.r, obj.borderColor3.g, obj.borderColor3.b, 255*(1-obj.borderTransparency))
                 );
@@ -45,102 +47,70 @@ local function new(obj)
                 dxSetBlendMode("overwrite");
                 
                 dxDrawRectangle(
-                    obj.borderSize,
-                    obj.borderSize,
+                    GuiObject.RT_ADDITIONAL_MARGIN+obj.borderSize,
+                    GuiObject.RT_ADDITIONAL_MARGIN+obj.borderSize,
                     
-                    obj.absSize.x,
-                    obj.absSize.y,
+                    obj.absSize.x, obj.absSize.y,
                     
                     tocolor(obj.bgColor3.r, obj.bgColor3.g, obj.bgColor3.b, 255*(1-obj.bgTransparency))
                 );
                 
-                if (obj.isRotated) then
-                    -- dxSetRenderTarget(obj.rootGui.rt, true);
+                -- children
+                dxSetBlendMode("add");
+                
+                dxSetRenderTarget(obj.container, true);
+                
+                if (obj.debug) then
+                    dxDrawRectangle(0, 0, obj.containerGui.absSize.x, obj.containerGui.absSize.y, tocolor(0, 255, 0, 127.5));
+                end
+                
+                for i = 1, #obj.children do
+                    local child = obj.children[i];
                     
-                    -- children
-                    dxSetBlendMode("modulate_add");
-                    
-                    for i = 1, #obj.children do
-                        local child = obj.children[i];
-                        
-                        if Instance.func.isA(child, "GuiObject") and (child.rt) then
-                            dxDrawImage(
-                                obj.rotRtOffset.x + child.clipperGui.absPos.x-obj.clipperGui.absPos.x,
-                                obj.rotRtOffset.y + child.clipperGui.absPos.y-obj.clipperGui.absPos.y,
+                    if Instance.func.isA(child, "GuiObject") and (child.rt) then
+                        if (child.isRotated) then
+                            dxSetShaderTransform(
+                                GuiObject.SHADER,
                                 
-                                child.clipperGui.absSize.x, child.clipperGui.absSize.y,
+                                child.rot.y, child.rot.x, child.rot.z,
                                 
-                                child.rt
+                                child.rtTransformPivot.x, child.rtTransformPivot.y, child.rtTransformPivot.z, false,
+                                
+                                child.isRotated3D and child.rtTransformPerspective.x or 0,
+                                child.isRotated3D and child.rtTransformPerspective.y or 0,
+                                not child.isRotated3D
                             );
+                            
+                            dxSetShaderValue(GuiObject.SHADER, "image", child.rt);
                         end
-                    end
-                    
-                    -- rotation
-                    dxSetRenderTarget(obj.rt, true);
-                    
-                    if (obj.isRotated3D) then
-                        dxSetShaderTransform(
-                            GuiObject.SHADER,
-                            
-                            obj.rot.y, obj.rot.x, obj.rot.z,
-                            
-                            obj.rotTransformPivot.x, obj.rotTransformPivot.y, obj.rotTransformPivot.z, false,
-                            
-                            obj.rotTransformPerspective.x, obj.rotTransformPerspective.y, false
-                        );
-                    else
-                        dxSetShaderTransform(
-                            GuiObject.SHADER,
-                            
-                            obj.rot.y, obj.rot.x, obj.rot.z,
-                            
-                            obj.rotTransformPivot.x, obj.rotTransformPivot.y, obj.rotTransformPivot.z, false
-                            
-                            -- if object is not rotated 3d (i.e. rotation on x and y flips the object or object is only rotated on z axis)
-                            -- then do not use rotTransformPerspective to avoid blurring
-                        );
-                    end
-                    
-                    dxSetShaderValue(GuiObject.SHADER, "image", obj.rootGui.rt);
-                    
-                    dxDrawImage(-obj.rotRtOffset.x, -obj.rotRtOffset.y, obj.rootGui.absSize.x, obj.rootGui.absSize.y, GuiObject.SHADER);
-                else
-                    -- dxSetRenderTarget(obj.rt, true);
-                    
-                    -- children
-                    dxSetBlendMode("modulate_add");
-                    
-                    dxSetRenderTarget(obj.container, true);
-                    
-                    if (obj.debug) then
-                        dxDrawRectangle(0, 0, obj.containerGui.absSize.x, obj.containerGui.absSize.y, tocolor(255, 255, 0, 127.5));
-                    end
-                    
-                    for i = 1, #obj.children do
-                        local child = obj.children[i];
                         
-                        if Instance.func.isA(child, "GuiObject") and (child.rt) then
-                            dxDrawImage(
-                                child.absPos.x-obj.containerGui.absPos.x - child.borderSize,
-                                child.absPos.y-obj.containerGui.absPos.y - child.borderSize,
-                                
-                                child.absSize.x + 2*child.borderSize,
-                                child.absSize.y + 2*child.borderSize,
-                                
-                                child.rt
-                            );
+                        dxDrawImage(
+                            child.rtAbsPos.x-obj.containerGui.absPos.x, child.rtAbsPos.y-obj.containerGui.absPos.y,
                             
-                            if Instance.func.isA(child, "GuiContainer") and (child.container) then
-                                dxDrawImage(
-                                    child.containerGui.absPos.x-obj.containerGui.absPos.x,
-                                    child.containerGui.absPos.y-obj.containerGui.absPos.y,
+                            child.rtAbsSize.x, child.rtAbsSize.y,
+                            
+                            child.isRotated and GuiObject.SHADER or child.rt
+                        );
+                        
+                        if Instance.func.isA(child, "GuiContainer") and (child.container) then
+                            if (child.isRotated) then
+                                dxSetShaderTransform(
+                                    GuiObject.SHADER,
                                     
-                                    child.containerGui.absSize.x,
-                                    child.containerGui.absSize.y,
-                                    
-                                    child.container
+                                    child.rot.y, child.rot.x, child.rot.z
                                 );
+                                
+                                dxSetShaderValue(GuiObject.SHADER, "image", child.container);
                             end
+                            
+                            dxDrawImage(
+                                child.containerGui.absPos.x-obj.containerGui.absPos.x,
+                                child.containerGui.absPos.y-obj.containerGui.absPos.y,
+                                
+                                child.containerGui.absSize.x, child.containerGui.absSize.y,
+                                
+                                child.isRotated and GuiObject.SHADER or child.container
+                            );
                         end
                     end
                 end
@@ -180,53 +150,56 @@ Instance.initializable.Frame = {
 scrGui = Instance.new("ScreenGui"); scrGui.name = "scrGui";
 
 fr1 = Instance.new("Frame", scrGui); fr1.name = "fr1";
-
-fr1.pos = UDim2.new(0.5, 0, 0.5, 0);
-fr1.size = UDim2.new(0, 300, 0, 300);
+fr1.pos = UDim2.new(0.6, 0, 0.6, 0);
+fr1.size = UDim2.new(0.2, 0, 0.3, 0);
 fr1.borderSize = 5;
+fr1.borderColor3 = Color3.new(0, 0, 255);
 
 fr2 = Instance.new("Frame", fr1); fr2.name = "fr2";
-
 fr2.pos = UDim2.new(0.5, 0, 0, 10);
 fr2.bgColor3 = Color3.new(223, 196, 125);
 fr2.borderColor3 = Color3.new(0, 0, 0);
-
 
 fr3 = Instance.new("Frame", fr2); fr3.name = "fr3";
 fr3.bgColor3 = Color3.new(0, 196, 0);
 fr3.pos = UDim2.new(0.5, 0, 0.5, 0);
 
+fr4 = Instance.new("Frame", fr1); fr3.name = "fr4";
+fr4.bgColor3 = Color3.new(255, 255, 0);
+fr4.pos = UDim2.new(0.05, 0, 0.05, 0);
+fr4.size = UDim2.new(0.25, 0, 0.3, 0);
 
 
--- local srx = guiCreateScrollBar(400, 20,  200, 20, true, false);
--- local sry = guiCreateScrollBar(400, 40,  200, 20, true, false);
--- local srz = guiCreateScrollBar(400, 60,  200, 20, true, false);
 
--- local spx = guiCreateScrollBar(400, 100,  200, 20, true, false); guiScrollBarSetScrollPosition(spx, 50);
--- local spy = guiCreateScrollBar(400, 120,  200, 20, true, false); guiScrollBarSetScrollPosition(spy, 50);
--- local spz = guiCreateScrollBar(400, 140,  200, 20, true, false); guiScrollBarSetScrollPosition(spz, 10);
+local srx = guiCreateScrollBar(400, 20,  200, 20, true, false);
+local sry = guiCreateScrollBar(400, 40,  200, 20, true, false);
+local srz = guiCreateScrollBar(400, 60,  200, 20, true, false);
 
--- local fr = fr1;
+local spx = guiCreateScrollBar(400, 100,  200, 20, true, false); guiScrollBarSetScrollPosition(spx, 50);
+local spy = guiCreateScrollBar(400, 120,  200, 20, true, false); guiScrollBarSetScrollPosition(spy, 50);
+local spz = guiCreateScrollBar(400, 140,  200, 20, true, false); guiScrollBarSetScrollPosition(spz, 10);
+
+local fr = fr1;
 
 
 -- local v1 = Vector3.new(fr.absPos.x, fr.absPos.y, 0);
 
--- addEventHandler("onClientRender", root, function()
-    -- fr.rotPivot = UDim2.new(guiScrollBarGetScrollPosition(spx)/100, 0, guiScrollBarGetScrollPosition(spy)/100, 0);
+addEventHandler("onClientRender", root, function()
+    fr.rotPivot = UDim2.new(guiScrollBarGetScrollPosition(spx)/100, 0, guiScrollBarGetScrollPosition(spy)/100, 0);
     
-    -- fr.rotPivotDepth = ((guiScrollBarGetScrollPosition(spz)/100)*10000-1000)/2;
+    fr.rotPivotDepth = ((guiScrollBarGetScrollPosition(spz)/100)*10000-1000)/2;
     
-    -- dxDrawLine(
-        -- SCREEN_WIDTH/2,
-        -- SCREEN_HEIGHT/2,
+    dxDrawLine(
+        SCREEN_WIDTH/2,
+        SCREEN_HEIGHT/2,
         
-        -- fr.absRotPivot.x,
-        -- fr.absRotPivot.y,
+        fr.absRotPivot.x,
+        fr.absRotPivot.y,
         
-        -- tocolor(255, 0, 0), 3
-    -- );
+        tocolor(255, 0, 0), 3
+    );
     
-    -- fr.rot = Vector3.new(guiScrollBarGetScrollPosition(srx)/100*360, guiScrollBarGetScrollPosition(sry)/100*360, guiScrollBarGetScrollPosition(srz)/100*360);
+    fr.rot = Vector3.new(guiScrollBarGetScrollPosition(srx)/100*360, guiScrollBarGetScrollPosition(sry)/100*360, guiScrollBarGetScrollPosition(srz)/100*360);
     
     
     -- local angx = guiScrollBarGetScrollPosition(srx)/100*2*math.pi;
@@ -277,7 +250,7 @@ fr3.pos = UDim2.new(0.5, 0, 0.5, 0);
         
         -- tocolor(0, 255, 0), 3
     -- );
--- end);
+end);
 
 
 

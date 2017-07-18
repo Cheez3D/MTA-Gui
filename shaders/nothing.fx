@@ -2,7 +2,9 @@ extern texture image;
 
 technique nothing {
     pass p0 {
-        AlphaBlendEnable = false;
+        AlphaBlendEnable = true;
+        
+        SrcBlend = One;
         
         Texture[0] = image;
     }

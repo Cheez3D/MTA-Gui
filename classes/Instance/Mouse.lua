@@ -258,13 +258,3 @@ Instance.initializable.Mouse = {
 local mouse = Instance.new("Mouse");
 
 Instance.privateClass.Mouse = true;
-
-
-
-
-
-addEventHandler("onClientRestore", root, function(clearedRts)
-    if (clearedRts) then
-        print("Render Targets were cleared!");
-    end
-end);

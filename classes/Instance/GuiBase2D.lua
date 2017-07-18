@@ -53,3 +53,13 @@ GuiBase2D = {
     
     new = new,
 }
+
+
+
+
+
+addEventHandler("onClientRestore", root, function(clearedRts)
+    if (clearedRts) then
+        print("Render Targets were cleared!");
+    end
+end);

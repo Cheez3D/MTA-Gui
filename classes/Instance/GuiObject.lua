@@ -24,6 +24,8 @@ local readOnly = setmetatable({}, { __index = function(tbl, key) return super.re
 
 
 
+local RT_ADDITIONAL_MARGIN = 1; -- added so that rt can be properly anti-aliased when rotated
+
 local MAX_BORDER_SIZE = 100;
 
 local ROT_NEAR_Z_PLANE        = -1000;
@@ -47,8 +49,7 @@ local function new(obj)
     obj.borderSize         = 1;
     obj.borderTransparency = 0;
     
-    obj.size = nil;
-    
+    obj.size      = nil;
     obj.posOrigin = UDim2.new(0, 0, 0, 0);
     obj.pos       = nil;
     
@@ -86,23 +87,6 @@ function func.update_rootGui(obj)
 end
 
 
-function func.update_clipperGui(obj)
-    obj.clipperGui = obj.rootGui and (
-           (obj.parent == obj.rootGui)   and obj.rootGui
-        or (obj.parent.clipsDescendants) and obj.parent
-        or                                   obj.parent.clipperGui
-    ) or nil;
-    
-    for i = 1, #obj.children do
-        local child = obj.children[i];
-        
-        if Instance.func.isA(child, "GuiObject") then
-            func.update_clipperGui(child);
-        end
-    end
-end
-
-
 function func.update_absSize(obj)
     obj.absSize = obj.rootGui and Vector2.new(
         floor(obj.size.x.offset + obj.parent.absSize.x*obj.size.x.scale),
@@ -117,7 +101,6 @@ function func.update_absSize(obj)
         end
     end
 end
-
 
 function func.update_absPos(obj)
     obj.absPos = obj.rootGui and Vector2.new(
@@ -142,6 +125,15 @@ function func.update_absRotPivot(obj)
         
         obj.rotPivotDepth
     ) or nil;
+    
+    
+    for i = 1, #obj.children do
+        local child = obj.children[i];
+        
+        if Instance.func.isA(child, "GuiObject") then
+            func.update_absRotPivot(child);
+        end
+    end
 end
 
 function func.update_absRotPerspective(obj)
@@ -149,6 +141,15 @@ function func.update_absRotPerspective(obj)
         floor(obj.absPos.x + (obj.rotPerspective.x.offset + obj.absSize.x*obj.rotPerspective.x.scale)),
         floor(obj.absPos.y + (obj.rotPerspective.y.offset + obj.absSize.y*obj.rotPerspective.y.scale))
     ) or nil;
+    
+    
+    for i = 1, #obj.children do
+        local child = obj.children[i];
+        
+        if Instance.func.isA(child, "GuiObject") then
+            func.update_absRotPerspective(child);
+        end
+    end
 end
 
 function func.update_isRotated(obj)
@@ -169,46 +170,87 @@ function func.update_isRotated3D(obj)
     end
 end
 
-function func.update_rotParams(obj)
-    -- if object is rotated then calculate offset for drawing object exactly in the middle of the rootGui rt
-    -- so that when rotating the chance of something to be percieved as cut off is very small
-    -- (something will be seen as cut off only when it is drawn outside of the rootGui rt boundaries and the object is rotated
-    --  so that it can be visible inside the parent)
+
+function func.update_rtSpacing(obj)
+    obj.rtLeftSpacing  = obj.rootGui and RT_ADDITIONAL_MARGIN or nil;
+    obj.rtRightSpacing = obj.rootGui and RT_ADDITIONAL_MARGIN or nil;
     
-    obj.rotRtOffset = obj.rootGui and obj.isRotated and Vector2.new(
-        floor((obj.rootGui.absSize.x-obj.clipperGui.absSize.x)/2),
-        floor((obj.rootGui.absSize.y-obj.clipperGui.absSize.y)/2)
+    obj.rtTopSpacing    = obj.rootGui and RT_ADDITIONAL_MARGIN or nil;
+    obj.rtBottomSpacing = obj.rootGui and RT_ADDITIONAL_MARGIN or nil;
+end
+
+function func.update_rtAbsSize(obj)
+    obj.rtAbsSize = obj.rootGui and Vector2.new(
+        obj.rtLeftSpacing + obj.borderSize + obj.absSize.x + obj.borderSize + obj.rtRightSpacing,
+        obj.rtTopSpacing  + obj.borderSize + obj.absSize.y + obj.borderSize + obj.rtBottomSpacing
     ) or nil;
     
-    
-    obj.rotTransformPivot = obj.rootGui and obj.isRotated and Vector3.new(
-        2*((-obj.clipperGui.absSize.x/2 + obj.absRotPivot.x-obj.clipperGui.absPos.x)/obj.clipperGui.absSize.x),
-        2*((-obj.clipperGui.absSize.y/2 + obj.absRotPivot.y-obj.clipperGui.absPos.y)/obj.clipperGui.absSize.y),
-        
-        2*(obj.absRotPivot.z/ROT_PIVOT_DEPTH_UNIT)
-    ) or nil;
-    
-    obj.rotTransformPerspective = obj.rootGui and obj.isRotated and Vector2.new(
-        2*((-obj.clipperGui.absSize.x/2 + obj.absRotPerspective.x-obj.clipperGui.absPos.x)/obj.clipperGui.absSize.x),
-        2*((-obj.clipperGui.absSize.y/2 + obj.absRotPerspective.y-obj.clipperGui.absPos.y)/obj.clipperGui.absSize.y)
-    ) or nil;
     
     for i = 1, #obj.children do
         local child = obj.children[i];
         
         if Instance.func.isA(child, "GuiObject") then
-            func.update_rotParams(child);
+            func.update_rtAbsSize(child);
         end
     end
 end
 
+function func.update_rtAbsPos(obj)
+    obj.rtAbsPos = obj.rootGui and Vector2.new(
+        obj.absPos.x - (obj.borderSize + obj.rtLeftSpacing),
+        obj.absPos.y - (obj.borderSize + obj.rtTopSpacing)
+    ) or nil;
+    
+    
+    for i = 1, #obj.children do
+        local child = obj.children[i];
+        
+        if Instance.func.isA(child, "GuiObject") then
+            func.update_rtAbsPos(child);
+        end
+    end
+end
+
+function func.update_rtTransformPivot(obj)
+    obj.rtTransformPivot = obj.rootGui and obj.isRotated and Vector3.new(
+        2*(-obj.rtAbsSize.x/2 + obj.absRotPivot.x-obj.rtAbsPos.x)/(obj.parent == obj.rootGui and obj.parent.absSize.x or obj.parent.containerGui.absSize.x),
+        2*(-obj.rtAbsSize.y/2 + obj.absRotPivot.y-obj.rtAbsPos.y)/(obj.parent == obj.rootGui and obj.parent.absSize.y or obj.parent.containerGui.absSize.y),
+        
+        2*(obj.absRotPivot.z/ROT_PIVOT_DEPTH_UNIT)
+    ) or nil;
+    
+    
+    for i = 1, #obj.children do
+        local child = obj.children[i];
+        
+        if Instance.func.isA(child, "GuiObject") then
+            func.update_rtTransformPivot(child);
+        end
+    end
+end
+
+function func.update_rtTransformPerspective(obj)
+    obj.rtTransformPerspective = obj.rootGui and obj.isRotated3D and Vector2.new(
+        2*(-obj.rtAbsSize.x/2 + obj.absRotPerspective.x-obj.rtAbsPos.x)/(obj.parent == obj.rootGui and obj.parent.absSize.x or obj.parent.containerGui.absSize.x),
+        2*(-obj.rtAbsSize.y/2 + obj.absRotPerspective.y-obj.rtAbsPos.y)/(obj.parent == obj.rootGui and obj.parent.absSize.y or obj.parent.containerGui.absSize.y)
+    ) or nil;
+    
+    
+    for i = 1, #obj.children do
+        local child = obj.children[i];
+        
+        if Instance.func.isA(child, "GuiObject") then
+            func.update_rtTransformPerspective(child);
+        end
+    end
+end
 
 function func.update_rt(obj)
     if isElement(obj.rt) then destroyElement(obj.rt) end
     
-    obj.rt = obj.rootGui and obj.visible and dxCreateRenderTarget(obj.absSize.x + 2*obj.borderSize, obj.absSize.y + 2*obj.borderSize, true) or nil;
+    obj.rt = obj.rootGui and obj.visible and dxCreateRenderTarget(obj.rtAbsSize.x, obj.rtAbsSize.y, true) or nil;
     
-    -- recursively update all children rts
+    
     for i = 1, #obj.children do
         local child = obj.children[i];
         
@@ -247,24 +289,21 @@ function set.parent(obj, parent, prev, k)
     func.update_rootGui(obj);
     
     func.update_absSize(obj);
-    
     func.update_absPos(obj);
     
     func.update_absRotPivot(obj);
     func.update_absRotPerspective(obj);
-    func.update_rotParams(obj);
     
+    func.update_rtSpacing(obj);
+    func.update_rtAbsSize(obj);
+    func.update_rtAbsPos(obj);
+    func.update_rtTransformPivot(obj);
+    func.update_rtTransformPerspective(obj);
     func.update_rt(obj);
     
     
     if (k == 1) then
-        for i = 1, #obj.children do
-            local child = obj.children[i];
-            
-            if Instance.func.isA(child, "GuiObject") then
-                func.update(child);
-            end
-        end
+        func.update(obj);
         
         obj.draw(true);
     end
@@ -329,16 +368,14 @@ function set.borderSize(obj, borderSize)
     obj.borderSize = floor(borderSize);
     
     
+    func.update_rtAbsSize(obj);
+    func.update_rtAbsPos(obj);
+    func.update_rtTransformPivot(obj);
+    func.update_rtTransformPerspective(obj);
     func.update_rt(obj);
     
     
-    for i = 1, #obj.children do
-        local child = obj.children[i];
-        
-        if Instance.func.isA(child, "GuiObject") then
-            func.update(child);
-        end
-    end
+    func.update(obj);
     
     obj.draw(true);
 end
@@ -372,24 +409,20 @@ function set.size(obj, size, prev, k)
     
     
     func.update_absSize(obj);
-    
     func.update_absPos(obj);
     
     func.update_absRotPivot(obj);
     func.update_absRotPerspective(obj);
-    func.update_rotParams(obj);
     
+    func.update_rtAbsSize(obj);
+    func.update_rtAbsPos(obj);
+    func.update_rtTransformPivot(obj);
+    func.update_rtTransformPerspective(obj);
     func.update_rt(obj);
     
     
     if (k == 1) then
-        for i = 1, #obj.children do
-            local child = obj.children[i];
-            
-            if Instance.func.isA(child, "GuiObject") then
-                func.update(child);
-            end
-        end
+        func.update(obj);
         
         obj.draw(true);
     end
@@ -411,16 +444,13 @@ function set.pos(obj, pos)
     
     func.update_absRotPivot(obj);
     func.update_absRotPerspective(obj);
-    func.update_rotParams(obj);
+    
+    func.update_rtAbsPos(obj);
+    func.update_rtTransformPivot(obj);
+    func.update_rtTransformPerspective(obj);
     
     
-    for i = 1, #obj.children do
-        local child = obj.children[i];
-        
-        if Instance.func.isA(child, "GuiObject") then
-            func.update(child);
-        end
-    end
+    func.update(obj);
     
     obj.draw(true);
 end
@@ -440,16 +470,13 @@ function set.posOrigin(obj, posOrigin)
     
     func.update_absRotPivot(obj);
     func.update_absRotPerspective(obj);
-    func.update_rotParams(obj);
+    
+    func.update_rtAbsPos(obj);
+    func.update_rtTransformPivot(obj);
+    func.update_rtTransformPerspective(obj);
     
     
-    for i = 1, #obj.children do
-        local child = obj.children[i];
-        
-        if Instance.func.isA(child, "GuiObject") then
-            func.update(child);
-        end
-    end
+    func.update(obj);
     
     obj.draw(true);
 end
@@ -468,7 +495,9 @@ function set.rot(obj, rot)
     
     func.update_isRotated(obj);
     func.update_isRotated3D(obj);
-    func.update_rotParams(obj);
+    
+    func.update_rtTransformPivot(obj);
+    func.update_rtTransformPerspective(obj);
     
     
     obj.draw(true);
@@ -485,7 +514,8 @@ function set.rotPivot(obj, rotPivot)
     
     
     func.update_absRotPivot(obj);
-    func.update_rotParams(obj);
+    
+    func.update_rtTransformPivot(obj);
     
     
     obj.draw(true);
@@ -505,7 +535,8 @@ function set.rotPivotDepth(obj, rotPivotDepth)
     
     func.update_absRotPivot(obj);
     func.update_isRotated3D(obj);
-    func.update_rotParams(obj);
+    
+    func.update_rtTransformPivot(obj);
     
     
     obj.draw(true);
@@ -523,7 +554,8 @@ function set.rotPerspective(obj, rotPerspective)
     
     
     func.update_absRotPerspective(obj);
-    func.update_rotParams(obj);
+    
+    func.update_rtTransformPerspective(obj);
     
     
     obj.draw(true);
@@ -546,13 +578,7 @@ function set.visible(obj, visible, prev, k)
     
     if (k == 1) then
         if (visible) then
-            for i = 1, #obj.children do
-                local child = obj.children[i];
-                
-                if Instance.func.isA(child, "GuiObject") then
-                    func.update(child);
-                end
-            end
+            func.update(obj);
         end
         
         obj.draw(true);
@@ -590,6 +616,16 @@ GuiObject = {
     
     new = new,
     
+    
+    RT_ADDITIONAL_MARGIN = RT_ADDITIONAL_MARGIN,
+    
+    MAX_BORDER_SIZE = MAX_BORDER_SIZE,
+
+    ROT_NEAR_Z_PLANE        = ROT_NEAR_Z_PLANE,
+    ROT_ACTUAL_NEAR_Z_PLANE = ROT_ACTUAL_NEAR_Z_PLANE,
+    ROT_FAR_Z_PLANE         = ROT_FAR_Z_PLANE,
+
+    ROT_PIVOT_DEPTH_UNIT = ROT_PIVOT_DEPTH_UNIT,
     
     SHADER = SHADER,
 }

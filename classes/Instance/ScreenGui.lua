@@ -31,7 +31,7 @@ local function new(obj)
     obj.absRotPivot = Vector2.new(0, 0);
     
     function obj.draw()
-        dxSetBlendMode("modulate_add");
+        dxSetBlendMode("add");
         
         dxSetRenderTarget(obj.rt, true);
         
@@ -39,25 +39,56 @@ local function new(obj)
             local child = obj.children[i];
             
             if Instance.func.isA(child, "GuiObject") and (child.rt) then
-                dxDrawImage(
-                    child.absPos.x-obj.absPos.x - child.borderSize,
-                    child.absPos.y-obj.absPos.y - child.borderSize,
+                if (child.isRotated) then
+                    dxSetShaderTransform(
+                        GuiObject.SHADER,
                         
-                    child.absSize.x + 2*child.borderSize,
-                    child.absSize.y + 2*child.borderSize,
+                        child.rot.y, child.rot.x, child.rot.z,
+                        
+                        child.rtTransformPivot.x, child.rtTransformPivot.y, child.rtTransformPivot.z, false,
+                        
+                        child.isRotated3D and child.rtTransformPerspective.x or 0,
+                        child.isRotated3D and child.rtTransformPerspective.y or 0,
+                        not child.isRotated3D
+                    );
                     
-                    child.rt
+                    dxSetShaderValue(GuiObject.SHADER, "image", child.rt);
+                end
+                
+                dxDrawImage(
+                    child.rtAbsPos.x-obj.absPos.x, child.rtAbsPos.y-obj.absPos.y,
+                        
+                    child.rtAbsSize.x, child.rtAbsSize.y,
+                    
+                    child.isRotated and GuiObject.SHADER or child.rt
                 );
                 
-                if Instance.func.isA(child, "GuiContainer") --[[and (child.container)]] then
+                if Instance.func.isA(child, "GuiContainer") and (child.container) then
+                    if (child.isRotated) then
+                        dxSetShaderTransform(
+                            GuiObject.SHADER,
+                            
+                            child.rot.y, child.rot.x, child.rot.z,
+                            
+                            2*(-child.containerGui.absSize.x/2 + child.absRotPivot.x-child.containerGui.absPos.x)/obj.absSize.x,
+                            2*(-child.containerGui.absSize.y/2 + child.absRotPivot.y-child.containerGui.absPos.y)/obj.absSize.y,
+                            2*(child.absRotPivot.z/GuiObject.ROT_PIVOT_DEPTH_UNIT),
+                            false,
+                            
+                            child.isRotated3D and 2*(-child.containerGui.absSize.x/2 + child.absRotPerspective.x-child.containerGui.absPos.x)/obj.absSize.x or 0,
+                            child.isRotated3D and 2*(-child.containerGui.absSize.y/2 + child.absRotPerspective.y-child.containerGui.absPos.y)/obj.absSize.y or 0,
+                            not child.isRotated3D
+                        );
+                        
+                        dxSetShaderValue(GuiObject.SHADER, "image", child.container);
+                    end
+                    
                     dxDrawImage(
-                        child.containerGui.absPos.x-obj.absPos.x,
-                        child.containerGui.absPos.y-obj.absPos.y,
+                        child.containerGui.absPos.x-obj.absPos.x, child.containerGui.absPos.y-obj.absPos.y,
                         
-                        child.containerGui.absSize.x,
-                        child.containerGui.absSize.y,
+                        child.containerGui.absSize.x, child.containerGui.absSize.y,
                         
-                        child.container
+                        child.isRotated and GuiObject.SHADER or child.container
                     );
                 end
             end
@@ -75,7 +106,7 @@ local function new(obj)
     function obj.render()
         dxSetBlendMode("modulate_add");
         
-        dxDrawImage(0, 0, obj.absSize.x, obj.absSize.y, obj.rt);
+        dxDrawImage(obj.absPos.x, obj.absPos.y, obj.absSize.x, obj.absSize.y, obj.rt);
         
         dxSetBlendMode("blend");
     end
