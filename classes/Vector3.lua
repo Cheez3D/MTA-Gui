@@ -19,7 +19,7 @@ local meta = {
     
         local func_f = func[key];
         if (func_f) then
-            return (function(...) return func_f(obj, ...) end); -- might be able to do memoization here
+            return (function(...) return func_f(obj, ...) end);
         end
         
         local get_f = get[key];
@@ -84,8 +84,8 @@ local meta = {
         
         local proxy2_t = type(proxy2);
         
-        if (proxy2_t ~= "Vector3" and proxy2_t ~= "Matrix3x3") then
-            error("bad operand #2 to '__mul' (Vector3 or Matrix3x3 expected, got " ..proxy2_t.. ")", 2);
+        if (proxy2_t ~= "Vector3" and proxy2_t ~= "Vector2" and proxy2_t ~= "Matrix3x3") then
+            error("bad operand #2 to '__mul' (Vector3/Vector2/Matrix3x3 expected, got " ..proxy2_t.. ")", 2);
         end
         
         
@@ -93,7 +93,9 @@ local meta = {
         local obj1 = PROXY__OBJ[proxy1];
         local obj2 = PROXY__OBJ[proxy2];
         
-        if (proxy2_t == "Matrix3x3") then
+        if (proxy2_t == "Vector2") then
+            return new(obj1.x*obj2.x, obj1.y*obj2.y, obj1.z);
+        elseif (proxy2_t == "Matrix3x3") then
             return new(
                 obj1.x*obj2.m00 + obj1.y*obj2.m10 + obj1.z*obj2.m20,
                 obj1.x*obj2.m01 + obj1.y*obj2.m11 + obj1.z*obj2.m21,
@@ -113,14 +115,18 @@ local meta = {
         
         local proxy2_t = type(proxy2);
         
-        if (proxy2_t ~= "Vector3") then
-            error("bad operand #2 to '__div' (Vector3 expected, got " ..proxy2_t.. ")", 2);
+        if (proxy2_t ~= "Vector3" and proxy2_t ~= "Vector2") then
+            error("bad operand #2 to '__div' (Vector3/Vector2 expected, got " ..proxy2_t.. ")", 2);
         end
         
         
         
         local obj1 = PROXY__OBJ[proxy1];
         local obj2 = PROXY__OBJ[proxy2];
+        
+        if (proxy2_t == "Vector2") then
+            return new(obj1.x/obj2.x, obj1.y/obj2.y, obj1.z);
+        end
         
         return new(obj1.x/obj2.x, obj1.y/obj2.y, obj1.z/obj2.z);
     end,

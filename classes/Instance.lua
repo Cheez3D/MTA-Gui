@@ -4,6 +4,8 @@ local func = {}
 local get  = {}
 local set  = {}
 
+local event = {}
+
 local private = {
     children       = true,
     childrenByKey  = true,
@@ -21,7 +23,9 @@ local privateClass  = {}
 
 local new;
 
-local meta = {
+local objMeta = { __metatable = name }
+
+local proxyMeta = {
     __metatable = name,
     
     
@@ -29,11 +33,9 @@ local meta = {
         local obj = PROXY__OBJ[proxy];
         
         
-        local class = initializable[obj.className];
-        
         local child = obj.childrenByName[key];
         
-        if (class.private[key]) then
+        if (obj.class.private[key]) then
             if (child) then -- if key is private but a child with key name exists
                 return OBJ__PROXY[child];
             else
@@ -50,7 +52,7 @@ local meta = {
             return val;
         end
         
-        local func_f = class.func[key];
+        local func_f = obj.class.func[key];
         if (func_f) then
             return (function(...)
                 local success, result = pcall(func_f, obj, ...);
@@ -60,7 +62,7 @@ local meta = {
             end);
         end
         
-        local get_f = class.get[key];
+        local get_f = obj.class.get[key];
         if (get_f) then
             return get_f(obj);
         end
@@ -82,11 +84,9 @@ local meta = {
         if (val == prev) then return end -- if trying to set same val then return
         
         
-        local class = initializable[obj.className];
-        
-        local set_f = class.set[key];
+        local set_f = obj.class.set[key];
         if (set_f) then
-            local success, result = pcall(set_f, obj, val, prev, 1);
+            local success, result = pcall(set_f, obj, val, prev);
             if (not success) then error(result, 2) end
             
             return;
@@ -105,21 +105,12 @@ local meta = {
 
 
 
-function new(className, parentProxy)
+function new(className)
     local className_t = type(className);
     
     if (className_t ~= "string") then
         error("bad argument #1 to '" ..__func__.. "' (string expected, got " ..className_t.. ")", 2);
     end
-    
-    if (parentProxy ~= nil) then
-        local parentProxy_t = type(parentProxy);
-        
-        if (parentProxy_t ~= "Instance") then
-            error("bad argument #2 to '" ..__func__.. "' (Instance expected, got " ..parentProxy_t.. ")", 2);
-        end
-    end
-    
     
     
     local class = (not privateClass[className]) and initializable[className];
@@ -128,28 +119,28 @@ function new(className, parentProxy)
         error("bad argument #1 to '" ..__func__.. "' (invalid class name)", 2);
     end
     
-    local obj = {
-        type = name,
-        
-        
-        className = className,
-        
-        name = className,
-        
-        children       = {},
-        childrenByKey  = {},
-        childrenByName = {},
-    }
+    local obj = setmetatable({}, objMeta);
+    
+    obj.index = nil; -- index in children array of parent
+    
+    obj.children       = {}
+    obj.childrenByKey  = {}
+    obj.childrenByName = {}
+    
+    obj.class     = class;
+    obj.className = className;
+    
+    set.name(obj, className);
+    set.parent(obj, nil);
+    
     
     class.new(obj);
     
-    local proxy = setmetatable({}, meta);
+    
+    local proxy = setmetatable({}, proxyMeta);
     
     OBJ__PROXY[obj] = proxy;
     PROXY__OBJ[proxy] = obj;
-    
-    
-    proxy.parent = parentProxy; -- shortcut for eliminating the need to set parent after object creation
     
     return proxy;
 end
@@ -164,8 +155,7 @@ function func.isA(obj, className)
     end
     
     
-    local class = initializable[obj.className];
-    
+    local class = obj.class;
     while (class) do
         if (class.name == className) then
             return true;
@@ -179,7 +169,7 @@ end
 
 
 
-function set.name(obj, name, prevName)
+function set.name(obj, name, prev)
     local name_t = type(name);
     
     if (name_t ~= "string") then
@@ -191,19 +181,19 @@ function set.name(obj, name, prevName)
         local parent = obj.parent;
         
         -- if obj is occupying the place in childrenByName then try to find another child with same prevName to replace it
-        if (parent.childrenByName[prevName] == obj) then
+        if (parent.childrenByName[prev] == obj) then
             local child;
             
             -- start search from after obj because childrenByName place is occupied by object with smallest index
             for i = obj.index+1, #parent.children do
                 child = parent.children[i];
                 
-                if (child.name == prevName) then
+                if (child.name == prev) then
                     break;
                 end
             end
             
-            parent.childrenByName[prevName] = child; -- if other child not found it will be set to nil
+            parent.childrenByName[prev] = child; -- if other child not found it will be set to nil
         end
         
         if (not parent.childrenByName[name]) then
@@ -214,8 +204,7 @@ function set.name(obj, name, prevName)
     obj.name = name;
 end
 
-function set.parent(obj, parent, prevParent)
-    
+function set.parent(obj, parent, prev)
     if (parent ~= nil) then -- might be false so check against nil for assertion
         local parent_t = type(parent);
         
@@ -240,37 +229,34 @@ function set.parent(obj, parent, prevParent)
     end
     
     
-    if (prevParent) then
-        -- -- remove child from children table (NOT NEEDED, taken care of by loop)
-        -- prevParent.children[obj.index] = nil;
-        
-        local childrenCount = #prevParent.children;
+    if (prev) then
+        local childrenCount = #prev.children;
         
         for i = obj.index+1, childrenCount do
-            local child = prevParent.children[i];
+            local child = prev.children[i];
             
             child.index = child.index-1;
-            prevParent.children[i-1] = child;
+            prev.children[i-1] = child;
         end
         
-        prevParent.children[childrenCount] = nil; -- remove last redundant element (using childrenCount from before operating on array)
+        prev.children[childrenCount] = nil; -- remove last redundant element (using childrenCount from before operating on array)
         
         -- remove child from childrenByKey table
-        prevParent.childrenByKey[obj] = nil;
+        prev.childrenByKey[obj] = nil;
         
         -- remove child from childrenByName table and, if possible, replace with another child with same name
-        if (prevParent.childrenByName[obj.name] == obj) then
+        if (prev.childrenByName[obj.name] == obj) then
             local child;
             
-            for i = obj.index, #prevParent.children do
-                child = prevParent.children[i];
+            for i = obj.index, #prev.children do
+                child = prev.children[i];
                 
                 if (child.name == obj.name) then
                     break;
                 end
             end
             
-            prevParent.childrenByName[obj.name] = child; -- if other child not found it will be set to nil
+            prev.childrenByName[obj.name] = child; -- if other child not found it will be set to nil
         end
         
         obj.index = nil;
@@ -301,13 +287,15 @@ Instance = {
     get  = get,
     set  = set,
     
+    event = event,
+    
     private  = private,
     readOnly = readOnly,
     
     initializable = initializable,
     privateClass  = privateClass,
     
-    meta = meta,
+    proxyMeta = proxyMeta,
     
     new = new,
 }

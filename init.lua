@@ -74,8 +74,6 @@ function type(arg)
         -- for use with classes (Vector2, UDim, etc.) (proxy and object)
         if (_type(argType) == "string") then
             return argType;
-        elseif (_type(arg.type) == "string") then
-            return arg.type;
         else
             return "table";
         end
@@ -123,17 +121,21 @@ function print_file(file, ...)
     fileWrite(file, '\n');
 end
 
-function print_table(t, f, tab)
+function print_table(t, f, tab, printed)
     f = f or print;
     
     tab = tab or 0;
     
+    printed = printed or {}
+    
     if (next(t)) then
         for k, v in pairs(t) do
-            if (type(v) == "table") then
+            if (type(v) == "table" and not printed[v]) then
                 f(string.rep(' ', tab), "[", k, "->", v, "]");
                 
-                print_table(v, f, tab+4);
+                printed[v] = true;
+                
+                print_table(v, f, tab+4, printed);
             else
                 if (OBJ__PROXY[k]) then
                      k = OBJ__PROXY[k];

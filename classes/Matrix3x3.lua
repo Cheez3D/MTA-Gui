@@ -93,7 +93,7 @@ local meta = {
         local proxy2_t = type(proxy2);
         
         if (proxy2_t ~= "Matrix3x3" and proxy2_t ~= "Vector3") then
-            error("bad operand #2 to '__mul' (Matrix3x3 or Vector3 expected, got " ..proxy2_t.. ")", 2);
+            error("bad operand #2 to '__mul' (Matrix3x3/Vector3 expected, got " ..proxy2_t.. ")", 2);
         end
         
         

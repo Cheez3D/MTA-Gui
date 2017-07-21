@@ -92,8 +92,10 @@ local name = "Mouse";
 local super = Instance;
 
 local func = setmetatable({}, { __index = function(tbl, key) return super.func[key] end });
-local get  = setmetatable({}, { __index = function(tbl, key) return super.get [key] end });
-local set  = setmetatable({}, { __index = function(tbl, key) return super.set [key] end });
+local get  = setmetatable({}, { __index = function(tbl, key) return super.get[key]  end });
+local set  = setmetatable({}, { __index = function(tbl, key) return super.set[key]  end });
+
+local event = setmetatable({}, { __index = function(tbl, key) return super.event[key] end });
 
 local private = setmetatable({
         cursorContainer = true,
@@ -248,6 +250,8 @@ Instance.initializable.Mouse = {
     func = func,
     get  = get,
     set  = set,
+    
+    event = event,
     
     private  = private,
     readOnly = readOnly,

@@ -3,10 +3,12 @@ local name = "GuiContainer";
 local super = GuiObject;
 
 local func = setmetatable({}, { __index = function(tbl, key) return super.func[key] end });
-local get  = setmetatable({}, { __index = function(tbl, key) return super.get [key] end });
-local set  = setmetatable({}, { __index = function(tbl, key) return super.set [key] end });
+local get  = setmetatable({}, { __index = function(tbl, key) return super.get[key]  end });
+local set  = setmetatable({}, { __index = function(tbl, key) return super.set[key]  end });
 
-local private  = setmetatable({}, { __index = function(tbl, key) return super.private [key] end });
+local event = setmetatable({}, { __index = function(tbl, key) return super.event[key] end });
+
+local private  = setmetatable({}, { __index = function(tbl, key) return super.private[key]  end });
 local readOnly = setmetatable({}, { __index = function(tbl, key) return super.readOnly[key] end });
 
 
@@ -19,50 +21,90 @@ end
 
 
 
-function func.update_containerGui(obj)
-    obj.containerGui = obj.rootGui and (
-           obj.clipsDescendants        and obj
-        or (obj.parent == obj.rootGui) and obj.parent
-        or                                 obj.parent.containerGui
-    ) or nil;
+function func.update_clippingGui(obj)
+    if (obj.rootGui) then
+        if     (obj.clipsDescendants)      then obj.clippingGui = obj;
+        elseif (obj.parent == obj.rootGui) then obj.clippingGui = obj.parent;
+        else                                    obj.clippingGui = obj.parent.clippingGui;
+        end
+    else
+        obj.clippingGui = nil;
+    end
     
     
-    for i = 1, #obj.children do
-        local child = obj.children[i];
+    for i = 1, #obj.guiChildren do
+        local child = obj.guiChildren[i];
         
         if Instance.func.isA(child, "GuiContainer") then
-            func.update_containerGui(child);
+            func.update_clippingGui(child);
         end
     end
 end
 
-function func.update_containerTransformPivot(obj)
-    
+
+function func.update_containerSize(obj)
+    if (obj.rootGui) then
+        obj.containerSize = obj.clippingGui.absSize;
+    else
+        obj.containerSize = nil;
+    end
 end
 
-function func.update_containerTransformPerspective(obj)
-    
+function func.update_containerPos(obj)
+    if (obj.rootGui) then
+        obj.containerPos = obj.clippingGui.absPos;
+    else
+        obj.containerPos = nil;
+    end
 end
 
-function func.update_container(obj)
-    if isElement(obj.container) then destroyElement(obj.container) end
-    
-    obj.container = obj.rootGui and obj.visible and dxCreateRenderTarget(
-        obj.containerGui.absSize.x,
-        obj.containerGui.absSize.y,
+function func.update_containerRotPivot(obj)
+    if (obj.rootGui and obj.isRotated) then
+        obj.containerRotPivot = Vector3.new(
+            2*(-obj.containerSize.x/2 + obj.absRotPivot.x-obj.containerPos.x),
+            2*(-obj.containerSize.y/2 + obj.absRotPivot.y-obj.containerPos.y),
+            
+            2*(obj.absRotPivot.z/GuiObject.ROT_PIVOT_DEPTH_UNIT)
+        )
         
-        true
-    ) or nil;
+        obj.containerRotPivot = obj.containerRotPivot/(obj.parent == obj.rootGui and obj.parent.absSize or obj.parent.containerSize);
+    else
+        obj.containerRotPivot = nil;
+    end
     
     
-    for i = 1, #obj.children do
-        local child = obj.children[i];
+    for i = 1, #obj.guiChildren do
+        local child = obj.guiChildren[i];
         
-        if Instance.func.isA(child, "Frame") then
-            func.update_container(child);
+        if Instance.func.isA(child, "GuiContainer") then
+            func.update_containerRotPivot(child);
         end
     end
 end
+
+function func.update_containerRotPerspective(obj)
+    if (obj.rootGui and obj.isRotated3D) then
+        obj.containerRotPerspective = Vector2.new(
+            2*(-obj.containerSize.x/2 + obj.absRotPerspective.x-obj.containerPos.x),
+            2*(-obj.containerSize.y/2 + obj.absRotPerspective.y-obj.containerPos.y)
+        );
+        
+        obj.containerRotPerspective = obj.containerRotPerspective/(obj.parent == obj.rootGui and obj.parent.absSize or obj.parent.containerSize);
+    else
+        obj.containerRotPerspective = nil;
+    end
+    
+    
+    for i = 1, #obj.guiChildren do
+        local child = obj.guiChildren[i];
+        
+        if Instance.func.isA(child, "GuiContainer") then
+            func.update_containerRotPerspective(child);
+        end
+    end
+end
+
+
 
 
 
@@ -71,7 +113,12 @@ function set.parent(obj, parent, prev, k)
     if (not success) then error(result, 2) end
     
     
-    func.update_containerGui(obj);
+    func.update_clippingGui(obj);
+    
+    func.update_containerSize(obj);
+    func.update_containerPos(obj);
+    func.update_containerRotPivot(obj);
+    func.update_containerRotPerspective(obj);
     func.update_container(obj);
     
     
@@ -86,10 +133,60 @@ function set.size(obj, size, prev, k)
     if (not success) then error(result, 2) end
     
     
+    func.update_containerSize(obj);
+    func.update_containerPos(obj);
+    func.update_containerRotPivot(obj);
+    func.update_containerRotPerspective(obj);
     func.update_container(obj);
     
     
     GuiObject.func.update(obj);
+    
+    obj.draw(true);
+end
+
+
+function set.rot(obj, rot, prev, k)
+    local success, result = pcall(super.set.rot, obj, rot, prev, k+1);
+    if (not success) then error(result, 2) end
+    
+    
+    func.update_containerRotPivot(obj);
+    func.update_containerRotPerspective(obj);
+    
+    
+    obj.draw(true);
+end
+
+function set.rotPivot(obj, rotPivot, prev, k)
+    local success, result = pcall(super.set.rotPivot, obj, rotPivot, prev, k+1);
+    if (not success) then error(result, 2) end
+    
+    
+    func.update_containerRotPivot(obj);
+    
+    
+    obj.draw(true);
+end
+
+function set.rotPivotDepth(obj, rotPivotDepth, prev, k)
+    local success, result = pcall(super.set.rotPivotDepth, obj, rotPivotDepth, prev, k+1);
+    if (not success) then error(result, 2) end
+    
+    
+    func.update_containerRotPivot(obj);
+    
+    
+    obj.draw(true);
+end
+
+function set.rotPerspective(obj, rotPerspective, prev, k)
+    local success, result = pcall(super.set.rotPerspective, obj, rotPerspective, prev, k+1);
+    if (not success) then error(result, 2) end
+    
+    
+    func.update_containerRotPerspective(obj);
+    
     
     obj.draw(true);
 end
@@ -103,9 +200,7 @@ function set.visible(obj, visible, prev, k)
     func.update_container(obj);
     
     
-    if (visible) then
-        GuiObject.func.update(obj);
-    end
+    GuiObject.func.update(obj);
     
     obj.draw(true);
 end
@@ -122,7 +217,16 @@ function set.clipsDescendants(obj, clipsDescendants)
     obj.clipsDescendants = clipsDescendants;
     
     
-    func.update_containerGui(obj);
+    func.update_clippingGui(obj);
+    
+    func.update_containerSize(obj);
+    func.update_containerPos(obj);
+    
+    GuiObject.func.update_rtRotPivot(obj);
+    GuiObject.func.update_rtRotPerspective(obj);
+    
+    func.update_containerRotPivot(obj);
+    func.update_containerRotPerspective(obj);
     func.update_container(obj);
     
     
@@ -141,6 +245,8 @@ GuiContainer = {
     func = func,
     get  = get,
     set  = set,
+    
+    event = event,
     
     private  = private,
     readOnly = readOnly,
