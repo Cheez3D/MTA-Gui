@@ -1,5 +1,20 @@
+local name = "Mouse";
+
+local super = Instance;
+
+local func = inherit({}, super.func);
+local get  = inherit({}, super.get);
+local set  = inherit({}, super.set);
+
+local event = inherit({}, super.event);
+
+local private  = inherit({}, super.private);
+local readOnly = inherit({}, super.readOnly);
+
+
+
 local DEFAULT_CURSORS = {
-    ["arrow"]       = "cursors/PulseGlass/arrow.ani",
+    ["arrow"]       = "cursors/arrow.png", -- "cursors/PulseGlass/arrow.ani",
     ["beam"]        = "cursors/PulseGlass/beam.cur",
     ["busy"]        = "cursors/PulseGlass/busy.ani",
     ["help"]        = "cursors/PulseGlass/help.cur",
@@ -13,10 +28,10 @@ local DEFAULT_CURSORS = {
     ["unavailable"] = "cursors/PulseGlass/unavailable.cur",
 }
 
-
 local DECODERS = { decode_ico, decode_ani, decode_gif, decode_jpg, decode_png }
 
-local function decode_cursor(path)
+
+local function decodeCursor(path)
     for i = 1, #DECODERS do
         local decoder = DECODERS[i];
         
@@ -26,7 +41,6 @@ local function decode_cursor(path)
             -- adapt returned table to render function
             
             if (decoder == decode_ico) then
-                
                 local type = data.type;
                 
                 data = data[1];
@@ -37,9 +51,7 @@ local function decode_cursor(path)
                     data.hotspotX = 0;
                     data.hotspotY = 0;
                 end
-
             elseif (decoder == decode_ani) then
-            
                 data = data[1];
                 
                 data.isAnimation = true;
@@ -49,9 +61,7 @@ local function decode_cursor(path)
                 for i = 1, #data do
                     data[i].fpms = 0.06/data[i].rate;
                 end
-                
             elseif (decoder == decode_gif) then
-                
                 if (data.isAnimation) then
                     data.frameCount = #data;
                     
@@ -70,8 +80,7 @@ local function decode_cursor(path)
                     
                     data.image = data[1].image;
                 end
-            
-            elseif (decoder == decode_jpg) or (decoder == decode_png) then
+            elseif (decoder == decode_jpg or decoder == decode_png) then
                 data.hotspotX = 0;
                 data.hotspotY = 0;
             end
@@ -83,166 +92,223 @@ end
 
 
 
-setCursorAlpha(0);
-
-
-
-local name = "Mouse";
-
-local super = Instance;
-
-local func = setmetatable({}, { __index = function(tbl, key) return super.func[key] end });
-local get  = setmetatable({}, { __index = function(tbl, key) return super.get[key]  end });
-local set  = setmetatable({}, { __index = function(tbl, key) return super.set[key]  end });
-
-local event = setmetatable({}, { __index = function(tbl, key) return super.event[key] end });
-
-local private = setmetatable({
-        cursorContainer = true,
-        
-        cursorFrame = true,
-        cursorData = true,
-    },
-    
-    { __index = function(tbl, key) return super.private[key] end }
-);
-
-local readOnly = setmetatable({
-        Move = true,
-        
-        viewWidth  = true,
-        viewHeight = true,
-        
-        x = true,
-        y = true,
-    },
-    
-    { __index = function(tbl, key) return super.readOnly[key] end }
-);
-
-
-
 local function new(obj)
-    obj.viewWidth  = SCREEN_WIDTH;
-    obj.viewHeight = SCREEN_HEIGHT;
+    local prevCursorAlpha = getCursorAlpha();
+
+    addEventHandler("onClientResourceStop", resourceRoot, function()
+        setCursorAlpha(prevCursorAlpha);
+    end);
     
-    obj.x = obj.viewWidth/2;
-    obj.y = obj.viewHeight/2;
+    if (not isMainMenuActive()) then
+        setCursorAlpha(0);
+    end -- otherwise cursor alpha is set to 0 by scenario 3 fix as soon as main menu is exited
     
-    setCursorPosition(obj.x, obj.y);
     
+    
+    obj.viewSize = Vector2.new(GuiBase2D.SCREEN_WIDTH, GuiBase2D.SCREEN_HEIGHT);
+    
+    local x, y = getCursorPosition();
+    
+    if (x and y) then
+        obj.x = math.floor(x*obj.viewSize.x);
+        obj.y = math.floor(y*obj.viewSize.y);
+    else
+        obj.x = math.floor(obj.viewSize.x/2);
+        obj.y = math.floor(obj.viewSize.y/2);
+    end
     
     obj.cursorContainer = {}
     
     for cursor, path in pairs(DEFAULT_CURSORS) do
-       local data = decode_cursor(path);
+       local data = decodeCursor(path);
         
         if (not data) then
-            error("could not decode " ..path); -- TODO: handle this in Instance
+            error("could not decode " ..path, 2); -- TODO: handle this in Instance.new
         end
         
         obj.cursorContainer[cursor] = data;
     end
     
-    obj.cursor = "arrow";
-    
     obj.cursorFrameController = 1; -- used for animations (e.g. for ani cursors)
-    obj.cursorFrame           = 1;
+    obj.cursorFrame = 1;
     
-    obj.cursorData = obj.cursorContainer[obj.cursor];
+    obj.isScenario1Fixed = false; -- when cursor alpha is 0 and console is opened it is set back to 255
+    obj.isScenario2Fixed = false; -- while in the main menu and console is opened and then closed,
+                                  -- cursor alpha will be set to 0 (probably because MTA's cursor showing code
+                                  -- mistakenly thinks that we are no longer in the main menu and reverts
+                                  -- back to script-set alpha value, which for us is 0, because we want to
+                                  -- display a custom cursor)
+    obj.isScenario3Fixed = false; -- while in the main menu and the console and any other window(s) (e.g. server browser)
+                                  -- is opened and then Esc is pressed repeatedly to return to the game, cursor alpha
+                                  -- will remain at 255 (probably because MTA's cursor showing code mistakenly thinks
+                                  -- we are still inside the main menu)
     
-    obj.shadow = true;
-    obj.shadowOffsetX = 2;
-    obj.shadowOffsetY = 2;
+    
+    set.cursor(obj, "arrow");
+    
+    set.shadow(obj, false);
+    set.shadowOffset(obj, Vector2.new(2, 2));
     
     
-    
-    local isScenario1Fixed = false; -- scenario 1: when cursor alpha is 0 and console is opened it is set back to 255
-    
-    local isScenario2Fixed = false; -- scenario 2: when cursor alpha is 0, main menu is open
-                                    -- and we open and close console, cursor alpha in main menu is set to 0
-    
-    function obj.render(dt)
-        local isConsoleActive  = isConsoleActive();
-        local isMainMenuActive = isMainMenuActive();
-        
-        if (isConsoleActive) then
-            if (isMainMenuActive) and (isScenario2Fixed) then isScenario2Fixed = false end
-            
-            if (not isMainMenuActive) and (not isScenario1Fixed) then
-                setCursorAlpha(0);
-                
-                isScenario1Fixed = true;
-            end
-        elseif (not isConsoleActive) then
-            if (isScenario1Fixed) then isScenario1Fixed = false end -- resetting scenario 1 fix for the next time it will happen
-            
-            if (isMainMenuActive) and (not isScenario2Fixed) then
-                setCursorAlpha(255);
-                
-                isScenario2Fixed = true;
-            end
-        end
-        
-        if (not isMainMenuActive) and (isCursorShowing() or isChatBoxInputActive() or isConsoleActive) then
-            
-            local data = obj.cursorData;
-            
-            local isAnimation = data.isAnimation;
-            local frameCount, fpms;
-            
-            if (isAnimation) then
-                frameCount = data.frameCount;
-                
-                data = data[obj.cursorFrame];
-                
-                fpms = data.fpms;
-            end
-            
-            local hotspotX = data.hotspotX;
-            local hotspotY = data.hotspotY;
-            
-            local width  = data.width;
-            local height = data.height;
-            
-            local image = data.image;
-            
-            if (obj.shadow) then
-                dxDrawImage(
-                    (obj.x - hotspotX) + obj.shadowOffsetX, (obj.y - hotspotY) + obj.shadowOffsetY, width, height, image,
-                    nil, nil, tocolor(0, 0, 0, 127.5), true -- draw over gui elements
-                );
-            end
-            
-            dxDrawImage(
-                obj.x - hotspotX, obj.y - hotspotY, width, height, image,
-                nil, nil, nil, true
-            );
-            
-            if (isAnimation) then
-                obj.cursorFrameController = obj.cursorFrameController + fpms*dt; -- for increment that is independent of framerate
-                obj.cursorFrame           = math.floor(obj.cursorFrameController);
-                
-                if (obj.cursorFrameController > frameCount) then
-                    obj.cursorFrameController = 1;
-                    obj.cursorFrame           = 1;
-                end
-            end
-            
-        end
+    function obj.draw_wrapper(dt)
+        func.draw(obj, dt);
     end
     
-    addEventHandler("onClientPreRender", root, obj.render, nil, "high");
+    function obj.move_wrapper(relX, relY, absX, absY)
+        func.move(obj, absX, absY);
+    end
     
-    addEventHandler("onClientCursorMove", root, function(relativeX, relativeY, absX, absY)
-        obj.x = absX;
-        obj.y = absY;
-    end, nil, "high");
+    
+    addEventHandler("onClientPreRender", root, obj.draw_wrapper, nil, "high");
+    
+    addEventHandler("onClientCursorMove", root, obj.move_wrapper, nil, "high");
 end
 
 
 
-Instance.initializable.Mouse = {
+function func.update_cursorData(obj)
+    obj.cursorData = obj.cursorContainer[obj.cursor];
+end
+
+
+function func.move(obj, x, y)
+    obj.x = x;
+    obj.y = y;
+end
+
+
+function func.draw(obj, dt)
+    local isConsoleActive  = isConsoleActive();
+    local isMainMenuActive = isMainMenuActive();
+    
+    -- fix scenario 1
+    if (isConsoleActive) then
+        if (not isMainMenuActive and not obj.isScenario1Fixed) then
+            setCursorAlpha(0);
+            
+            obj.isScenario1Fixed = true;
+        end
+    else
+        if (obj.isScenario1Fixed) then
+            obj.isScenario1Fixed = false;
+        end
+    end
+    
+    -- fix scenarios 2 and 3
+    if (isMainMenuActive) then
+        if (isConsoleActive) then
+            if (obj.isScenario2Fixed) then
+                obj.isScenario2Fixed = false;
+            end
+        else
+            if (not obj.isScenario2Fixed) then
+                setCursorAlpha(255);
+                
+                obj.isScenario2Fixed = true;
+            end
+        end
+        
+        if (obj.isScenario3Fixed) then
+            obj.isScenario3Fixed = false;
+        end
+    else
+        if (not obj.isScenario3Fixed) then
+            setCursorAlpha(0);
+            
+            obj.isScenario3Fixed = true;
+        end
+    end
+    
+    -- draw cursor
+    if (not isMainMenuActive and (isCursorShowing() or isChatBoxInputActive() or isConsoleActive)) then
+        local data = obj.cursorData;
+        
+        local isAnimation = data.isAnimation;
+        local frameCount, fpms;
+        
+        if (isAnimation) then
+            frameCount = data.frameCount;
+            
+            data = data[obj.cursorFrame];
+            
+            fpms = data.fpms;
+        end
+        
+        local hotspotX = data.hotspotX;
+        local hotspotY = data.hotspotY;
+        
+        local width  = data.width;
+        local height = data.height;
+        
+        local image = data.image;
+        
+        if (obj.shadow) then
+            dxDrawImage(
+                (obj.x - hotspotX) + obj.shadowOffset.x, (obj.y - hotspotY) + obj.shadowOffset.y, width, height, image,
+                nil, nil, tocolor(0, 0, 0, 127.5), true
+            );
+        end
+        
+        dxDrawImage(
+            obj.x - hotspotX, obj.y - hotspotY, width, height, image,
+            nil, nil, nil, true -- draw over gui elements
+        );
+        
+        if (isAnimation) then
+            obj.cursorFrameController = obj.cursorFrameController + fpms*dt; -- for increment does not depend on framerate
+            obj.cursorFrame = math.floor(obj.cursorFrameController);
+            
+            if (obj.cursorFrameController > frameCount) then
+                obj.cursorFrameController = 1;
+                obj.cursorFrame = 1;
+            end
+        end
+    end
+end
+
+
+function set.cursor(obj, cursor)
+    local cursor_t = type(cursor);
+    
+    if (cursor_t ~= "string") then
+        error("bad argument #1 to 'cursor' (string expected, got " ..cursor_t.. ")", 2);
+    elseif (not obj.cursorContainer[cursor]) then
+        error("bad argument #1 to 'cursor' (invalid type)", 2);
+    end
+    
+    
+    obj.cursor = cursor;
+    
+    
+    func.update_cursorData(obj);
+end
+
+
+function set.shadow(obj, shadow)
+    local shadow_t = type(shadow);
+    
+    if (shadow_t ~= "boolean") then
+        error("bad argument #1 to 'shadow' (boolean expected, got " ..shadow_t.. ")", 2);
+    end
+    
+    
+    obj.shadow = shadow;
+end
+
+function set.shadowOffset(obj, shadowOffset)
+    local shadowOffset_t = type(shadowOffset);
+    
+    if (shadowOffset_t ~= "Vector2") then
+        error("bad argument #1 to 'shadowOffset' (Vector2 expected, got " ..shadowOffset_t.. ")", 2);
+    end
+    
+    
+    obj.shadowOffset = shadowOffset;
+end
+
+
+
+Mouse = inherit({
     name = name,
     
     super = super,
@@ -257,8 +323,10 @@ Instance.initializable.Mouse = {
     readOnly = readOnly,
     
     new = new,
-}
+}, super);
 
-local mouse = Instance.new("Mouse");
+Instance.initializable.Mouse = Mouse;
+
+mouse = Instance.new("Mouse");
 
 Instance.privateClass.Mouse = true;

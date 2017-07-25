@@ -9,9 +9,6 @@ IS_CLIENT = (triggerServerEvent ~= nil);
 if (not IS_CLIENT) then return end
 
 
-SCREEN_WIDTH, SCREEN_HEIGHT = guiGetScreenSize();
-
-
 
 setmetatable(_G, {
     __index = function(tbl, key)
@@ -162,6 +159,10 @@ end);
 
 addCommandHandler("cls", function()
     for i = 1, 256 do
-        outputConsole('\n');
+        outputChatBox('');
     end
+end);
+
+addCommandHandler("dx", function()
+    print_table(dxGetStatus());
 end);

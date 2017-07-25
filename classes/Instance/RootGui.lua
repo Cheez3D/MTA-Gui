@@ -2,27 +2,32 @@ local name = "RootGui";
 
 local super = GuiBase2D;
 
-local func = setmetatable({}, { __index = function(tbl, key) return super.func[key] end });
-local get  = setmetatable({}, { __index = function(tbl, key) return super.get[key]  end });
-local set  = setmetatable({}, { __index = function(tbl, key) return super.set[key]  end });
+local func = inherit({}, super.func);
+local get  = inherit({}, super.get);
+local set  = inherit({}, super.set);
 
-local event = setmetatable({}, { __index = function(tbl, key) return super.event[key] end });
+local event = inherit({}, super.event);
 
-local private  = setmetatable({}, { __index = function(tbl, key) return super.private[key]  end });
-local readOnly = setmetatable({}, { __index = function(tbl, key) return super.readOnly[key] end });
+local private  = inherit({}, super.private);
+local readOnly = inherit({}, super.readOnly);
 
 
 
 local function new(obj)
-    super.new(obj);
+    local success, result = pcall(super.new, obj);
+    if (not success) then error(result, 2) end
     
     
+    func.update_absSize(obj);
+    func.update_absPos(obj);
     
+    func.update_containerPos(obj);
+    func.update_containerSize(obj);
 end
 
 
 
-RootGui = {
+RootGui = inherit({
     name = name,
     
     super = super,
@@ -37,4 +42,4 @@ RootGui = {
     readOnly = readOnly,
     
     new = new,
-}
+}, super);

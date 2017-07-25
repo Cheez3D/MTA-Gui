@@ -2,111 +2,73 @@ local name = "GuiBase2D";
 
 local super = Instance;
 
-local func = setmetatable({}, { __index = function(tbl, key) return super.func[key] end });
-local get  = setmetatable({}, { __index = function(tbl, key) return super.get[key]  end });
-local set  = setmetatable({}, { __index = function(tbl, key) return super.set[key]  end });
+local func = inherit({}, super.func);
+local get  = inherit({}, super.get);
+local set  = inherit({}, super.set);
 
-local event = setmetatable({}, { __index = function(tbl, key) return super.event[key] end });
+local event = inherit({}, super.event);
 
-local private  = setmetatable({}, { __index = function(tbl, key) return super.private[key]  end });
-local readOnly = setmetatable({}, { __index = function(tbl, key) return super.readOnly[key] end });
+local private  = inherit({}, super.private);
+local readOnly = inherit({}, super.readOnly);
+
+
+
+local SCREEN_WIDTH, SCREEN_HEIGHT = guiGetScreenSize();
 
 
 
 local function new(obj)
     obj.guiChildren = {}
-    
-    func.update_rootGui(obj);
-    func.update_clipperGui(obj);
-    
-    func.update_absSize(obj);
-    func.update_absPos(obj);
-    
-    func.update_containerPos(obj, true);
-    func.update_container(obj, true);
 end
 
-
-
-function func.update_rootGui(obj, descend)
-    if (Instance.func.isA(obj, "RootGui")) then
-        obj.rootGui = obj;
-    elseif (obj.parent and Instance.func.isA(obj.parent, "GuiBase2D")) then
-        obj.rootGui = obj.parent.rootGui;
-    else
-        obj.rootGui = nil;
-    end
-    
-    
-    if (descend) then
-        for i = 1, #obj.guiChildren do
-            func.update_rootGui(obj.guiChildren[i], true);
-        end
-    end
-end
-
-function func.update_clipperGui(obj, descend)
-    if (Instance.func.isA(obj, "RootGui")) then
-        obj.clipperGui = obj;
-    elseif (obj.rootGui) then
-        if (obj.clipsDescendants) then
-            obj.clipperGui = obj;
-        else
-            obj.clipperGui = obj.parent.clipperGui;
-        end
-    else
-        obj.clipperGui = nil;
-    end
-    
-    
-    if (descend) then
-        for i = 1, #obj.guiChildren do
-            func.update_clipperGui(obj.guiChildren[i], true);
-        end
-    end
-end
 
 
 function func.update_absSize(obj, descend)
-    if (Instance.func.isA(obj, "RootGui")) then
-        if (Instance.func.isA(obj, "ScreenGui")) then
-            obj.absSize = Vector2.new(SCREEN_WIDTH, SCREEN_HEIGHT);
-        else
-            obj.absSize = Vector2.new();
-        end
-    elseif (obj.rootGui) then
-        obj.absSize = Vector2.new(
+    local absSize = (
+        func.isA(obj, "RootGui") and (
+            func.isA(obj, "ScreenGui") and Vector2.new(SCREEN_WIDTH, SCREEN_HEIGHT)
+            or Vector2.new()
+        )
+        or func.isA(obj, "GuiObject") and obj.rootGui and Vector2.new(
             math.floor(obj.size.x.offset + obj.parent.absSize.x*obj.size.x.scale),
             math.floor(obj.size.y.offset + obj.parent.absSize.y*obj.size.y.scale)
-        );
-    else
-        obj.absSize = nil;
-    end
+        )
+    )
+    or nil;
     
-    
-    if (descend) then
-        for i = 1, #obj.guiChildren do
-            func.update_absSize(obj.guiChildren[i], true);
+    if (absSize ~= obj.absSize) then
+        obj.absSize = absSize;
+        
+        
+        if (descend) then
+            for i = 1, #obj.guiChildren do
+                func.update_absSize(obj.guiChildren[i], true);
+            end
         end
     end
 end
 
 function func.update_absPos(obj, descend)
-    if (Instance.func.isA(obj, "RootGui")) then
-        obj.absPos = Vector2.new();
-    elseif (obj.rootGui) then
-        obj.absPos = Vector2.new(
+    local absPos = (
+        func.isA(obj, "RootGui") and (
+            func.isA(obj, "ScreenGui") and Vector2.new()
+            or Vector2.new()
+        )
+        or func.isA(obj, "GuiObject") and obj.rootGui and Vector2.new(
             math.floor(
                 obj.parent.absPos.x + (obj.pos.x.offset + obj.parent.absSize.x*obj.pos.x.scale)
-              - (obj.posOrigin.x.offset + obj.absSize.x*obj.posOrigin.x.scale)
+                - (obj.posOrigin.x.offset + obj.absSize.x*obj.posOrigin.x.scale)
             ),
             math.floor(
                 obj.parent.absPos.y + (obj.pos.y.offset + obj.parent.absSize.y*obj.pos.y.scale)
-              - (obj.posOrigin.y.offset + obj.absSize.y*obj.posOrigin.y.scale)
+                - (obj.posOrigin.y.offset + obj.absSize.y*obj.posOrigin.y.scale)
             )
-        );
-    else
-        obj.absPos = nil;
+        )
+    )
+    or nil;
+    
+    if (absPos ~= obj.absPos) then
+        obj.absPos = absPos;
     end
     
     
@@ -119,10 +81,14 @@ end
 
 
 function func.update_containerPos(obj, descend)
-    if (obj.rootGui and #obj.guiChildren > 0) then
-        obj.containerPos = obj.clipperGui.absPos;
-    else
-        obj.containerPos = nil;
+    local containerPos = #obj.guiChildren > 0 and (
+        func.isA(obj, "RootGui") and obj.absPos
+        or func.isA(obj, "GuiObject") and obj.rootGui and obj.clipperGui.absPos
+    )
+    or nil;
+    
+    if (containerPos ~= obj.containerPos) then
+        obj.containerPos = containerPos;
     end
     
     
@@ -133,72 +99,153 @@ function func.update_containerPos(obj, descend)
     end
 end
 
-function func.update_container(obj, descend)
-    if (obj.rootGui and #obj.guiChildren > 0) then
-        local containerSize = obj.clipperGui.absSize;
-        
-        if (containerSize ~= obj.containerSize) then
-            if (obj.container and isElement(obj.container)) then
-                destroyElement(obj.container);
-            end
-            
-            obj.containerSize = containerSize;
-            obj.container = dxCreateRenderTarget(containerSize.x, containerSize.y, true);
-        end
-    else
+function func.update_containerSize(obj, descend)
+    local containerSize = #obj.guiChildren > 0 and (
+        func.isA(obj, "RootGui") and obj.absSize
+        or func.isA(obj, "GuiObject") and obj.rootGui and obj.clipperGui.absSize
+    )
+    or nil;
+    
+    if (containerSize ~= obj.containerSize) then
         if (obj.container and isElement(obj.container)) then
             destroyElement(obj.container);
         end
         
-        obj.containerSize = nil;
-        obj.container = nil;
-    end
-    
-    
-    if (descend) then
-        for i = 1, #obj.guiChildren do
-            func.update_container(obj.guiChildren[i], true);
+        obj.containerSize = containerSize;
+        obj.container = containerSize and dxCreateRenderTarget(containerSize.x, containerSize.y, true);
+        
+        
+        if (descend) then
+            for i = 1, #obj.guiChildren do
+                func.update_containerSize(obj.guiChildren[i], true);
+            end
         end
     end
 end
 
 
-function func.draw(obj, descend)
-    if (descend) then
-        for i = 1, #obj.guiChildren do
-            local child = obj.guiChildren[i];
-            
-            child.class.func.draw(child, true);
+function func.update(obj, descend)
+    if (obj.container) then
+        if (descend) then
+            for i = 1, #obj.guiChildren do
+                local child = obj.guiChildren[i];
+                
+                child.class.func.update(child, true);
+            end
         end
-    end
-    
-    
-    if (obj.rootGui) then
+        
+        
         dxSetRenderTarget(obj.container, true);
         
-        if (obj.debug) then
-            dxSetBlendMode("add");
-            
-            dxDrawRectangle(0, 0, obj.containerSize.x, obj.containerSize.y, tocolor(0, 255, 0, 127.5));
+        dxSetBlendMode("add");
         
-            dxSetBlendMode("blend");
+        if (obj.debug) then
+            dxDrawRectangle(0, 0, obj.containerSize.x, obj.containerSize.y, tocolor(0, 255, 0, 127.5));
+        end
+        
+        -- children
+        for i = 1, #obj.guiChildren do
+            local child = obj.children[i];
+            
+            if (child.visible) then
+                if (func.isA(child, "GuiObject") and child.rt) then
+                    if (child.isRotated) then
+                        if (child.isRotated3D) then
+                            dxSetShaderTransform(
+                                GuiObject.SHADER,
+                                
+                                child.rot.y, child.rot.x, child.rot.z,
+                                child.rtRotPivot.x, child.rtRotPivot.y, child.rtRotPivot.z, false,
+                                child.rtRotPerspective.x, child.rtRotPerspective.y, false
+                            );
+                        else
+                            dxSetShaderTransform(
+                                GuiObject.SHADER,
+                                
+                                child.rot.y, child.rot.x, child.rot.z,
+                                child.rtRotPivot.x, child.rtRotPivot.y, child.rtRotPivot.z, false,
+                                0, 0, true -- if rotated 2D-ly do not change perspective to avoid unnecessary blurring
+                            );
+                        end
+                        
+                        dxSetShaderValue(GuiObject.SHADER, "image", child.rt);
+                        
+                        dxDrawImage(
+                            child.rtPos.x-obj.containerPos.x, child.rtPos.y-obj.containerPos.y,
+                            child.rtSize.x, child.rtSize.y,
+                            
+                            GuiObject.SHADER
+                        );
+                    else
+                        dxDrawImage(
+                            child.rtPos.x-obj.containerPos.x, child.rtPos.y-obj.containerPos.y,
+                            child.rtSize.x, child.rtSize.y,
+                            
+                            child.rt
+                        );
+                    end
+                end
+                
+                if (child.container) then
+                    if (func.isA(child, "GuiObject") and child.isRotated) then
+                        if (child.isRotated3D) then
+                            dxSetShaderTransform(
+                                GuiObject.SHADER,
+                                
+                                child.rot.y, child.rot.x, child.rot.z,
+                                child.containerRotPivot.x, child.containerRotPivot.y, child.containerRotPivot.z, false,
+                                child.containerRotPerspective.x, child.containerRotPerspective.y, false
+                            );
+                        else
+                            dxSetShaderTransform(
+                                GuiObject.SHADER,
+                                
+                                child.rot.y, child.rot.x, child.rot.z,
+                                child.containerRotPivot.x, child.containerRotPivot.y, child.containerRotPivot.z, false,
+                                0, 0, true -- if rotated 2D-ly do not change perspective to avoid unnecessary blurring
+                            );
+                        end
+                        
+                        dxSetShaderValue(GuiObject.SHADER, "image", child.container);
+                        
+                        dxDrawImage(
+                            child.containerPos.x-obj.containerPos.x, child.containerPos.y-obj.containerPos.y,
+                            child.containerSize.x, child.containerSize.y,
+                            
+                            GuiObject.SHADER
+                        );
+                    else
+                        dxDrawImage(
+                            child.containerPos.x-obj.containerPos.x, child.containerPos.y-obj.containerPos.y,
+                            child.containerSize.x, child.containerSize.y,
+                            
+                            child.container
+                        );
+                    end
+                end
+            end
         end
         
         dxSetRenderTarget();
+        
+        dxSetBlendMode("blend");
     end
 end
+
 
 function func.propagate(obj)
-    if (not func.isA(obj, "RootGui") and obj.rootGui) then
-        obj.parent.class.func.draw(obj.parent);
-
-        func.propagate(obj.parent);
+    if (func.isA(obj, "RootGui")) then
+        -- do nothing
+    elseif (func.isA(obj, "GuiObject") and obj.rootGui) then
+        obj.parent.class.func.update(obj.parent);
+        
+        obj.parent.class.func.propagate(obj.parent);
     end
 end
 
 
 
-function set.debug(obj, debug)
+function set.debug(obj, debug, prev, k)
     local debug_t = type(debug);
     
     if (debug_t ~= "boolean") then
@@ -209,13 +256,16 @@ function set.debug(obj, debug)
     obj.debug = debug;
     
     
-    obj.class.func.draw(obj);
-    func.propagate(obj);
+    if (k == 1) then -- used because GuiObject has its own set.debug function
+        func.update(obj);
+        
+        func.propagate(obj);
+    end
 end
 
 
 
-GuiBase2D = {
+GuiBase2D = inherit({
     name = name,
     
     super = super,
@@ -229,8 +279,11 @@ GuiBase2D = {
     private  = private,
     readOnly = readOnly,
     
+    SCREEN_WIDTH  = SCREEN_WIDTH,
+    SCREEN_HEIGHT = SCREEN_HEIGHT,
+    
     new = new,
-}
+}, super);
 
 
 
@@ -239,6 +292,6 @@ GuiBase2D = {
 
 addEventHandler("onClientRestore", root, function(clearedRts)
     if (clearedRts) then
-        print("Render Targets were cleared!");
+        print("RTs were cleared!");
     end
 end);

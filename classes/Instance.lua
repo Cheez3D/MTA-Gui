@@ -86,7 +86,7 @@ local proxyMeta = {
         
         local set_f = obj.class.set[key];
         if (set_f) then
-            local success, result = pcall(set_f, obj, val, prev);
+            local success, result = pcall(set_f, obj, val, prev, 1);
             if (not success) then error(result, 2) end
             
             return;
@@ -102,6 +102,22 @@ local proxyMeta = {
         return obj.className.. " " ..obj.name;
     end,
 }
+
+
+
+local function isCircularReference(obj, parent)
+    if (obj.childrenByKey[parent]) then
+        return true;
+    end
+    
+    for i = 1, #obj.children do
+        if (isCircularReference(obj.children[i], parent)) then
+            return true;
+        end
+    end
+    
+    return false;
+end
 
 
 
@@ -134,15 +150,17 @@ function new(className)
     set.parent(obj, nil);
     
     
-    class.new(obj);
+    local success, result = pcall(class.new, obj);
+    if (not success) then error(result, 2) end
     
     
     local proxy = setmetatable({}, proxyMeta);
     
+    
     OBJ__PROXY[obj] = proxy;
     PROXY__OBJ[proxy] = obj;
     
-    return proxy;
+    return proxy, obj;
 end
 
 
@@ -204,6 +222,7 @@ function set.name(obj, name, prev)
     obj.name = name;
 end
 
+
 function set.parent(obj, parent, prev)
     if (parent ~= nil) then -- might be false so check against nil for assertion
         local parent_t = type(parent);
@@ -213,10 +232,10 @@ function set.parent(obj, parent, prev)
         end
         
         
-        -- if trying to set a child to be the parent of its parent
-        -- e.g. obj1.parent = obj2; obj2.parent = obj1;
+        -- if trying to loop objects
+        -- e.g. obj1.parent = obj2; obj2.parent = obj3; obj3.parent = obj1;
         
-        if (obj.childrenByKey[parent]) then
+        while (isCircularReference(obj, parent)) do
             error("bad argument #1 to 'parent' (circular reference)", 2);
         end
         
@@ -299,17 +318,3 @@ Instance = {
     
     new = new,
 }
-
--- Instance = setmetatable({}, {
-    -- __call = function(_Proxy,...)
-        -- local Success,Result = pcall(Class.New,...);
-        -- if (Success == false) then error(fromat_pcall_error(Result),2) end
-        
-        -- return Result;
-    -- end,
-    -- __index = Class,
-    -- __metatable = "Instance",
-    -- __newindex = function(_Proxy,Key)
-        -- error("attempt to modify a read-only key ("..tostring(Key)..")",2);
-    -- end
--- });
