@@ -13,7 +13,7 @@ local readOnly = inherit({}, super.readOnly);
 
 
 
-local RT_ADDITIONAL_MARGIN = 1; -- added so that rt can be properly anti-aliased when rotated
+local CANVAS_ADDITIONAL_MARGIN = 1; -- added so that canvas can be properly anti-aliased when rotated
 
 local MAX_BORDER_SIZE = 100;
 
@@ -168,7 +168,7 @@ function func.update_containerRotPivot(obj, descend)
             2*(-obj.containerSize.x/2 + obj.absRotPivot.x-obj.containerPos.x),
             2*(-obj.containerSize.y/2 + obj.absRotPivot.y-obj.containerPos.y),
             
-            2*(obj.absRotPivot.z/GuiObject.ROT_PIVOT_DEPTH_UNIT)
+            2*(obj.absRotPivot.z/ROT_PIVOT_DEPTH_UNIT)
         )/obj.parent.containerSize
     )
     or nil;
@@ -207,84 +207,88 @@ function func.update_containerRotPerspective(obj, descend)
 end
 
 
-function func.update_rtPos(obj, descend)
-    local rtPos = obj.rootGui and Vector2.new(
-        obj.absPos.x - (RT_ADDITIONAL_MARGIN + obj.borderSize),
-        obj.absPos.y - (RT_ADDITIONAL_MARGIN + obj.borderSize)
+function func.update_canvasPos(obj, descend)
+    local canvasPos = obj.rootGui and Vector2.new(
+        obj.absPos.x - (CANVAS_ADDITIONAL_MARGIN + obj.borderSize),
+        obj.absPos.y - (CANVAS_ADDITIONAL_MARGIN + obj.borderSize)
     )
     or nil;
     
-    if (rtPos ~= obj.rtPos) then
-        obj.rtPos = rtPos;
+    if (canvasPos ~= obj.canvasPos) then
+        obj.canvasPos = canvasPos;
     end
     
     
     if (descend) then
             for i = 1, #obj.guiChildren do
-                func.update_rtPos(obj.guiChildren[i], true);
+                func.update_canvasPos(obj.guiChildren[i], true);
             end
         end
 end
 
-function func.update_rtSize(obj, descend)
-    local rtSize = obj.rootGui and Vector2.new(
-        RT_ADDITIONAL_MARGIN + obj.borderSize + obj.absSize.x + obj.borderSize + RT_ADDITIONAL_MARGIN,
-        RT_ADDITIONAL_MARGIN + obj.borderSize + obj.absSize.y + obj.borderSize + RT_ADDITIONAL_MARGIN
+function func.update_canvasSize(obj, descend)
+    local canvasSize = obj.rootGui and Vector2.new(
+        CANVAS_ADDITIONAL_MARGIN + obj.borderSize + obj.absSize.x + obj.borderSize + CANVAS_ADDITIONAL_MARGIN,
+        CANVAS_ADDITIONAL_MARGIN + obj.borderSize + obj.absSize.y + obj.borderSize + CANVAS_ADDITIONAL_MARGIN
     )
     or nil;
     
-    if (rtSize ~= obj.rtSize) then
-        if (obj.rt and isElement(obj.rt)) then
-            destroyElement(obj.rt);
+    if (canvasSize ~= obj.canvasSize) then
+        if (obj.canvas and isElement(obj.canvas)) then
+            destroyElement(obj.canvas);
         end
         
-        obj.rtSize = rtSize;
-        obj.rt = rtSize and dxCreateRenderTarget(rtSize.x, rtSize.y, true);
+        obj.canvasSize = canvasSize;
+        obj.canvasSizeStep = Vector2.new(
+            math.ceil(canvasSize.x/super.RT_SIZE_STEP)*super.RT_SIZE_STEP,
+            math.ceil(canvasSize.y/super.RT_SIZE_STEP)*super.RT_SIZE_STEP
+        );
+        obj.canvas = canvasSize and dxCreateRenderTarget(math.floor(obj.canvasSizeStep.x), math.floor(obj.canvasSizeStep.y), true);
         
         
         if (descend) then
             for i = 1, #obj.guiChildren do
-                func.update_rtSize(obj.guiChildren[i], true);
+                func.update_canvasSize(obj.guiChildren[i], true);
             end
         end
     end
 end
 
-function func.update_rtRotPivot(obj, descend)
-    local rtRotPivot = obj.rootGui and obj.isRotated and Vector3.new(
-        2*(-obj.rtSize.x/2 + obj.absRotPivot.x-obj.rtPos.x),
-        2*(-obj.rtSize.y/2 + obj.absRotPivot.y-obj.rtPos.y),
+function func.update_canvasRotPivot(obj, descend)
+    local canvasRotPivot = obj.rootGui and obj.isRotated and Vector3.new(
+        2*(-obj.canvasSize.x/2 + obj.absRotPivot.x-obj.canvasPos.x),
+        2*(-obj.canvasSize.y/2 + obj.absRotPivot.y-obj.canvasPos.y),
         
         2*(obj.absRotPivot.z/ROT_PIVOT_DEPTH_UNIT)
     )/obj.parent.containerSize
     or nil;
     
-    if (rtRotPivot ~= obj.rtRotPivot) then
-        obj.rtRotPivot = rtRotPivot;
+    if (canvasRotPivot ~= obj.canvasRotPivot) then
+        obj.canvasRotPivot = canvasRotPivot;
         
         
         if (descend) then
             for i = 1, #obj.guiChildren do
-                func.update_rtRotPivot(obj.guiChildren[i], true);
+                func.update_canvasRotPivot(obj.guiChildren[i], true);
             end
         end
     end
 end
 
-function func.update_rtRotPerspective(obj, descend)
-    local rtRotPerspective = obj.rootGui and obj.isRotated3D and Vector2.new(
-        2*(-obj.rtSize.x/2 + obj.absRotPerspective.x-obj.rtPos.x),
-        2*(-obj.rtSize.y/2 + obj.absRotPerspective.y-obj.rtPos.y)
+function func.update_canvasRotPerspective(obj, descend)
+    local canvasRotPerspective = obj.rootGui and obj.isRotated3D and Vector2.new(
+        2*(-obj.canvasSize.x/2 + obj.absRotPerspective.x-obj.canvasPos.x),
+        2*(-obj.canvasSize.y/2 + obj.absRotPerspective.y-obj.canvasPos.y)
     )/obj.parent.containerSize
     or nil;
     
-    if (rtRotPerspective ~= obj.rtRotPerspective) then
-        obj.rtRotPerspective = rtRotPerspective;
+    if (canvasRotPerspective ~= obj.canvasRotPerspective) then
+        obj.canvasRotPerspective = canvasRotPerspective;
         
         
         if (descend) then
             for i = 1, #obj.guiChildren do
-                func.update_rtRotPerspective(obj.guiChildren[i], true);
+                func.update_canvasRotPerspective(obj.guiChildren[i], true);
             end
         end
     end
@@ -296,20 +300,21 @@ function func.update(obj, descend)
     if (not success) then error(result, 2) end
     
     
-    if (obj.rt) then
-        dxSetRenderTarget(obj.rt, true);
+    if (obj.canvas) then
+        dxSetRenderTarget(obj.canvas, true);
         
         dxSetBlendMode("add");
         
         if (obj.debug) then
-            dxDrawRectangle(0, 0, obj.rtSize.x, obj.rtSize.y, tocolor(255, 0, 255, 127.5));
+            dxDrawRectangle(0, 0, math.floor(obj.canvasSizeStep.x), math.floor(obj.canvasSizeStep.y), tocolor(255, 0, 255, 127.5));
         end
         
         -- border
         dxDrawRectangle(
-            RT_ADDITIONAL_MARGIN, RT_ADDITIONAL_MARGIN,
+            math.floor(CANVAS_ADDITIONAL_MARGIN), math.floor(CANVAS_ADDITIONAL_MARGIN),
             
-            obj.absSize.x+2*obj.borderSize, obj.absSize.y+2*obj.borderSize,
+            math.floor(obj.absSize.x+2*obj.borderSize),
+            math.floor(obj.absSize.y+2*obj.borderSize),
             
             tocolor(obj.borderColor3.r, obj.borderColor3.g, obj.borderColor3.b, 255*(1-obj.borderTransparency))
         );
@@ -318,10 +323,10 @@ function func.update(obj, descend)
         dxSetBlendMode("overwrite");
         
         dxDrawRectangle(
-            RT_ADDITIONAL_MARGIN+obj.borderSize,
-            RT_ADDITIONAL_MARGIN+obj.borderSize,
+            math.floor(CANVAS_ADDITIONAL_MARGIN+obj.borderSize),
+            math.floor(CANVAS_ADDITIONAL_MARGIN+obj.borderSize),
             
-            obj.absSize.x, obj.absSize.y,
+            math.floor(obj.absSize.x), math.floor(obj.absSize.y),
             
             tocolor(obj.bgColor3.r, obj.bgColor3.g, obj.bgColor3.b, 255*(1-obj.bgTransparency))
         );
@@ -388,10 +393,10 @@ function set.parent(obj, parent, prev, k)
     func.update_containerRotPivot(obj, true);
     func.update_containerRotPerspective(obj, true);
     
-    func.update_rtPos(obj, true);
-    func.update_rtSize(obj, true);
-    func.update_rtRotPivot(obj, true);
-    func.update_rtRotPerspective(obj, true);
+    func.update_canvasPos(obj, true);
+    func.update_canvasSize(obj, true);
+    func.update_canvasRotPivot(obj, true);
+    func.update_canvasRotPerspective(obj, true);
     
     func.update(obj, true);
     
@@ -432,8 +437,8 @@ function set.clipsDescendants(obj, clipsDescendants)
         local child = obj.guiChildren[i];
         
         -- because of updating obj's containerSize through update_containerSize
-        func.update_rtRotPivot(child, true);
-        func.update_rtRotPerspective(child, true);
+        func.update_canvasRotPivot(child, true);
+        func.update_canvasRotPerspective(child, true);
     end
     
     func.update(obj, true);
@@ -503,13 +508,13 @@ function set.borderSize(obj, borderSize)
     end
     
     
-    obj.borderSize = math.floor(borderSize);
+    obj.borderSize = borderSize;
     
     
-    func.update_rtPos(obj);
-    func.update_rtSize(obj);
-    func.update_rtRotPivot(obj);
-    func.update_rtRotPerspective(obj);
+    func.update_canvasPos(obj);
+    func.update_canvasSize(obj);
+    func.update_canvasRotPivot(obj);
+    func.update_canvasRotPerspective(obj);
     
     func.update(obj);
     
@@ -557,10 +562,10 @@ function set.size(obj, size)
     func.update_containerRotPivot(obj, true);
     func.update_containerRotPerspective(obj, true);
     
-    func.update_rtPos(obj, true);
-    func.update_rtSize(obj, true);
-    func.update_rtRotPivot(obj, true);
-    func.update_rtRotPerspective(obj, true);
+    func.update_canvasPos(obj, true);
+    func.update_canvasSize(obj, true);
+    func.update_canvasRotPivot(obj, true);
+    func.update_canvasRotPerspective(obj, true);
     
     func.update(obj, true);
     
@@ -588,9 +593,9 @@ function set.pos(obj, pos)
     func.update_containerRotPivot(obj, true);
     func.update_containerRotPerspective(obj, true);
     
-    func.update_rtPos(obj, true);
-    func.update_rtRotPivot(obj, true);
-    func.update_rtRotPerspective(obj, true);
+    func.update_canvasPos(obj, true);
+    func.update_canvasRotPivot(obj, true);
+    func.update_canvasRotPerspective(obj, true);
     
     func.update(obj, true);
     
@@ -617,9 +622,9 @@ function set.posOrigin(obj, posOrigin)
     func.update_containerRotPivot(obj, true);
     func.update_containerRotPerspective(obj, true);
     
-    func.update_rtPos(obj, true);
-    func.update_rtRotPivot(obj, true);
-    func.update_rtRotPerspective(obj, true);
+    func.update_canvasPos(obj, true);
+    func.update_canvasRotPivot(obj, true);
+    func.update_canvasRotPerspective(obj, true);
     
     func.update(obj, true);
     
@@ -644,8 +649,8 @@ function set.rot(obj, rot)
     func.update_containerRotPivot(obj);
     func.update_containerRotPerspective(obj);
     
-    func.update_rtRotPivot(obj);
-    func.update_rtRotPerspective(obj);
+    func.update_canvasRotPivot(obj);
+    func.update_canvasRotPerspective(obj);
     
     func.update(obj);
     
@@ -666,7 +671,7 @@ function set.rotPivot(obj, rotPivot)
     
     func.update_containerRotPivot(obj);
     
-    func.update_rtRotPivot(obj);
+    func.update_canvasRotPivot(obj);
     
     func.update(obj);
     
@@ -691,7 +696,7 @@ function set.rotPivotDepth(obj, rotPivotDepth)
     
     func.update_containerRotPivot(obj);
     
-    func.update_rtRotPivot(obj);
+    func.update_canvasRotPivot(obj);
     
     func.update(obj);
     
@@ -713,7 +718,7 @@ function set.rotPerspective(obj, rotPerspective)
     
     func.update_containerRotPerspective(obj);
     
-    func.update_rtRotPerspective(obj);
+    func.update_canvasRotPerspective(obj);
     
     func.update(obj);
     

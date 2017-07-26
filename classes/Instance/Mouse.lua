@@ -106,12 +106,13 @@ local function new(obj)
     
     
     obj.viewSize = Vector2.new(GuiBase2D.SCREEN_WIDTH, GuiBase2D.SCREEN_HEIGHT);
+    obj.viewPos  = Vector2.new();
     
     local x, y = getCursorPosition();
     
     if (x and y) then
-        obj.x = math.floor(x*obj.viewSize.x);
-        obj.y = math.floor(y*obj.viewSize.y);
+        obj.x = math.floor(x*GuiBase2D.SCREEN_WIDTH);
+        obj.y = math.floor(y*GuiBase2D.SCREEN_HEIGHT);
     else
         obj.x = math.floor(obj.viewSize.x/2);
         obj.y = math.floor(obj.viewSize.y/2);
@@ -172,6 +173,32 @@ end
 
 
 function func.move(obj, x, y)
+    local flag = false; -- TODO: add this to obj as a member
+    
+    if (x < obj.viewPos.x) then
+        x = obj.viewPos.x;
+        
+        flag = true;
+    elseif (x > obj.viewPos.x+obj.viewSize.x) then -- TODO: add a viewVertex instead of viewPos+viewSize
+        x = obj.viewPos.x+obj.viewSize.x;
+        
+        flag = true;
+    end
+    
+    if (y < obj.viewPos.y) then
+        y = obj.viewPos.y;
+        
+        flag = true;
+    elseif (y > obj.viewPos.y+obj.viewSize.y) then
+        y = obj.viewPos.y+obj.viewSize.y;
+        
+        flag = true;
+    end    
+    
+    if (flag) then
+        setCursorPosition(x, y);
+    end
+    
     obj.x = x;
     obj.y = y;
 end

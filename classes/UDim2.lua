@@ -70,6 +70,8 @@ local meta = {
 
 local MEM_PROXIES = setmetatable({}, { __mode = "v" });
 
+
+
 function new(scaleX, offsetX, scaleY, offsetY)
     if (scaleX ~= nil) then
         local scaleX_t = type(scaleX);

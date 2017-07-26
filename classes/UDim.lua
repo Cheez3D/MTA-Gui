@@ -59,6 +59,8 @@ local meta = {
 
 local MEM_PROXIES = setmetatable({}, { __mode = "v" });
 
+
+
 function new(scale, offset)
     
     if (scale ~= nil) then

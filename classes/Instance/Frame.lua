@@ -62,6 +62,7 @@ fr1.borderColor3 = Color3.new(0, 0, 255);
 fr2 = Instance.new("Frame");
 fr2.name = "fr2";
 fr2.pos = UDim2.new(0.5, 0, 0, 10);
+fr2.posOrigin = UDim2.new(0.25, 0, 0, -10)
 fr2.bgColor3 = Color3.new(223, 196, 125);
 fr2.borderColor3 = Color3.new(0, 0, 0);
 fr2.parent = fr1;
@@ -87,21 +88,21 @@ fr5.parent = fr1;
 
 fr1.parent = scrGui;
 
--- fr6 = Instance.new("Frame");
--- fr6.name = "fr6";
--- fr6.size = UDim2.new(0, 200, 0, 200);
--- fr6.pos = UDim2.new(0.5, 0, 0.5);
--- fr6.parent = scrGui;
+fr6 = Instance.new("Frame");
+fr6.name = "fr6";
+fr6.size = UDim2.new(0, 200, 0, 200);
+fr6.pos = UDim2.new(0.07, 0, 0.4);
+fr6.parent = scrGui;
 
--- fr7 = Instance.new("Frame");
--- fr7.name = "fr7";
--- fr7.bgColor3 = Color3.new(0, 255, 0);
--- fr7.pos = UDim2.new(0.5, 0, 0.5);
--- fr7.parent = fr6;
+fr7 = Instance.new("Frame");
+fr7.name = "fr7";
+fr7.bgColor3 = Color3.new(0, 255, 0);
+fr7.pos = UDim2.new(0.5, 0, 0.5);
+fr7.parent = fr6;
 
 
 
-selFr = fr1;
+selFr = fr6;
 
 local srx = guiCreateScrollBar(400, 20,  200, 20, true, false);
 local sry = guiCreateScrollBar(400, 40,  200, 20, true, false);
@@ -122,21 +123,35 @@ end);
 
 
 
-selFr.clipsDescendants = false;
+-- selFr.clipsDescendants = false;
+selFr.debug = true
 local v1 = selFr.size.x.scale;
 local v2 = selFr.size.y.scale;
-addEventHandler("onClientRender", root, function()
-    if (v1 > 0.7) then
-        fr1.clipsDescendants = true;
+local v3 = 0;
+
+local function render()
+    if (v1 > 0.66) then
+        -- selFr.clipsDescendants = true;
+        
+        print("Done");
+        
+        removeEventHandler("onClientRender", root, render)
         
         return
     end
     
     v1 = v1+0.001;
     v2 = v2+0.001;
+    v3 = v3+0.0025;
     
     selFr.size = UDim2.new(v1, 0, v2, 0);
-end);
+    -- selFr.borderSize = v1*60;
+    -- selFr.borderColor3 = Color3.new(v3*255, 0, (1-v3)*255);
+end
+
+setTimer(function()
+    addEventHandler("onClientRender", root, render);
+end, 2500, 1);
 
 
 

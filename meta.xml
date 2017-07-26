@@ -84,8 +84,7 @@
     
     <script src="classes/helper.lua" type="client"/>
     
-    <script src="classes/Instance.lua" type="client"/>
-    
+    <script src="classes/Instance/Instance.lua"     type="client"/>
     <script src="classes/Instance/GuiBase2D.lua"    type="client"/>
     <script src="classes/Instance/RootGui.lua"      type="client"/>
     <script src="classes/Instance/ScreenGui.lua"    type="client"/>

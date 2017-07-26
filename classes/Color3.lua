@@ -42,6 +42,8 @@ local meta = {
 
 local MEM_PROXIES = setmetatable({}, { __mode = "v" });
 
+
+
 function new(r, g, b)
     if (r ~= nil) then
         local r_t = type(r);

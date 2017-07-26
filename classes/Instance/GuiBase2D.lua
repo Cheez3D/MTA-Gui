@@ -15,6 +15,8 @@ local readOnly = inherit({}, super.readOnly);
 
 local SCREEN_WIDTH, SCREEN_HEIGHT = guiGetScreenSize();
 
+local RT_SIZE_STEP = 25;
+
 
 
 local function new(obj)
@@ -30,8 +32,8 @@ function func.update_absSize(obj, descend)
             or Vector2.new()
         )
         or func.isA(obj, "GuiObject") and obj.rootGui and Vector2.new(
-            math.floor(obj.size.x.offset + obj.parent.absSize.x*obj.size.x.scale),
-            math.floor(obj.size.y.offset + obj.parent.absSize.y*obj.size.y.scale)
+            obj.size.x.offset + obj.parent.absSize.x*obj.size.x.scale,
+            obj.size.y.offset + obj.parent.absSize.y*obj.size.y.scale
         )
     )
     or nil;
@@ -55,14 +57,11 @@ function func.update_absPos(obj, descend)
             or Vector2.new()
         )
         or func.isA(obj, "GuiObject") and obj.rootGui and Vector2.new(
-            math.floor(
-                obj.parent.absPos.x + (obj.pos.x.offset + obj.parent.absSize.x*obj.pos.x.scale)
-                - (obj.posOrigin.x.offset + obj.absSize.x*obj.posOrigin.x.scale)
-            ),
-            math.floor(
-                obj.parent.absPos.y + (obj.pos.y.offset + obj.parent.absSize.y*obj.pos.y.scale)
-                - (obj.posOrigin.y.offset + obj.absSize.y*obj.posOrigin.y.scale)
-            )
+            obj.parent.absPos.x + (obj.pos.x.offset + obj.parent.absSize.x*obj.pos.x.scale)
+            - (obj.posOrigin.x.offset + obj.absSize.x*obj.posOrigin.x.scale),
+            
+            obj.parent.absPos.y + (obj.pos.y.offset + obj.parent.absSize.y*obj.pos.y.scale)
+            - (obj.posOrigin.y.offset + obj.absSize.y*obj.posOrigin.y.scale)
         )
     )
     or nil;
@@ -107,12 +106,27 @@ function func.update_containerSize(obj, descend)
     or nil;
     
     if (containerSize ~= obj.containerSize) then
-        if (obj.container and isElement(obj.container)) then
-            destroyElement(obj.container);
-        end
-        
         obj.containerSize = containerSize;
-        obj.container = containerSize and dxCreateRenderTarget(containerSize.x, containerSize.y, true);
+        
+        local containerSizeStep = containerSize and ( -- TODO: change variable name to something else
+            func.isA(obj, "RootGui") and containerSize
+            or func.isA(obj, "GuiObject") and Vector2.new(
+                math.ceil(containerSize.x/RT_SIZE_STEP)*RT_SIZE_STEP,
+                math.ceil(containerSize.y/RT_SIZE_STEP)*RT_SIZE_STEP
+            )
+        )
+        or nil;
+        
+        if (containerSizeStep ~= obj.containerSizeStep) then
+            obj.containerSizeStep = containerSizeStep;
+            
+            
+            if (obj.container and isElement(obj.container)) then
+                destroyElement(obj.container);
+            end
+            
+            obj.container = containerSizeStep and dxCreateRenderTarget(math.floor(containerSizeStep.x), math.floor(containerSizeStep.y), true);
+        end
         
         
         if (descend) then
@@ -140,48 +154,54 @@ function func.update(obj, descend)
         dxSetBlendMode("add");
         
         if (obj.debug) then
-            dxDrawRectangle(0, 0, obj.containerSize.x, obj.containerSize.y, tocolor(0, 255, 0, 127.5));
+            dxDrawRectangle(0, 0, math.floor(obj.containerSizeStep.x), math.floor(obj.containerSizeStep.y), tocolor(0, 255, 0, 127.5));
         end
         
         -- children
         for i = 1, #obj.guiChildren do
-            local child = obj.children[i];
+            local child = obj.guiChildren[i];
             
             if (child.visible) then
-                if (func.isA(child, "GuiObject") and child.rt) then
+                if (func.isA(child, "GuiObject") and child.canvas) then
                     if (child.isRotated) then
                         if (child.isRotated3D) then
                             dxSetShaderTransform(
                                 GuiObject.SHADER,
                                 
                                 child.rot.y, child.rot.x, child.rot.z,
-                                child.rtRotPivot.x, child.rtRotPivot.y, child.rtRotPivot.z, false,
-                                child.rtRotPerspective.x, child.rtRotPerspective.y, false
+                                child.canvasRotPivot.x, child.canvasRotPivot.y, child.canvasRotPivot.z, false,
+                                child.canvasRotPerspective.x, child.canvasRotPerspective.y, false
                             );
                         else
                             dxSetShaderTransform(
                                 GuiObject.SHADER,
                                 
                                 child.rot.y, child.rot.x, child.rot.z,
-                                child.rtRotPivot.x, child.rtRotPivot.y, child.rtRotPivot.z, false,
+                                child.canvasRotPivot.x, child.canvasRotPivot.y, child.canvasRotPivot.z, false,
                                 0, 0, true -- if rotated 2D-ly do not change perspective to avoid unnecessary blurring
                             );
                         end
                         
-                        dxSetShaderValue(GuiObject.SHADER, "image", child.rt);
+                        dxSetShaderValue(GuiObject.SHADER, "image", child.canvas);
                         
                         dxDrawImage(
-                            child.rtPos.x-obj.containerPos.x, child.rtPos.y-obj.containerPos.y,
-                            child.rtSize.x, child.rtSize.y,
+                            math.floor(child.canvasPos.x-obj.containerPos.x),
+                            math.floor(child.canvasPos.y-obj.containerPos.y),
+                            
+                            math.floor(child.canvasSizeStep.x),
+                            math.floor(child.canvasSizeStep.y),
                             
                             GuiObject.SHADER
                         );
                     else
                         dxDrawImage(
-                            child.rtPos.x-obj.containerPos.x, child.rtPos.y-obj.containerPos.y,
-                            child.rtSize.x, child.rtSize.y,
+                            math.floor(child.canvasPos.x-obj.containerPos.x),
+                            math.floor(child.canvasPos.y-obj.containerPos.y),
                             
-                            child.rt
+                            math.floor(child.canvasSizeStep.x),
+                            math.floor(child.canvasSizeStep.y),
+                            
+                            child.canvas
                         );
                     end
                 end
@@ -209,15 +229,21 @@ function func.update(obj, descend)
                         dxSetShaderValue(GuiObject.SHADER, "image", child.container);
                         
                         dxDrawImage(
-                            child.containerPos.x-obj.containerPos.x, child.containerPos.y-obj.containerPos.y,
-                            child.containerSize.x, child.containerSize.y,
+                            math.floor(child.containerPos.x-obj.containerPos.x),
+                            math.floor(child.containerPos.y-obj.containerPos.y),
+                            
+                            math.floor(child.containerSizeStep.x),
+                            math.floor(child.containerSizeStep.y),
                             
                             GuiObject.SHADER
                         );
                     else
                         dxDrawImage(
-                            child.containerPos.x-obj.containerPos.x, child.containerPos.y-obj.containerPos.y,
-                            child.containerSize.x, child.containerSize.y,
+                            math.floor(child.containerPos.x-obj.containerPos.x),
+                            math.floor(child.containerPos.y-obj.containerPos.y),
+                            
+                            math.floor(child.containerSizeStep.x),
+                            math.floor(child.containerSizeStep.y),
                             
                             child.container
                         );
@@ -281,6 +307,8 @@ GuiBase2D = inherit({
     
     SCREEN_WIDTH  = SCREEN_WIDTH,
     SCREEN_HEIGHT = SCREEN_HEIGHT,
+    
+    RT_SIZE_STEP = RT_SIZE_STEP,
     
     new = new,
 }, super);
