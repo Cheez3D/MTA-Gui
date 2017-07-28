@@ -25,6 +25,11 @@ local ROT_PIVOT_DEPTH_UNIT = 1000;
 
 local SHADER = dxCreateShader("shaders/nothing.fx"); -- TODO: add check for successful creation (dxSetTestMode)
 
+local DEBUG_CANVAS_COLOR = tocolor(255, 0, 255, 127.5);
+
+local DEBUG_ROT_LINE_COLOR = tocolor(255, 0, 0, 200);
+local DEBUG_ROT_LINE_THICKNESS = 2;
+
 
 
 local function new(obj)
@@ -36,10 +41,10 @@ local function new(obj)
     
     set.clipsDescendants(obj, true);
     
-    set.bgColor3(obj, Color3.new(255, 255, 255));
+    set.bgColor(obj, Color3.new(255, 255, 255));
     set.bgTransparency(obj, 0);
     
-    set.borderColor3(obj, Color3.new(27, 42, 53));
+    set.borderColor(obj, Color3.new(27, 42, 53));
     set.borderSize(obj, 1);
     set.borderTransparency(obj, 0);
     
@@ -162,14 +167,177 @@ function func.update_absRotPerspective(obj, descend)
 end
 
 
+function func.update_vertices(obj, descend)
+    -- REFERENCES:
+    -- http://www.scratchapixel.com/lessons/mathematics-physics-for-computer-graphics/geometry/how-does-matrix-work-part-1
+    -- https://www.siggraph.org/education/materials/HyperGraph/modeling/mod_tran/3drota.htm
+    -- http://www.petesqbsite.com/sections/tutorials/tuts/perspective.html
+    
+    if (obj.rootGui) then
+        -- get positions of all 4 vertices
+        local v1 = obj.absPos;
+        local v2 = obj.absPos+Vector2.new(obj.absSize.x, 0);
+        local v3 = obj.absPos+obj.absSize;
+        local v4 = obj.absPos+Vector2.new(0, obj.absSize.y);
+        
+        if (obj.isRotated) then
+            -- we will be working in 3D so convert to Vector3
+            v1 = v1.vector3_0;
+            v2 = v2.vector3_0;
+            v3 = v3.vector3_0;
+            v4 = v4.vector3_0;
+            
+            -- calculate rotation matrices for each plane
+            local ax = math.rad(obj.rot.x);
+            local sx, cx = math.sin(ax), math.cos(ax);
+            local rx = Matrix3x3.new(
+                1, 0,  0,
+                0, cx, -sx,
+                0, sx, cx
+            );
+            
+            local ay = math.rad(obj.rot.y);
+            local sy, cy = math.sin(ay), math.cos(ay);
+            local ry = Matrix3x3.new(
+                cy,  0, sy,
+                0,   1, 0,
+                -sy, 0, cy
+            );
+            
+            local az = math.rad(obj.rot.z);
+            local sz, cz = math.sin(az), math.cos(az);
+            local rz = Matrix3x3.new(
+                cz, -sz, 0,
+                sz, cz,  0,
+                0,  0,   1
+            );
+            
+            local r = ry*rx*rz; -- get the final rotation transformation matrix
+                                -- (order is y, x, z because in dxSetShaderTransform x and y rotations are interchanged)
+            
+            -- translate by -absRotPivot so that absRotPivot is center of rotation, apply rotation through matrix, then translate back by +absRotPivot
+            v1 = v1-obj.absRotPivot;
+            v2 = v2-obj.absRotPivot;
+            v3 = v3-obj.absRotPivot;
+            v4 = v4-obj.absRotPivot;
+            
+            v1 = r*v1;
+            v2 = r*v2;
+            v3 = r*v3;
+            v4 = r*v4;
+            
+            local m1 = (1/(v1.z+1000))*Matrix3x3.new(
+                (1000), 0, (obj.absRotPerspective.x-obj.absRotPivot.x),
+                0, (1000), (obj.absRotPerspective.y-obj.absRotPivot.y),
+                0, 0, 0
+            );
+            
+            v1 = m1*v1+obj.absRotPivot;
+            v2 = v2+obj.absRotPivot;
+            v3 = v3+obj.absRotPivot;
+            v4 = v4+obj.absRotPivot;
+            
+            -- +------------------------------------------------------------------------------------------------------------+
+            -- | PERSPECTIVE PROJECTION                                                                                     |
+            -- +------------------------------------------------------------------------------------------------------------+
+            -- | TOP-DOWN VIEW OF SCREEN SLICED AT AN ARBITRARY Y VALUE                                                     |
+            -- +------------------------------------------------------------------------------------------------------------+
+            -- |                                                                                                            |
+            -- |                                   (cx, cy, pz)                      (px, py, pz)                           |
+            -- |                                                (C')-------------(P)                                        |
+            -- |                                                 |               /                                          |
+            -- |                                                 |              /                                           |
+            -- |                                                 |             /                                            |
+            -- |                                                 |            /                                             |
+            -- |        (SCREEN) [============================= (C)---------(S) =====================]                      |
+            -- |                                    (cx, cy, 0)  |          /   (sx, sy, 0)                                 |
+            -- |                                                 |         /                                                |
+            -- |                                                 |        /                                                 |
+            -- |                                                 |       /                                                  |
+            -- |                                                 |      /                                                   |
+            -- |                         (z)                     |     /                                                    |
+            -- |                          ^                      |    /                                                     |
+            -- |                          |                      |   /                                                      |
+            -- |                          +---> (x)              |  /                                                       |
+            -- |                                                 | /                                                        |
+            -- |                                                 |/                                                         |
+            -- |                                                (E)                                                         |
+            -- |                                                    (cx, cy, -1000)                                         |
+            -- |                                                                                                            |
+            -- +------------------------------------------------------------------------------------------------------------+
+            -- |                                                                                                            |
+            -- | (E) -> eye (empirically found out that for dxSetShaderTransform eye is 1000 pixels in front of the screen) |
+            -- |        (actually, stuff starts to disappear from sight at values >= 900 px,                                |
+            -- |         but I've noticed that the position is the most accurate when 1000 is used)                         |
+            -- |                                                                                                            |
+            -- | (C) -> perspective point that is used in dxSetShaderTransform (located at absRotPerspective)               |
+            -- |                                                                                                            |
+            -- | (P) -> point obtained by applying rotation to rectangle vertex                                             |
+            -- |                                                                                                            |
+            -- | (S) -> point that will be visible on screen after dxSetShaderTransform is applied                          |
+            -- |        (this is the point whose sx and sy coordinates we need to find)                                     |
+            -- |                                                                                                            |
+            -- +------------------------------------------------------------------------------------------------------------+
+            -- |                                                                                                            |
+            -- | Using the fact that the triangles (EPC') and (ESC) are similar we can calculate the coordinates of (S):    |
+            -- |                                                                                                            |
+            -- |                                   CS/C'P = CE/C'E =>                                                       |
+            -- |                                => (sx-cx)/(px-cx) = (0-(-1000))/(pz-(-1000)) =>                            |
+            -- |                                => (sx-cx)/(px-cx) = 1000/(pz+1000) =>                                      |
+            -- |                                => sx-cx = (1000/(pz+1000))*(px-cx) =>                                      |
+            -- |                                                                                                            |
+            -- |                                => sx = cx + (1000/(pz+1000))*(px-cx)                                       |
+            -- |                                                                                                            |
+            -- +------------------------------------------------------------------------------------------------------------+
+            
+            -- before we can use the vertex positions on screen we need to project them onto the screen using perspective projection
+            -- (this is the projection used by dxSetShaderTransform)
+            
+            local m1 = (1/(v1.z+1000))*Matrix3x3.new(
+                (1000), 0, (obj.absRotPerspective.x),
+                0, (1000), (obj.absRotPerspective.y),
+                0, 0, 0
+            );
+            
+            
+            -- v1 = Vector2.new(
+                -- (1000/(v1.z+1000))*v1.x+(obj.absRotPerspective.x/(v1.z+1000))*v1.z,
+                -- (1000/(v1.z+1000))*v1.y+(obj.absRotPerspective.y/(v1.z+1000))*v1.z
+            -- );
+            v1 = v1.vector2-- (m1*v1).vector2; -- obj.absRotPerspective+(-ROT_NEAR_Z_PLANE/(v1.z-ROT_NEAR_Z_PLANE))*(v1.vector2-obj.absRotPerspective);
+            v2 = obj.absRotPerspective+(-ROT_NEAR_Z_PLANE/(v2.z-ROT_NEAR_Z_PLANE))*(v2.vector2-obj.absRotPerspective);
+            v3 = obj.absRotPerspective+(-ROT_NEAR_Z_PLANE/(v3.z-ROT_NEAR_Z_PLANE))*(v3.vector2-obj.absRotPerspective);
+            v4 = obj.absRotPerspective+(-ROT_NEAR_Z_PLANE/(v4.z-ROT_NEAR_Z_PLANE))*(v4.vector2-obj.absRotPerspective);
+        end
+        
+        obj.vertex1 = v1;
+        obj.vertex2 = v2;
+        obj.vertex3 = v3;
+        obj.vertex4 = v4;
+    else
+        obj.vertex1 = nil;
+        obj.vertex2 = nil;
+        obj.vertex3 = nil;
+        obj.vertex4 = nil;
+    end
+    
+    
+    if (descend) then
+        for i = 1, #obj.guiChildren do
+            func.update_vertices(obj.guiChildren[i], true);
+        end
+    end
+end
+
+
 function func.update_containerRotPivot(obj, descend)
     local containerRotPivot = #obj.guiChildren > 0 and (
         obj.rootGui and obj.isRotated and Vector3.new(
-            2*(-obj.containerSize.x/2 + obj.absRotPivot.x-obj.containerPos.x),
-            2*(-obj.containerSize.y/2 + obj.absRotPivot.y-obj.containerPos.y),
+            2*(-obj.containerSize.x/2 + obj.absRotPivot.x-obj.containerPos.x), -- use containerSize and not containerActualSize
+            2*(-obj.containerSize.y/2 + obj.absRotPivot.y-obj.containerPos.y), -- because we draw container using dxDrawImageSection in GuiBase2D
             
             2*(obj.absRotPivot.z/ROT_PIVOT_DEPTH_UNIT)
-        )/obj.parent.containerSize
+        )/obj.parent.containerActualSize.vector3_1
     )
     or nil;
     
@@ -190,7 +358,7 @@ function func.update_containerRotPerspective(obj, descend)
         obj.rootGui and obj.isRotated3D and Vector2.new(
             2*(-obj.containerSize.x/2 + obj.absRotPerspective.x-obj.containerPos.x),
             2*(-obj.containerSize.y/2 + obj.absRotPerspective.y-obj.containerPos.y)
-        )/obj.parent.containerSize
+        )/obj.parent.containerActualSize
     )
     or nil;
     
@@ -220,10 +388,10 @@ function func.update_canvasPos(obj, descend)
     
     
     if (descend) then
-            for i = 1, #obj.guiChildren do
-                func.update_canvasPos(obj.guiChildren[i], true);
-            end
+        for i = 1, #obj.guiChildren do
+            func.update_canvasPos(obj.guiChildren[i], true);
         end
+    end
 end
 
 function func.update_canvasSize(obj, descend)
@@ -234,16 +402,24 @@ function func.update_canvasSize(obj, descend)
     or nil;
     
     if (canvasSize ~= obj.canvasSize) then
-        if (obj.canvas and isElement(obj.canvas)) then
-            destroyElement(obj.canvas);
-        end
-        
         obj.canvasSize = canvasSize;
-        obj.canvasSizeStep = Vector2.new(
-            math.ceil(canvasSize.x/super.RT_SIZE_STEP)*super.RT_SIZE_STEP,
-            math.ceil(canvasSize.y/super.RT_SIZE_STEP)*super.RT_SIZE_STEP
-        );
-        obj.canvas = canvasSize and dxCreateRenderTarget(math.floor(obj.canvasSizeStep.x), math.floor(obj.canvasSizeStep.y), true);
+        
+        local canvasActualSize = canvasSize and Vector2.new(
+            math.ceil(canvasSize.x/GuiBase2D.RT_SIZE_STEP)*GuiBase2D.RT_SIZE_STEP,
+            math.ceil(canvasSize.y/GuiBase2D.RT_SIZE_STEP)*GuiBase2D.RT_SIZE_STEP
+        )
+        or nil;
+        
+        if (canvasActualSize ~= obj.canvasActualSize) then
+            obj.canvasActualSize = canvasActualSize;
+            
+            
+            if (obj.canvas and isElement(obj.canvas)) then
+                destroyElement(obj.canvas);
+            end
+            
+            obj.canvas = canvasActualSize and dxCreateRenderTarget(canvasActualSize.x, canvasActualSize.y, true);
+        end
         
         
         if (descend) then
@@ -256,11 +432,11 @@ end
 
 function func.update_canvasRotPivot(obj, descend)
     local canvasRotPivot = obj.rootGui and obj.isRotated and Vector3.new(
-        2*(-obj.canvasSize.x/2 + obj.absRotPivot.x-obj.canvasPos.x),
-        2*(-obj.canvasSize.y/2 + obj.absRotPivot.y-obj.canvasPos.y),
+        2*(-obj.canvasActualSize.x/2 + obj.absRotPivot.x-obj.canvasPos.x), -- use canvasActualSize and not canvasSize
+        2*(-obj.canvasActualSize.y/2 + obj.absRotPivot.y-obj.canvasPos.y), -- because we draw canvas using dxDrawImage in GuiBase2D
         
         2*(obj.absRotPivot.z/ROT_PIVOT_DEPTH_UNIT)
-    )/obj.parent.containerSize
+    )/obj.parent.containerActualSize.vector3_1
     or nil;
     
     if (canvasRotPivot ~= obj.canvasRotPivot) then
@@ -277,9 +453,9 @@ end
 
 function func.update_canvasRotPerspective(obj, descend)
     local canvasRotPerspective = obj.rootGui and obj.isRotated3D and Vector2.new(
-        2*(-obj.canvasSize.x/2 + obj.absRotPerspective.x-obj.canvasPos.x),
-        2*(-obj.canvasSize.y/2 + obj.absRotPerspective.y-obj.canvasPos.y)
-    )/obj.parent.containerSize
+        2*(-obj.canvasActualSize.x/2 + obj.absRotPerspective.x-obj.canvasPos.x),
+        2*(-obj.canvasActualSize.y/2 + obj.absRotPerspective.y-obj.canvasPos.y)
+    )/obj.parent.containerActualSize
     or nil;
     
     if (canvasRotPerspective ~= obj.canvasRotPerspective) then
@@ -306,29 +482,29 @@ function func.update(obj, descend)
         dxSetBlendMode("add");
         
         if (obj.debug) then
-            dxDrawRectangle(0, 0, math.floor(obj.canvasSizeStep.x), math.floor(obj.canvasSizeStep.y), tocolor(255, 0, 255, 127.5));
+            dxDrawRectangle(0, 0, obj.canvasActualSize.x, obj.canvasActualSize.y, DEBUG_CANVAS_COLOR);
         end
         
         -- border
         dxDrawRectangle(
-            math.floor(CANVAS_ADDITIONAL_MARGIN), math.floor(CANVAS_ADDITIONAL_MARGIN),
+            CANVAS_ADDITIONAL_MARGIN, CANVAS_ADDITIONAL_MARGIN,
             
-            math.floor(obj.absSize.x+2*obj.borderSize),
-            math.floor(obj.absSize.y+2*obj.borderSize),
+            obj.absSize.x+2*obj.borderSize,
+            obj.absSize.y+2*obj.borderSize,
             
-            tocolor(obj.borderColor3.r, obj.borderColor3.g, obj.borderColor3.b, 255*(1-obj.borderTransparency))
+            tocolor(obj.borderColor.r, obj.borderColor.g, obj.borderColor.b, 255*(1-obj.borderTransparency))
         );
         
         -- background
         dxSetBlendMode("overwrite");
         
         dxDrawRectangle(
-            math.floor(CANVAS_ADDITIONAL_MARGIN+obj.borderSize),
-            math.floor(CANVAS_ADDITIONAL_MARGIN+obj.borderSize),
+            CANVAS_ADDITIONAL_MARGIN+obj.borderSize,
+            CANVAS_ADDITIONAL_MARGIN+obj.borderSize,
             
-            math.floor(obj.absSize.x), math.floor(obj.absSize.y),
+            obj.absSize.x, obj.absSize.y,
             
-            tocolor(obj.bgColor3.r, obj.bgColor3.g, obj.bgColor3.b, 255*(1-obj.bgTransparency))
+            tocolor(obj.bgColor.r, obj.bgColor.g, obj.bgColor.b, 255*(1-obj.bgTransparency))
         );
         
         dxSetRenderTarget();
@@ -388,6 +564,8 @@ function set.parent(obj, parent, prev, k)
     func.update_absRotPivot(obj, true);
     func.update_absRotPerspective(obj, true);
     
+    func.update_vertices(obj, true);
+    
     func.update_containerPos(obj, true);
     func.update_containerSize(obj, true);
     func.update_containerRotPivot(obj, true);
@@ -436,7 +614,7 @@ function set.clipsDescendants(obj, clipsDescendants)
     for i = 1, #obj.guiChildren do
         local child = obj.guiChildren[i];
         
-        -- because of updating obj's containerSize through update_containerSize
+        -- because of updating obj's containerActualSize through update_containerSize
         func.update_canvasRotPivot(child, true);
         func.update_canvasRotPerspective(child, true);
     end
@@ -447,15 +625,15 @@ function set.clipsDescendants(obj, clipsDescendants)
 end
 
 
-function set.bgColor3(obj, bgColor3)
-    local bgColor3_t = type(bgColor3);
+function set.bgColor(obj, bgColor)
+    local bgColor_t = type(bgColor);
     
-    if (bgColor3_t ~= "Color3") then
-        error("bad argument #1 to 'bgColor3' (Color3 expected, got " ..bgColor3_t.. ")", 2);
+    if (bgColor_t ~= "Color3") then
+        error("bad argument #1 to 'bgColor3' (Color3 expected, got " ..bgColor_t.. ")", 2);
     end
     
     
-    obj.bgColor3 = bgColor3;
+    obj.bgColor = bgColor;
     
     
     func.update(obj);
@@ -482,15 +660,15 @@ function set.bgTransparency(obj, bgTransparency)
 end
 
 
-function set.borderColor3(obj, borderColor3)
-    local borderColor3_t = type(borderColor3);
+function set.borderColor(obj, borderColor)
+    local borderColor_t = type(borderColor);
     
-    if (borderColor3_t ~= "Color3") then
-        error("bad argument #1 to 'borderColor3' (Color3 expected, got " ..borderColor3_t.. ")", 2);
+    if (borderColor_t ~= "Color3") then
+        error("bad argument #1 to 'borderColor3' (Color3 expected, got " ..borderColor_t.. ")", 2);
     end
     
     
-    obj.borderColor3 = borderColor3;
+    obj.borderColor = borderColor;
     
     
     func.update(obj);
@@ -508,7 +686,7 @@ function set.borderSize(obj, borderSize)
     end
     
     
-    obj.borderSize = borderSize;
+    obj.borderSize = math.floor(borderSize);
     
     
     func.update_canvasPos(obj);
@@ -557,6 +735,8 @@ function set.size(obj, size)
     func.update_absRotPivot(obj, true);
     func.update_absRotPerspective(obj, true);
     
+    func.update_vertices(obj, true);
+    
     func.update_containerPos(obj, true);
     func.update_containerSize(obj, true);
     func.update_containerRotPivot(obj, true);
@@ -589,6 +769,8 @@ function set.pos(obj, pos)
     func.update_absRotPivot(obj, true);
     func.update_absRotPerspective(obj, true);
     
+    func.update_vertices(obj, true);
+    
     func.update_containerPos(obj, true);
     func.update_containerRotPivot(obj, true);
     func.update_containerRotPerspective(obj, true);
@@ -618,6 +800,8 @@ function set.posOrigin(obj, posOrigin)
     func.update_absRotPivot(obj, true);
     func.update_absRotPerspective(obj, true);
     
+    func.update_vertices(obj, true);
+    
     func.update_containerPos(obj, true);
     func.update_containerRotPivot(obj, true);
     func.update_containerRotPerspective(obj, true);
@@ -646,6 +830,8 @@ function set.rot(obj, rot)
     func.update_isRotated(obj);
     func.update_isRotated3D(obj);
     
+    func.update_vertices(obj, true);
+    
     func.update_containerRotPivot(obj);
     func.update_containerRotPerspective(obj);
     
@@ -668,6 +854,8 @@ function set.rotPivot(obj, rotPivot)
     
     
     func.update_absRotPivot(obj);
+    
+    func.update_vertices(obj, true);
     
     func.update_containerRotPivot(obj);
     
@@ -694,6 +882,8 @@ function set.rotPivotDepth(obj, rotPivotDepth)
     
     func.update_absRotPivot(obj);
     
+    func.update_vertices(obj, true);
+    
     func.update_containerRotPivot(obj);
     
     func.update_canvasRotPivot(obj);
@@ -715,6 +905,8 @@ function set.rotPerspective(obj, rotPerspective)
     
     
     func.update_absRotPerspective(obj);
+    
+    func.update_vertices(obj, true);
     
     func.update_containerRotPerspective(obj);
     
@@ -756,6 +948,9 @@ GuiObject = inherit({
     readOnly = readOnly,
     
     SHADER = SHADER,
+    
+    DEBUG_ROT_LINE_COLOR     = DEBUG_ROT_LINE_COLOR,
+    DEBUG_ROT_LINE_THICKNESS = DEBUG_ROT_LINE_THICKNESS,
     
     new = new,
 }, super);

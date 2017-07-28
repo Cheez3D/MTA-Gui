@@ -153,7 +153,12 @@ end
 addCommandHandler("r", function(cmd, ...)
     local code = table.concat({ ... }, ' ');
     
-    local f = loadstring(code);
+    local f, err = loadstring(code);
+    
+    if (not f) then
+        error(err);
+    end
+    
     f();
 end);
 

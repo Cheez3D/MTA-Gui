@@ -84,13 +84,13 @@
     
     <script src="classes/helper.lua" type="client"/>
     
-    <script src="classes/Instance/Instance.lua"     type="client"/>
-    <script src="classes/Instance/GuiBase2D.lua"    type="client"/>
-    <script src="classes/Instance/RootGui.lua"      type="client"/>
-    <script src="classes/Instance/ScreenGui.lua"    type="client"/>
-    <script src="classes/Instance/GuiObject.lua"    type="client"/>
-    <script src="classes/Instance/GuiContainer.lua" type="client"/>
-    <script src="classes/Instance/Frame.lua"        type="client"/>
+    <script src="classes/Instance/Instance.lua" type="client"/>
+    
+    <script src="classes/Instance/GuiBase2D.lua" type="client"/>
+    <script src="classes/Instance/RootGui.lua"   type="client"/>
+    <script src="classes/Instance/ScreenGui.lua" type="client"/>
+    <script src="classes/Instance/GuiObject.lua" type="client"/>
+    <script src="classes/Instance/Frame.lua"     type="client"/>
     
     <script src="classes/Instance/Mouse.lua" type="client"/>
     

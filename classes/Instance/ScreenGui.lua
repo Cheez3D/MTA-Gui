@@ -28,110 +28,15 @@ end
 
 
 
-function func.draw(obj) -- TODO: move update from GuiBase2D to GuiObject, move container;
-    -- if (obj.container) then
-        -- dxDrawImage(obj.containerPos.x, obj.containerPos.y, obj.containerSizeStep.x, obj.containerSizeStep.y, obj.container);
-    -- end
-    
-    if (obj.debug) then
-        dxDrawRectangle(0, 0, math.floor(obj.containerSizeStep.x), math.floor(obj.containerSizeStep.y), tocolor(0, 255, 0, 127.5));
-    end
-    
-    -- children
-    for i = 1, #obj.guiChildren do
-        local child = obj.guiChildren[i];
-        
-        if (child.visible) then
-            if (child.canvas) then
-                if (child.isRotated) then
-                    if (child.isRotated3D) then
-                        dxSetShaderTransform(
-                            GuiObject.SHADER,
-                            
-                            child.rot.y, child.rot.x, child.rot.z,
-                            child.canvasRotPivot.x, child.canvasRotPivot.y, child.canvasRotPivot.z, false,
-                            child.canvasRotPerspective.x, child.canvasRotPerspective.y, false
-                        );
-                    else
-                        dxSetShaderTransform(
-                            GuiObject.SHADER,
-                            
-                            child.rot.y, child.rot.x, child.rot.z,
-                            child.canvasRotPivot.x, child.canvasRotPivot.y, child.canvasRotPivot.z, false,
-                            0, 0, true -- if rotated 2D-ly do not change perspective to avoid unnecessary blurring
-                        );
-                    end
-                    
-                    dxSetShaderValue(GuiObject.SHADER, "image", child.canvas);
-                    
-                    dxDrawImage(
-                        math.floor(child.canvasPos.x-obj.containerPos.x),
-                        math.floor(child.canvasPos.y-obj.containerPos.y),
-                        
-                        math.floor(child.canvasSizeStep.x),
-                        math.floor(child.canvasSizeStep.y),
-                        
-                        GuiObject.SHADER
-                    );
-                else
-                    dxDrawImage(
-                        math.floor(child.canvasPos.x-obj.containerPos.x),
-                        math.floor(child.canvasPos.y-obj.containerPos.y),
-                        
-                        math.floor(child.canvasSizeStep.x),
-                        math.floor(child.canvasSizeStep.y),
-                        
-                        child.canvas
-                    );
-                end
-            end
+function func.draw(obj)
+    if (obj.container) then
+        dxDrawImageSection(
+            obj.containerPos.x, obj.containerPos.y, obj.containerSize.x, obj.containerSize.y,
+            0, 0, obj.containerSize.x, obj.containerSize.y,
             
-            if (child.container) then
-                if (child.isRotated) then
-                    if (child.isRotated3D) then
-                        dxSetShaderTransform(
-                            GuiObject.SHADER,
-                            
-                            child.rot.y, child.rot.x, child.rot.z,
-                            child.containerRotPivot.x, child.containerRotPivot.y, child.containerRotPivot.z, false,
-                            child.containerRotPerspective.x, child.containerRotPerspective.y, false
-                        );
-                    else
-                        dxSetShaderTransform(
-                            GuiObject.SHADER,
-                            
-                            child.rot.y, child.rot.x, child.rot.z,
-                            child.containerRotPivot.x, child.containerRotPivot.y, child.containerRotPivot.z, false,
-                            0, 0, true -- if rotated 2D-ly do not change perspective to avoid unnecessary blurring
-                        );
-                    end
-                    
-                    dxSetShaderValue(GuiObject.SHADER, "image", child.container);
-                    
-                    dxDrawImage(
-                        math.floor(child.containerPos.x-obj.containerPos.x),
-                        math.floor(child.containerPos.y-obj.containerPos.y),
-                        
-                        math.floor(child.containerSizeStep.x),
-                        math.floor(child.containerSizeStep.y),
-                        
-                        GuiObject.SHADER
-                    );
-                else
-                    dxDrawImage(
-                        math.floor(child.containerPos.x-obj.containerPos.x),
-                        math.floor(child.containerPos.y-obj.containerPos.y),
-                        
-                        math.floor(child.containerSizeStep.x),
-                        math.floor(child.containerSizeStep.y),
-                        
-                        child.container
-                    );
-                end
-            end
-        end
+            obj.container
+        );
     end
-    
 end
 
 

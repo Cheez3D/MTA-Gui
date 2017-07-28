@@ -36,19 +36,37 @@ local meta = {
     __add = function(proxy1, proxy2)
         local proxy1_t = type(proxy1);
         
-        if (proxy1_t ~= "Matrix3x3") then
-            error("bad operand #1 to '__add' (Matrix3x3 expected, got " ..proxy1_t.. ")", 2);
+        if (proxy1_t ~= "Matrix3x3" and proxy1_t ~= "number") then
+            error("bad operand #1 to '__add' (Matrix3x3/number expected, got " ..proxy1_t.. ")", 2);
         end
         
         local proxy2_t = type(proxy2);
         
-        if (proxy2_t ~= "Matrix3x3") then
-            error("bad operand #2 to '__add' (Matrix3x3 expected, got " ..proxy2_t.. ")", 2);
+        if (proxy2_t ~= "Matrix3x3" and proxy2_t ~= "number") then
+            error("bad operand #2 to '__add' (Matrix3x3/number expected, got " ..proxy2_t.. ")", 2);
         end
         
         
+        if (proxy1_t == "number") then
+            local obj2 = PROXY__OBJ[proxy2];
+            
+            return new(
+                proxy1 + obj2.m00, proxy1 + obj2.m01, proxy1 + obj2.m02,
+                proxy1 + obj2.m10, proxy1 + obj2.m11, proxy1 + obj2.m12,
+                proxy1 + obj2.m20, proxy1 + obj2.m21, proxy1 + obj2.m22
+            );
+        end
         
         local obj1 = PROXY__OBJ[proxy1];
+        
+        if (proxy2_t == "number") then
+            return new(
+                obj1.m00 + proxy2, obj1.m01 + proxy2, obj1.m02 + proxy2,
+                obj1.m10 + proxy2, obj1.m11 + proxy2, obj1.m12 + proxy2,
+                obj1.m20 + proxy2, obj1.m21 + proxy2, obj1.m22 + proxy2
+            );
+        end
+        
         local obj2 = PROXY__OBJ[proxy2];
         
         return new(
@@ -61,19 +79,37 @@ local meta = {
     __sub = function(proxy1, proxy2)
         local proxy1_t = type(proxy1);
         
-        if (proxy1_t ~= "Matrix3x3") then
-            error("bad operand #1 to '__sub' (Matrix3x3 expected, got " ..proxy1_t.. ")", 2);
+        if (proxy1_t ~= "Matrix3x3" and proxy1_t ~= "number") then
+            error("bad operand #1 to '__sub' (Matrix3x3/number expected, got " ..proxy1_t.. ")", 2);
         end
         
         local proxy2_t = type(proxy2);
         
-        if (proxy2_t ~= "Matrix3x3") then
-            error("bad operand #2 to '__sub' (Matrix3x3 expected, got " ..proxy2_t.. ")", 2);
+        if (proxy2_t ~= "Matrix3x3" and proxy2_t ~= "number") then
+            error("bad operand #2 to '__sub' (Matrix3x3/number expected, got " ..proxy2_t.. ")", 2);
         end
         
         
+        if (proxy1_t == "number") then
+            local obj2 = PROXY__OBJ[proxy2];
+            
+            return new(
+                proxy1 - obj2.m00, proxy1 - obj2.m01, proxy1 - obj2.m02,
+                proxy1 - obj2.m10, proxy1 - obj2.m11, proxy1 - obj2.m12,
+                proxy1 - obj2.m20, proxy1 - obj2.m21, proxy1 - obj2.m22
+            );
+        end
         
         local obj1 = PROXY__OBJ[proxy1];
+        
+        if (proxy2_t == "number") then
+            return new(
+                obj1.m00 - proxy2, obj1.m01 - proxy2, obj1.m02 - proxy2,
+                obj1.m10 - proxy2, obj1.m11 - proxy2, obj1.m12 - proxy2,
+                obj1.m20 - proxy2, obj1.m21 - proxy2, obj1.m22 - proxy2
+            );
+        end
+        
         local obj2 = PROXY__OBJ[proxy2];
         
         return new(
@@ -86,19 +122,37 @@ local meta = {
     __mul = function(proxy1, proxy2)
         local proxy1_t = type(proxy1);
         
-        if (proxy1_t ~= "Matrix3x3") then
-            error("bad operand #1 to '__mul' (Matrix3x3 expected, got " ..proxy1_t.. ")", 2);
+        if (proxy1_t ~= "Matrix3x3" and proxy1_t ~= "number") then
+            error("bad operand #1 to '__mul' (Matrix3x3/number expected, got " ..proxy1_t.. ")", 2);
         end
         
         local proxy2_t = type(proxy2);
         
-        if (proxy2_t ~= "Matrix3x3" and proxy2_t ~= "Vector3") then
-            error("bad operand #2 to '__mul' (Matrix3x3/Vector3 expected, got " ..proxy2_t.. ")", 2);
+        if (proxy2_t ~= "Matrix3x3" and proxy2_t ~= "Vector3" and proxy2_t ~= "number") then
+            error("bad operand #2 to '__mul' (Matrix3x3/Vector3/number expected, got " ..proxy2_t.. ")", 2);
         end
         
         
+        if (proxy1_t == "number") then
+            local obj2 = PROXY__OBJ[proxy2];
+            
+            return new(
+                proxy1 * obj2.m00, proxy1 * obj2.m01, proxy1 * obj2.m02,
+                proxy1 * obj2.m10, proxy1 * obj2.m11, proxy1 * obj2.m12,
+                proxy1 * obj2.m20, proxy1 * obj2.m21, proxy1 * obj2.m22
+            );
+        end
         
         local obj1 = PROXY__OBJ[proxy1];
+        
+        if (proxy2_t == "number") then
+            return new(
+                obj1.m00 * proxy2, obj1.m01 * proxy2, obj1.m02 * proxy2,
+                obj1.m10 * proxy2, obj1.m11 * proxy2, obj1.m12 * proxy2,
+                obj1.m20 * proxy2, obj1.m21 * proxy2, obj1.m22 * proxy2
+            );
+        end
+        
         local obj2 = PROXY__OBJ[proxy2];
         
         if (proxy2_t == "Vector3") then
@@ -312,4 +366,11 @@ Matrix3x3 = {
     meta = meta,
     
     new = new,
+    
+    ZERO     = new(),
+    IDENTITY = new(
+        1, 0, 0,
+        0, 1, 0,
+        0, 0, 1
+    ),
 }
