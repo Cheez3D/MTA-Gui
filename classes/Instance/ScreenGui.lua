@@ -23,7 +23,7 @@ local function new(obj)
     end
     
     
-    addEventHandler("onClientPreRender", root, obj.draw_wrapper);
+    addEventHandler("onClientRender", root, obj.draw_wrapper, false);
 end
 
 
@@ -34,7 +34,9 @@ function func.draw(obj)
             obj.containerPos.x, obj.containerPos.y, obj.containerSize.x, obj.containerSize.y,
             0, 0, obj.containerSize.x, obj.containerSize.y,
             
-            obj.container
+            obj.container,
+            
+            nil, nil, nil, GuiBase2D.DRAW_POST_GUI -- 13th argument instead of 14th when leaving rotation params nil
         );
     end
 end

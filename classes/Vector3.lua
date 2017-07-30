@@ -276,12 +276,12 @@ function get.unit(obj)
     return obj.unit;
 end
 
-function get.vector2(obj)
-    if (not obj.vector2) then
-        obj.vector2 = Vector2.new(obj.x, obj.y);
+function get.vec2(obj)
+    if (not obj.vec2) then
+        obj.vec2 = Vector2.new(obj.x, obj.y);
     end
     
-    return obj.vector2;
+    return obj.vec2;
 end
 
 

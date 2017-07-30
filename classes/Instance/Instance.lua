@@ -137,14 +137,18 @@ function new(className)
     
     local obj = setmetatable({}, objMeta);
     
+    
     obj.index = nil; -- index in children array of parent
     
     obj.children       = {}
     obj.childrenByKey  = {}
     obj.childrenByName = {}
     
+    obj.depth = nil; -- depth in object tree
+    
     obj.class     = class;
     obj.className = className;
+    
     
     set.name(obj, className);
     set.parent(obj, nil);
@@ -163,6 +167,22 @@ function new(className)
     return proxy, obj;
 end
 
+
+
+function func.update_depth(obj, descend)
+    local depth = obj.parent and obj.parent.depth+1 or 1;
+    
+    if (depth ~= obj.depth) then
+        obj.depth = depth;
+        
+        
+        if (descend) then
+            for i = 1, #obj.children do
+                func.update_depth(obj.children[i], true);
+            end
+        end
+    end
+end
 
 
 function func.isA(obj, className)
@@ -295,6 +315,9 @@ function set.parent(obj, parent, prev)
     
     
     obj.parent = parent;
+    
+    
+    func.update_depth(obj, true);
 end
 
 

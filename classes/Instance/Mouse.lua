@@ -160,9 +160,9 @@ local function new(obj)
     end
     
     
-    addEventHandler("onClientPreRender", root, obj.draw_wrapper, nil, "high");
+    addEventHandler("onClientRender", root, obj.draw_wrapper, false, "low-1");
     
-    addEventHandler("onClientCursorMove", root, obj.move_wrapper, nil, "high");
+    addEventHandler("onClientCursorMove", root, obj.move_wrapper, false, "high");
 end
 
 

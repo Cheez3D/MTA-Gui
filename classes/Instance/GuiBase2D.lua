@@ -19,10 +19,15 @@ local RT_SIZE_STEP = 25;
 
 local DEBUG_CONTAINER_COLOR = tocolor(0, 255, 0, 127.5);
 
+local DRAW_POST_GUI = false;
+
 
 
 local function new(obj)
     obj.guiChildren = {}
+    
+    
+    set.debug(obj, false);
 end
 
 
@@ -42,12 +47,12 @@ function func.update_absSize(obj, descend)
     
     if (absSize ~= obj.absSize) then
         obj.absSize = absSize;
-        
-        
-        if (descend) then
-            for i = 1, #obj.guiChildren do
-                func.update_absSize(obj.guiChildren[i], true);
-            end
+    end
+    
+    
+    if (descend) then
+        for i = 1, #obj.guiChildren do
+            func.update_absSize(obj.guiChildren[i], true);
         end
     end
 end
@@ -132,12 +137,12 @@ function func.update_containerSize(obj, descend)
             
             obj.container = containerActualSize and dxCreateRenderTarget(containerActualSize.x, containerActualSize.y, true);
         end
-        
-        
-        if (descend) then
-            for i = 1, #obj.guiChildren do
-                func.update_containerSize(obj.guiChildren[i], true);
-            end
+    end
+    
+    
+    if (descend) then
+        for i = 1, #obj.guiChildren do
+            func.update_containerSize(obj.guiChildren[i], true);
         end
     end
 end
@@ -232,30 +237,6 @@ function func.update(obj, descend)
                         );
                     end
                 end
-                
-                if (func.isA(child, "GuiObject") and child.debug) then
-                    local lineSrcPos = child.absRotPivot.vector2-obj.containerPos;
-                    
-                    dxDrawLine(
-                        lineSrcPos.x, lineSrcPos.y, child.vertex1.x-obj.containerPos.x, child.vertex1.y-obj.containerPos.y,
-                        GuiObject.DEBUG_ROT_LINE_COLOR, GuiObject.DEBUG_ROT_LINE_THICKNESS
-                    );
-                    
-                    dxDrawLine(
-                        lineSrcPos.x, lineSrcPos.y, child.vertex2.x-obj.containerPos.x, child.vertex2.y-obj.containerPos.y,
-                        GuiObject.DEBUG_ROT_LINE_COLOR, GuiObject.DEBUG_ROT_LINE_THICKNESS
-                    );
-                    
-                    dxDrawLine(
-                        lineSrcPos.x, lineSrcPos.y, child.vertex3.x-obj.containerPos.x, child.vertex3.y-obj.containerPos.y,
-                        GuiObject.DEBUG_ROT_LINE_COLOR, GuiObject.DEBUG_ROT_LINE_THICKNESS
-                    );
-                    
-                    dxDrawLine(
-                        lineSrcPos.x, lineSrcPos.y, child.vertex4.x-obj.containerPos.x, child.vertex4.y-obj.containerPos.y,
-                        GuiObject.DEBUG_ROT_LINE_COLOR, GuiObject.DEBUG_ROT_LINE_THICKNESS
-                    );
-                end
             end
         end
         
@@ -316,6 +297,8 @@ GuiBase2D = inherit({
     SCREEN_HEIGHT = SCREEN_HEIGHT,
     
     RT_SIZE_STEP = RT_SIZE_STEP,
+    
+    DRAW_POST_GUI = DRAW_POST_GUI,
     
     new = new,
 }, super);

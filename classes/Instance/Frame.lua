@@ -122,18 +122,12 @@ addEventHandler("onClientGUIScroll", root, function()
     selFr.rot = Vector3.new(guiScrollBarGetScrollPosition(srx)/100*360, guiScrollBarGetScrollPosition(sry)/100*360, guiScrollBarGetScrollPosition(srz)/100*360);
 end);
 
-
-
--- -- selFr.clipsDescendants = false;
--- selFr.debug = true
 -- local v1 = selFr.size.x.scale;
 -- local v2 = selFr.size.y.scale;
 -- local v3 = 0;
 
 -- local function render()
     -- if (v1 > 0.66) then
-        -- -- selFr.clipsDescendants = true;
-        
         -- print("Done");
         
         -- removeEventHandler("onClientRender", root, render)
@@ -147,72 +141,8 @@ end);
     
     -- selFr.size = UDim2.new(v1, 0, v2, 0);
     
-    -- print(selFr.absSize, "->", selFr.fr7.absPos);
-    
     -- -- selFr.borderSize = v1*60;
     -- -- selFr.borderColor = Color3.new(v3*255, 0, (1-v3)*255);
 -- end
 
 -- addEventHandler("onClientRender", root, render);
-
-
-
-
-
--- addEventHandler("onClientPreRender", root, function()
-    -- if (selFr.absRotPivot) then
-        -- local x = selFr.absRotPerspective.x+(1000/(selFr.absRotPivot.z+1000))*(selFr.absRotPivot.x-selFr.absRotPerspective.x);
-        -- local y = selFr.absRotPerspective.y+(1000/(selFr.absRotPivot.z+1000))*(selFr.absRotPivot.y-selFr.absRotPerspective.y);
-        
-        -- dxDrawLine(0, super.SCREEN_HEIGHT, x, y, tocolor(255, 0, 0), 3);
-    -- end
-    
-    -- if (selFr.containerPos) then
-        -- dxDrawLine(
-            -- 0, super.SCREEN_HEIGHT,
-            
-            -- selFr.containerPos.x,
-            -- selFr.containerPos.y,
-            
-            -- tocolor(selFr.borderColor.r, selFr.borderColor.g, selFr.borderColor.b), 3
-        -- );
-    -- end
-    
-    -- if (selFr.vertex1) then
-        -- dxDrawLine(
-            -- selFr.absRotPivot.x,
-            -- selFr.absRotPivot.y,
-            
-            -- selFr.vertex1.x, selFr.vertex1.y,
-            
-            -- tocolor(0, 255, 0), 3
-        -- );
-        
-        -- dxDrawLine(
-            -- selFr.absRotPivot.x,
-            -- selFr.absRotPivot.y,
-            
-            -- selFr.vertex2.x, selFr.vertex2.y,
-            
-            -- tocolor(0, 255, 0), 3
-        -- );
-        
-        -- dxDrawLine(
-            -- selFr.absRotPivot.x,
-            -- selFr.absRotPivot.y,
-            
-            -- selFr.vertex3.x, selFr.vertex3.y,
-            
-            -- tocolor(0, 255, 0), 3
-        -- );
-        
-        -- dxDrawLine(
-            -- selFr.absRotPivot.x,
-            -- selFr.absRotPivot.y,
-            
-            -- selFr.vertex4.x, selFr.vertex4.y,
-            
-            -- tocolor(0, 255, 0), 3
-        -- );
-    -- end
--- end);

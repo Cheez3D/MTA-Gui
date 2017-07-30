@@ -261,20 +261,20 @@ function get.unit(obj)
     return obj.unit;
 end
 
-function get.vector3_0(obj) -- for addition/substraction
-    if (not obj.vector3_0) then
-        obj.vector3_0 = Vector3.new(obj.x, obj.y, 0);
+function get.vec30(obj) -- for addition/substraction
+    if (not obj.vec30) then
+        obj.vec30 = Vector3.new(obj.x, obj.y, 0);
     end
     
-    return obj.vector3_0;
+    return obj.vec30;
 end
 
-function get.vector3_1(obj) -- for multiplication/division
-    if (not obj.vector3_1) then
-        obj.vector3_1 = Vector3.new(obj.x, obj.y, 1);
+function get.vec31(obj) -- for multiplication/division
+    if (not obj.vec31) then
+        obj.vec31 = Vector3.new(obj.x, obj.y, 1);
     end
     
-    return obj.vector3_1;
+    return obj.vec31;
 end
 
 
