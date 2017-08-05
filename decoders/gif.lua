@@ -727,10 +727,10 @@ end
 
 -- local s = getTickCount();
 
--- local frames = decode_gif("decoders/gif/delays/10-delay-50.gif");
--- printdebug("loopCount =", frames.loopCount);
+-- local frames = decode_gif("decoders/gif/jupiter.gif");
+-- print_debug("loopCount =", frames.loopCount);
 
--- printdebug("elapsed =", getTickCount() - s, "ms");
+-- print_debug("elapsed =", getTickCount() - s, "ms");
 
 -- debug.sethook(nil, h1, h2, h3);
 

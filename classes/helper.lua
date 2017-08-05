@@ -1,5 +1,15 @@
+function extend(class, super)
+    for k, v in pairs(super) do
+        if (not class[k]) then
+            class[k] = v;
+        end
+    end
+    
+    return class;
+end
+
 function inherit(class, super)
-    return setmetatable(class, {
+    setmetatable(class, {
         __index = function(tbl, key)
             local val = super[key];
             
@@ -10,4 +20,6 @@ function inherit(class, super)
             return val;
         end,
     });
+    
+    return class;
 end

@@ -1,194 +1,23 @@
 local name = "Vector2";
 
-local func = {}
-local get  = {}
+local class;
+local super = Object;
 
-local new;
+local func = inherit({}, super.func);
+local get  = inherit({}, super.get);
+local set  = inherit({}, super.set);
 
-local meta = {
-    __metatable = name,
-    
-    
-    __index = function(proxy, key)
-        local obj = PROXY__OBJ[proxy];
-        
-        local val = obj[key];
-        if (val ~= nil) then -- val might be false so compare against nil
-            return val;
-        end
-    
-        local func_f = func[key];
-        if (func_f) then
-            return (function(...) return func_f(obj, ...) end); -- might be able to do memoization here
-        end
-        
-        local get_f = get[key];
-        if (get_f) then
-            return get_f(obj, key);
-        end
-    end,
-    
-    __newindex = function(proxy, key)
-        error("attempt to modify a read-only key (" ..tostring(key).. ")", 2);
-    end,
-    
-    
-    __add = function(proxy1, proxy2)
-        local proxy1_t = type(proxy1);
-        
-        if (proxy1_t ~= "Vector2" and proxy1_t ~= "number") then
-            error("bad operand #1 to '__add' (Vector2/number expected, got " ..proxy1_t.. ")", 2);
-        end
-        
-        local proxy2_t = type(proxy2);
-        
-        if (proxy2_t ~= "Vector2" and proxy2_t ~= "number") then
-            error("bad operand #2 to '__add' (Vector2/number expected, got " ..proxy2_t.. ")", 2);
-        end
-        
-        
-        if (proxy1_t == "number") then
-            local obj2 = PROXY__OBJ[proxy2];
-            
-            return new(proxy1+obj2.x, proxy1+obj2.y);
-        end
-        
-        local obj1 = PROXY__OBJ[proxy1];
-        
-        if (proxy2_t == "number") then
-            return new(obj1.x+proxy2, obj1.y+proxy2);
-        end
-        
-        local obj2 = PROXY__OBJ[proxy2];
-        
-        return new(obj1.x+obj2.x, obj1.y+obj2.y);
-    end,
-    
-    __sub = function(proxy1, proxy2)
-        local proxy1_t = type(proxy1);
-        
-        if (proxy1_t ~= "Vector2" and proxy1_t ~= "number") then
-            error("bad operand #1 to '__sub' (Vector2/number expected, got " ..proxy1_t.. ")", 2);
-        end
-        
-        local proxy2_t = type(proxy2);
-        
-        if (proxy2_t ~= "Vector2" and proxy2_t ~= "number") then
-            error("bad operand #2 to '__sub' (Vector2/number expected, got " ..proxy2_t.. ")", 2);
-        end
-        
-        
-        if (proxy1_t == "number") then
-            local obj2 = PROXY__OBJ[proxy2];
-            
-            return new(proxy1-obj2.x, proxy1-obj2.y);
-        end
-        
-        local obj1 = PROXY__OBJ[proxy1];
-        
-        if (proxy2_t == "number") then
-            return new(obj1.x-proxy2, obj1.y-proxy2);
-        end
-        
-        local obj2 = PROXY__OBJ[proxy2];
-        
-        if (proxy2_t == "Vector3") then
-            return Vector3.new(obj1.x-obj2.x, obj1.y-obj2.y, obj2.z);
-        end
-        
-        return new(obj1.x-obj2.x, obj1.y-obj2.y);
-    end,
-    
-    __mul = function(proxy1, proxy2)
-        local proxy1_t = type(proxy1);
-        
-        if (proxy1_t ~= "Vector2" and proxy1_t ~= "number") then
-            error("bad operand #1 to '__mul' (Vector2/number expected, got " ..proxy1_t.. ")", 2);
-        end
-        
-        local proxy2_t = type(proxy2);
-        
-        if (proxy2_t ~= "Vector2" and proxy2_t ~= "number") then
-            error("bad operand #2 to '__mul' (Vector2/number expected, got " ..proxy2_t.. ")", 2);
-        end
-        
-        
-        if (proxy1_t == "number") then
-            local obj2 = PROXY__OBJ[proxy2];
-            
-            return new(proxy1*obj2.x, proxy1*obj2.y);
-        end
-        
-        local obj1 = PROXY__OBJ[proxy1];
-        
-        if (proxy2_t == "number") then
-            return new(obj1.x*proxy2, obj1.y*proxy2);
-        end
-        
-        local obj2 = PROXY__OBJ[proxy2];
-        
-        return new(obj1.x*obj2.x, obj1.y*obj2.y);
-    end,
-    
-    __div = function(proxy1, proxy2)
-        local proxy1_t = type(proxy1);
-        
-        if (proxy1_t ~= "Vector2" and proxy1_t ~= "number") then
-            error("bad operand #1 to '__div' (Vector2/number expected, got " ..proxy1_t.. ")", 2);
-        end
-        
-        local proxy2_t = type(proxy2);
-        
-        if (proxy2_t ~= "Vector2" and proxy2_t ~= "number") then
-            error("bad operand #2 to '__div' (Vector2/number expected, got " ..proxy2_t.. ")", 2);
-        end
-        
-        
-        if (proxy1_t == "number") then
-            local obj2 = PROXY__OBJ[proxy2];
-            
-            return new(proxy1/obj2.x, proxy1/obj2.y);
-        end
-        
-        local obj1 = PROXY__OBJ[proxy1];
-        
-        if (proxy2_t == "number") then
-            return new(obj1.x/proxy2, obj1.y/proxy2);
-        end
-        
-        local obj2 = PROXY__OBJ[proxy2];
-        
-        return new(obj1.x/obj2.x, obj1.y/obj2.y);
-    end,
-    
-    
-    __unm = function(proxy)
-        local obj = PROXY__OBJ[proxy];
-        
-        return new(-obj.x, -obj.y);
-    end,
-    
-    
-    -- __eq, -- memoization takes care of it
-    
-    
-    __tostring = function(proxy)
-        local obj = PROXY__OBJ[proxy];
-        
-        return obj.x.. ", " ..obj.y;
-    end,
-}
+local new, meta;
+
+local concrete = true;
 
 
 
-local MEM_PROXIES = setmetatable({}, { __mode = "v" });
-
-
+local cache = setmetatable({}, { __mode = "v" });
 
 function new(x, y)
     if (x ~= nil) then
         local x_t = type(x);
-        
         if (x_t ~= "number") then
             error("bad argument #1 to '" ..__func__.. "' (number expected, got " ..x_t.. ")", 2);
         end
@@ -198,7 +27,6 @@ function new(x, y)
     
     if (y ~= nil) then
         local y_t = type(y);
-        
         if (y_t ~= "number") then
             error("bad argument #2 to '" ..__func__.. "' (number expected, got " ..y_t.. ")", 2);
         end
@@ -207,29 +35,106 @@ function new(x, y)
     end
     
     
-    local memId = x.. ":" ..y;
+    local cacheId = x.. ":" ..y;
     
-    local proxy = MEM_PROXIES[memId];
-    
-    if (not proxy) then
-        local obj = {
-            type = name,
-            
-            
-            x = x,
-            y = y,
-        }
+    local obj = cache[cacheId];
+    if (not obj) then
+        local success;
         
-        proxy = setmetatable({}, meta);
+        success, obj = pcall(super.new, class, meta);
+        if (not success) then error(obj, 2) end
         
-        MEM_PROXIES[memId] = proxy;
+        obj.x = x;
+        obj.y = y;
         
-        OBJ__PROXY[obj] = proxy;
-        PROXY__OBJ[proxy] = obj;
+        cache[cacheId] = obj;
     end
     
-    return proxy;
+    return obj;
 end
+
+meta = extend({
+    __metatable = name,
+    
+    
+    __add = function(obj1, obj2)
+        local obj1_t = type(obj1);
+        if (obj1_t ~= "Vector2" and obj1_t ~= "number") then
+            error("bad operand #1 to '+' (Vector2/number expected, got " ..obj1_t.. ")", 2);
+        end
+        
+        local obj2_t = type(obj2);
+        if (obj2_t ~= "Vector2" and obj2_t ~= "number") then
+            error("bad operand #2 to '+' (Vector2/number expected, got " ..obj2_t.. ")", 2);
+        end
+        
+        
+        return (obj1_t == "number") and new(obj1+obj2.x, obj1+obj2.y)
+        or (obj2_t == "number") and new(obj1.x+obj2, obj1.y+obj2)
+        or new(obj1.x+obj2.x, obj1.y+obj2.y);
+    end,
+    
+    __sub = function(obj1, obj2)
+        local obj1_t = type(obj1);
+        if (obj1_t ~= "Vector2" and obj1_t ~= "number") then
+            error("bad operand #1 to '-' (Vector2/number expected, got " ..obj1_t.. ")", 2);
+        end
+        
+        local obj2_t = type(obj2);
+        if (obj2_t ~= "Vector2" and obj2_t ~= "number") then
+            error("bad operand #2 to '-' (Vector2/number expected, got " ..obj2_t.. ")", 2);
+        end
+        
+        
+        return (obj1_t == "number") and new(obj1-obj2.x, obj1-obj2.y)
+        or (obj2_t == "number") and new(obj1.x-obj2, obj1.y-obj2)
+        or new(obj1.x-obj2.x, obj1.y-obj2.y);
+    end,
+    
+    __mul = function(obj1, obj2)
+        local obj1_t = type(obj1);
+        if (obj1_t ~= "Vector2" and obj1_t ~= "number") then
+            error("bad operand #1 to '*' (Vector2/number expected, got " ..obj1_t.. ")", 2);
+        end
+        
+        local obj2_t = type(obj2);
+        if (obj2_t ~= "Vector2" and obj2_t ~= "number") then
+            error("bad operand #2 to '*' (Vector2/number expected, got " ..obj2_t.. ")", 2);
+        end
+        
+        
+        return (obj1_t == "number") and new(obj1*obj2.x, obj1*obj2.y)
+        or (obj2_t == "number") and new(obj1.x*obj2, obj1.y*obj2)
+        or new(obj1.x*obj2.x, obj1.y*obj2.y);
+    end,
+    
+    __div = function(obj1, obj2)
+        local obj1_t = type(obj1);
+        if (obj1_t ~= "Vector2" and obj1_t ~= "number") then
+            error("bad operand #1 to '/' (Vector2/number expected, got " ..obj1_t.. ")", 2);
+        end
+        
+        local obj2_t = type(obj2);
+        if (obj2_t ~= "Vector2" and obj2_t ~= "number") then
+            error("bad operand #2 to '/' (Vector2/number expected, got " ..obj2_t.. ")", 2);
+        end
+        
+        
+        return (obj1_t == "number") and new(obj1/obj2.x, obj1/obj2.y)
+        or (obj2_t == "number") and new(obj1.x/obj2, obj1.y/obj2)
+        or new(obj1.x/obj2.x, obj1.y/obj2.y);
+    end,
+    
+    
+    __unm = function(obj)
+        return new(-obj.x, -obj.y);
+    end,
+    
+    
+    __tostring = function(obj)
+        return obj.x.. ", " ..obj.y;
+    end,
+}, super.meta);
 
 
 
@@ -241,27 +146,30 @@ end
 
 function get.mag(obj)
     if (not obj.mag) then
-        obj.mag = math.sqrt(obj.x^2+obj.y^2);
+        obj.mag = math.sqrt(obj.x^2 + obj.y^2);
     end
     
     return obj.mag;
 end
 
 function get.unit(obj)
+    local mag = obj.get.mag(obj);
+    
+    if (mag == 0) then
+        error("attempt to get unit of 0 magnitude vector", 2);
+    end
+    
+    
     if (not obj.unit) then
-        local mag = get.mag(obj);
-        
-        if (mag == 0) then
-            error("attempt to get unit of 0 length vector", 2);
-        end
-        
-        obj.unit = new(obj.x/mag, obj.y/mag);
+        obj.unit = obj/mag;
     end
     
     return obj.unit;
 end
 
-function get.vec30(obj) -- for addition/substraction
+
+-- for addition/substraction
+function get.vec30(obj)
     if (not obj.vec30) then
         obj.vec30 = Vector3.new(obj.x, obj.y, 0);
     end
@@ -269,7 +177,8 @@ function get.vec30(obj) -- for addition/substraction
     return obj.vec30;
 end
 
-function get.vec31(obj) -- for multiplication/division
+-- for multiplication/division
+function get.vec31(obj)
     if (not obj.vec31) then
         obj.vec31 = Vector3.new(obj.x, obj.y, 1);
     end
@@ -279,15 +188,17 @@ end
 
 
 
-Vector2 = {
+class = {
     name = name,
     
-    func = func,
-    get  = get,
+    super = super,
     
-    meta = meta,
+    func = func, get = get, set = set,
     
-    new = new,
+    new = new, meta = meta,
     
-    ZERO = new(),
+    concrete = concrete,
 }
+
+_G[name] = class;
+classes[#classes+1] = class;

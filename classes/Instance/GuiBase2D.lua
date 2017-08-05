@@ -1,15 +1,13 @@
 local name = "GuiBase2D";
 
-local super = Instance;
+local class;
+local super = classes.Instance;
 
 local func = inherit({}, super.func);
 local get  = inherit({}, super.get);
 local set  = inherit({}, super.set);
 
-local event = inherit({}, super.event);
-
-local private  = inherit({}, super.private);
-local readOnly = inherit({}, super.readOnly);
+local new, meta;
 
 
 
@@ -23,12 +21,18 @@ local DRAW_POST_GUI = false;
 
 
 
-local function new(obj)
+function new(class, meta)
+    local success, obj = pcall(super.new, class, meta);
+    if (not success) then error(obj, 2) end
+    
     obj.guiChildren = {}
     
-    
     set.debug(obj, false);
+    
+    return obj;
 end
+
+meta = extend({}, super.meta);
 
 
 
@@ -259,7 +263,7 @@ end
 
 
 
-function set.debug(obj, debug, prev, k)
+function set.debug(obj, debug, prev)
     local debug_t = type(debug);
     
     if (debug_t ~= "boolean") then
@@ -270,41 +274,31 @@ function set.debug(obj, debug, prev, k)
     obj.debug = debug;
     
     
-    if (k == 1) then -- used because GuiObject has its own set.debug function
-        func.update(obj);
-        
-        func.propagate(obj);
-    end
+    func.update(obj);
+    
+    func.propagate(obj);
 end
 
 
 
-GuiBase2D = inherit({
+class = {
     name = name,
     
     super = super,
     
-    func = func,
-    get  = get,
-    set  = set,
+    func = func, get = get, set = set,
     
-    event = event,
+    new = new, meta = meta,
     
-    private  = private,
-    readOnly = readOnly,
     
-    SCREEN_WIDTH  = SCREEN_WIDTH,
-    SCREEN_HEIGHT = SCREEN_HEIGHT,
+    SCREEN_WIDTH, SCREEN_HEIGHT = SCREEN_WIDTH, SCREEN_HEIGHT,
     
     RT_SIZE_STEP = RT_SIZE_STEP,
     
     DRAW_POST_GUI = DRAW_POST_GUI,
-    
-    new = new,
-}, super);
+}
 
-
-
+_G[name] = class;
 
 
 

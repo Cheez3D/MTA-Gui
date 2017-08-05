@@ -1,4 +1,4 @@
-local name = "Signal";
+local name = "Listener";
 
 local func = {}
 
@@ -39,9 +39,13 @@ local meta = {
 
 
 
-local function new()
+local function new(signal, func)
     local obj = {
-        listenersByKey = {},
+        signal = signal,
+        
+        index = #signal.listeners
+        
+        func = func,
     }
     
     local proxy = setmetatable({}, meta);
@@ -53,19 +57,6 @@ local function new()
 end
 
 
-
-function func.connect(obj, listener)
-    local listener_t = type(listener);
-    
-    if (listener_t ~= "function") then
-        error("bad argument #1 to '" ..__func__.. "' (function expected, got " ..listener_t.. ")", 2);
-    elseif (obj.listenersByKey[listener]) then
-        error("bad argument #1 to '" ..__func__.. "' (listener already connected)", 2);
-    end
-    
-    
-    obj.listenersByKey[listener] = true;
-end
 
 function func.disconnect(obj, listener)
     local listener_t = type(listener);
@@ -89,7 +80,7 @@ end
 
 
 
-Signal = {
+Listener = {
     name = name,
     
     func = func,

@@ -1,6 +1,15 @@
-local string = string;
+local name = "Stream";
 
-local fileRead = fileRead;
+local class;
+local super = Object;
+
+local func = inherit({}, super.func);
+local get  = inherit({}, super.get);
+local set  = inherit({}, super.set);
+
+local new, meta;
+
+local concrete = true;
 
 
 
@@ -10,107 +19,82 @@ local INT_MASK   = 2^31;
 
 
 
-local name = "Stream";
-
-local func = {}
-local get  = {}
-local set  = {}
-
-local private = {
-    isClosed = true,
-    isFile   = true,
+function new(bytes)
+    local bytes_t = type(bytes);
+    if (bytes_t ~= "string") then
+        error("bad argument #1 to '" ..__func__.. "' (string expected, got " ..bytes_t.. ")", 2);
+    end
     
-    bytes = true,
-}
+    
+    local success, obj = pcall(super.new, class, meta);
+    if (not success) then error(obj, 2) end
+    
+    
+    obj.isFile = fileExists(bytes);
+    
+    if (obj.isFile) then
+        obj.fileName = bytes;
+    else
+        obj.bytes = bytes;
+    end
+    
+    
+    obj.func.open(obj);
+    
+    
+    return obj;
+end
 
-local readOnly = {
-    size = true,
-}
-
-local new;
-
-local meta = {
+meta = extend({
     __metatable = name,
     
     
-    __index = function(proxy, key)
-        if (private[key]) then return end
-        
-        
-        local obj = PROXY__OBJ[proxy];
-        
-        local val = obj[key];
-        if (val ~= nil) then -- val might be false so compare against nil
-            return val;
-        end
-    
-        local func_f = func[key];
-        if (func_f) then
-            return (function(...) return func_f(obj, ...) end); -- might be able to do memoization here
-        end
-        
-        local get_f = get[key];
-        if (get_f) then
-            return get_f(obj, key);
-        end
+    __tostring = function(obj)
+        return tostring(obj.isOpen).. ", " ..obj.pos.. "/" ..obj.size;
     end,
-    
-    __newindex = function(proxy, key, val)
-        if (readOnly[key]) then
-            error("attempt to modify a read-only key (" ..tostring(key).. ")", 2);
-        end
-        
-        
-        local obj = PROXY__OBJ[proxy];
-        
-        local set_f = set[key];
-        if (set_f) then
-            local prev = obj[key];
-            
-            set_f(obj, key, val, prev);
-        end
-    end
-}
+}, super.meta);
 
 
 
-function new(bytes)
-    local bytes_t = type(bytes);
-    if (bytes_t ~= "string") then error("bad argument #1 to '" ..__func__.. "' (string expected, got " ..bytes_t.. ")",2) end
-    
-    
-    local isFile = fileExists(bytes);
-    local file;
-    
-    if (isFile) then
-        file = fileOpen(bytes, true);
+function func.open(obj)
+    if (obj.isOpen) then
+        error("stream is already open", 2);
     end
     
-    local obj = {
-        type = name,
-        
-        
-        isClosed = false,
-        isFile   = isFile,
-        
-        bytes = isFile and file or bytes,
-        
-        pos = 0,
-        
-        size = isFile and fileGetSize(file) or #bytes,
-    }
     
-    local proxy = setmetatable({}, meta);
+    obj.isOpen = true;
     
-    PROXY__OBJ[proxy] = obj;
+    if (obj.isFile) then
+        obj.file = fileOpen(obj.fileName, true); -- TODO: add write support in the future
+        
+        obj.size = fileGetSize(obj.file);
+    else
+        obj.size = #obj.bytes;
+    end
     
-    return proxy;
+    obj.pos = 0;
+end
+
+function func.close(obj)
+    if (not obj.isOpen) then
+        error("stream is already closed", 2);
+    end
+    
+    
+    obj.isOpen = false;
+    
+    if (obj.isFile) then
+        fileClose(obj.file);
+        obj.file = nil;
+    end
+    
+    obj.size = nil;
+    obj.pos  = nil;
 end
 
 
-
 function func.read(obj, count)
-    if (obj.isClosed) then
+    if (not obj.isOpen) then
         error("stream is closed", 2);
     end
     
@@ -129,20 +113,22 @@ function func.read(obj, count)
     end
     
     
-    local prevPos = obj.pos;
-    local nextPos = prevPos+count;
-    
-     if (nextPos > obj.size) then
-        nextPos = obj.size;
+    local newPos = obj.pos+count;
+    if (newPos > obj.size) then
+        newPos = obj.size;
     end
     
-    obj.pos = nextPos;
+    local ret = obj.isFile and fileRead(obj.file, count) or string.sub(obj.bytes, obj.pos+1, newPos);
     
-    return obj.isFile and fileRead(obj.bytes, count) or string.sub(obj.bytes, prevPos+1, nextPos);
+    obj.pos = newPos;
+    
+    return ret;
 end
 
-function func.read_uchar(obj)    
-    return string.byte(func.read(obj, 1));
+function func.read_uchar(obj)
+    local byte = obj.func.read(obj);
+    
+    return string.byte(byte);
 end
 
 function func.read_ushort(obj, bigEndian)
@@ -157,8 +143,8 @@ function func.read_ushort(obj, bigEndian)
     end
     
     
-    local uchar1 = func.read_uchar(obj);
-    local uchar2 = func.read_uchar(obj);
+    local uchar1 = obj.func.read_uchar(obj);
+    local uchar2 = obj.func.read_uchar(obj);
     
     return (bigEndian) and 0x100 * uchar1
                          +         uchar2
@@ -179,8 +165,8 @@ function func.read_uint(obj, bigEndian)
     end
     
     
-    local ushort1 = func.read_ushort(obj, bigEndian);
-    local ushort2 = func.read_ushort(obj, bigEndian);
+    local ushort1 = obj.func.read_ushort(obj, bigEndian);
+    local ushort2 = obj.func.read_ushort(obj, bigEndian);
     
 
     return (bigEndian) and 0x10000 * ushort1
@@ -193,32 +179,22 @@ end
 
 -- convert unsigned to signed
 -- using masks to determine if MSB is 1 or 0
-
 function func.read_char(obj)
-    local uchar = func.read_uchar(obj);
+    local uchar = obj.func.read_uchar(obj);
     
     return uchar-2*bitAnd(uchar, CHAR_MASK);
 end
 
 function func.read_short(obj, bigEndian)
-    local ushort = func.read_ushort(obj, bigEndian);
+    local ushort = obj.func.read_ushort(obj, bigEndian);
     
     return ushort-2*bitAnd(ushort, SHORT_MASK);
 end
 
 function func.read_int(obj, bigEndian)
-    local uint = func.read_uint(obj, bigEndian);
+    local uint = obj.func.read_uint(obj, bigEndian);
     
     return uint-2*bitAnd(uint, INT_MASK);
-end
-
-
-function func.close(obj)
-    if (obj.isFile) then
-        fileClose(obj.bytes);
-    end
-    
-    obj.isClosed = true;
 end
 
 
@@ -233,21 +209,21 @@ end
 
 
 
-function set.pos(obj, key, pos)
+function set.pos(obj, pos)
     local pos_t = type(pos);
-    
     if (pos_t ~= "number") then
-        error("bad argument #1 to '" ..key.. "' (number expected, got " ..pos_t.. ")", 3);
+        error("bad argument #1 to 'pos' (number expected, got " ..pos_t.. ")", 2);
     end
     
     pos = math.floor(pos);
+    
     if (pos < 0) or (pos > obj.size) then
-        error("bad argument #1 to '" ..key.. "' (value out of bounds)", 3);
+        error("bad argument #1 to 'pos' (value out of bounds)", 2);
     end
     
     
     if (obj.isFile) then
-        fileSetPos(obj.bytes, pos);
+        fileSetPos(obj.file, pos);
     end
     
     obj.pos = pos;
@@ -255,41 +231,14 @@ end
 
 
 
-Stream = {
+class = {
     name = name,
+    func = func, get = get, set = set,
     
-    func = func,
-    get  = get,
-    set  = set,
+    new = new, meta = meta,
     
-    private  = private,
-    readOnly = readOnly,
-    
-    meta = meta,
-    
-    new = new,
+    concrete = concrete,
 }
 
--- Stream = setmetatable({}, {
-    -- __metatable = "Stream",
-    
-    
-    -- __index = function(proxy, key)
-        -- return (key == "new") and new or nil;
-    -- end,
-    
-    -- __newindex = function(proxy, key)
-        -- error("attempt to modify a read-only key (" ..tostring(key).. ")", 2);
-    -- end,
-    
-    
-    -- __call = function(proxy, ...)
-        -- local success, result = pcall(new, ...);
-        
-        -- if (not success) then
-            -- error("call error", 2);
-        -- end
-        
-        -- return result;
-    -- end,
--- });
+_G[name] = class;
+classes[#classes+1] = class;

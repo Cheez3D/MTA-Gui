@@ -1,15 +1,13 @@
 local name = "GuiObject";
 
+local class;
 local super = GuiBase2D;
 
 local func = inherit({}, super.func);
 local get  = inherit({}, super.get);
 local set  = inherit({}, super.set);
 
-local event = inherit({}, super.event);
-
-local private  = inherit({}, super.private);
-local readOnly = inherit({}, super.readOnly);
+local new, meta;
 
 
 
@@ -32,16 +30,20 @@ local DEBUG_VERTEX_LINE_THICKNESS = 2;
 
 
 
-local function new(obj)
-    local success, result = pcall(super.new, obj);
-    if (not success) then error(result, 2) end
+function new(class, meta)
+    local success, obj = pcall(super.new, class, meta);
+    if (not success) then error(obj, 2) end
     
     
     obj.guiIndex = nil; -- index in guiChildren array of parent
     
-    obj.vertices = {}
+    obj.quad = {}
     
     
+    set.debug(obj, false);
+    
+    
+    -- TODO: investigate prev and k arguments in set functions
     set.clipsDescendants(obj, true);
     
     set.bgColor(obj, Color3.new(255, 255, 255));
@@ -51,8 +53,8 @@ local function new(obj)
     set.borderSize(obj, 1);
     set.borderTransparency(obj, 0);
     
-    obj.size = nil;
-    obj.pos = nil;
+    set.size(obj, UDim2.new(0, 100, 0, 100));
+    set.pos(obj, UDim2.new());
     set.posOrigin(obj, UDim2.new());
     
     set.rot(obj, Vector3.new());
@@ -61,7 +63,12 @@ local function new(obj)
     set.rotPerspective(obj, obj.rotPivot);
     
     set.visible(obj, true);
+    
+    
+    return obj;
 end
+
+meta = extend({}, super.meta);
 
 
 
@@ -213,18 +220,18 @@ function func.update_vertices(obj, descend)
     -- http://www.petesqbsite.com/sections/tutorials/tuts/perspective.html
     
     if (obj.rootGui) then
-        obj.vertices[1] = Vector3.new(obj.absPos.x, obj.absPos.y, 0);
-        obj.vertices[2] = Vector3.new(obj.absPos.x+obj.absSize.x, obj.absPos.y, 0);
-        obj.vertices[3] = Vector3.new(obj.absPos.x+obj.absSize.x, obj.absPos.y+obj.absSize.y, 0);
-        obj.vertices[4] = Vector3.new(obj.absPos.x, obj.absPos.y+obj.absSize.y, 0);
+        obj.quad[1] = Vector3.new(obj.absPos.x, obj.absPos.y, 0);
+        obj.quad[2] = Vector3.new(obj.absPos.x+obj.absSize.x, obj.absPos.y, 0);
+        obj.quad[3] = Vector3.new(obj.absPos.x+obj.absSize.x, obj.absPos.y+obj.absSize.y, 0);
+        obj.quad[4] = Vector3.new(obj.absPos.x, obj.absPos.y+obj.absSize.y, 0);
         
         
         local asc = obj;
         
         while (asc ~= obj.rootGui) do
             if (asc.isRotated) then
-                for i = 1, #obj.vertices do
-                    local v = obj.vertices[i];
+                for i = 1, #obj.quad do
+                    local v = obj.quad[i];
                     
                     v = v-asc.absRotPivot; -- translate by -absRotPivot so that absRotPivot becomes center of rotation
                     v = asc.rotMatrix*v; -- apply rotation through rotMatrix
@@ -238,7 +245,7 @@ function func.update_vertices(obj, descend)
                     
                     v = projMatrix*v;
                     
-                    obj.vertices[i] = v;
+                    obj.quad[i] = v;
                 end
             end
             
@@ -300,8 +307,8 @@ function func.update_vertices(obj, descend)
         -- |                       This can now be written in matrix form, as seen in projMatrix                        |
         -- +------------------------------------------------------------------------------------------------------------+
     else
-        for i = 1, #obj.vertices do
-            obj.vertices[i] = nil;
+        for i = 1, #obj.quad do
+            obj.quad[i] = nil;
         end
     end
     
@@ -389,8 +396,8 @@ function func.update_canvasSize(obj, descend)
         obj.canvasSize = canvasSize;
         
         local canvasActualSize = canvasSize and Vector2.new(
-            math.ceil(canvasSize.x/GuiBase2D.RT_SIZE_STEP)*GuiBase2D.RT_SIZE_STEP,
-            math.ceil(canvasSize.y/GuiBase2D.RT_SIZE_STEP)*GuiBase2D.RT_SIZE_STEP
+            math.ceil(canvasSize.x/class.RT_SIZE_STEP)*class.RT_SIZE_STEP,
+            math.ceil(canvasSize.y/class.RT_SIZE_STEP)*class.RT_SIZE_STEP
         )
         or nil;
         
@@ -499,10 +506,10 @@ end
 
 
 function func.drawVertices(obj)
-    for i = 1, #obj.vertices do
+    for i = 1, #obj.quad do
         dxDrawLine(
             obj.absRotPivot.x, obj.absRotPivot.y,
-            obj.vertices[i].x, obj.vertices[i].y,
+            obj.quad[i].x, obj.quad[i].y,
             
             DEBUG_VERTEX_LINE_COLOR, DEBUG_VERTEX_LINE_THICKNESS,
             
@@ -513,8 +520,8 @@ end
 
 
 
-function set.parent(obj, parent, prev, k)
-    local success, result = pcall(super.set.parent, obj, parent, prev, k+1);
+function set.parent(obj, parent, prev)
+    local success, result = pcall(super.set.parent, obj, parent, prev);
     if (not success) then error(result, 2) end
     
     
@@ -580,8 +587,8 @@ function set.parent(obj, parent, prev, k)
 end
 
 
-function set.debug(obj, debug, prev, k)
-    local success, result = pcall(super.set.debug, obj, debug, prev, k+1);
+function set.debug(obj, debug, prev)
+    local success, result = pcall(super.set.debug, obj, debug, prev);
     if (not success) then error(result, 2) end
     
     
@@ -590,16 +597,18 @@ function set.debug(obj, debug, prev, k)
     func.propagate(obj);
     
     
-    if (debug) then
-        function obj.drawVertices_wrapper()
-            func.drawVertices(obj);
+    if (obj.rootGui) then
+        if (debug) then
+            function obj.drawVertices_wrapper()
+                func.drawVertices(obj);
+            end
+            
+            addEventHandler("onClientRender", root, obj.drawVertices_wrapper, false, "low");
+        else
+            removeEventHandler("onClientRender", root, obj.drawVertices_wrapper);
+            
+            obj.drawVertices_wrapper = nil;
         end
-        
-        addEventHandler("onClientRender", root, obj.drawVertices_wrapper, false, "low");
-    else
-        removeEventHandler("onClientRender", root, obj.drawVertices_wrapper);
-        
-        obj.drawVertices_wrapper = nil;
     end
 end
 
@@ -945,24 +954,20 @@ end
 
 
 
-GuiObject = inherit({
+class = inherit({
     name = name,
     
     super = super,
     
-    func = func,
-    get  = get,
-    set  = set,
+    func = func, get = get, set = set,
     
-    event = event,
+    new = new, meta = meta,
     
-    private  = private,
-    readOnly = readOnly,
     
     SHADER = SHADER,
     
     DEBUG_VERTEX_LINE_COLOR     = DEBUG_VERTEX_LINE_COLOR,
     DEBUG_VERTEX_LINE_THICKNESS = DEBUG_VERTEX_LINE_THICKNESS,
-    
-    new = new,
 }, super);
+
+_G[name] = class;

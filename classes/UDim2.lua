@@ -1,142 +1,154 @@
--- local UDim = require("UDim");
+local UDim = UDim;
+
+
 
 local name = "UDim2";
 
-local func = {}
+local class;
+local super = Object;
 
-local new;
+local func = inherit({}, super.func);
+local get  = inherit({}, super.get);
+local set  = inherit({}, super.set);
 
-local meta = {
+local new, new2, meta;
+
+local concrete = true;
+
+
+
+local cache = setmetatable({}, { __mode = "v" });
+
+function new(x, y)
+    if (x ~= nil) then
+        local x_t = type(x);
+        if (x_t ~= "UDim") then
+            error("bad argument #1 to '" ..__func__.. "' (UDim expected, got " ..x_t.. ")", 2);
+        end
+    else
+        x = UDim.new();
+    end
+    
+    if (y ~= nil) then
+        local y_t = type(y);
+        if (y_t ~= "UDim") then
+            error("bad argument #2 to '" ..__func__.. "' (UDim expected, got " ..y_t.. ")", 2);
+        end
+    else
+        y = UDim.new();
+    end
+    
+    
+    local cacheId = tostring(x).. ":" ..tostring(y);
+    
+    local obj = cache[cacheId];
+    if (not obj) then
+        local success;
+        
+        success, obj = pcall(super.new, class, meta);
+        if (not success) then error(obj, 2) end
+        
+        obj.x = x;
+        obj.y = y;
+        
+        cache[cacheId] = obj;
+    end
+    
+    return obj;
+end
+
+function new2(scaleX, offsetX, scaleY, offsetY)
+    local success, x = pcall(UDim.new, scaleX, offsetX);
+    if (not success) then error(x, 2) end
+    
+    local success, y = pcall(UDim.new, scaleY, offsetY);
+    if (not success) then error(y, 2) end
+    
+    return new(x, y);
+end
+
+meta = extend({
     __metatable = name,
     
     
-    __index = function(proxy, key)
-        local obj = PROXY__OBJ[proxy];
+    __add = function(obj1, obj2)
+        local obj1_t = type(obj1);
+        if (obj1_t ~= "UDim2" and obj1_t ~= "number") then
+            error("bad operand #1 to '+' (UDim2/number expected, got " ..obj1_t.. ")", 2);
+        end
         
-        local val = obj[key];
-        if (val ~= nil) then -- val might be false so compare against nil
-            return val;
+        local obj2_t = type(obj2);
+        if (obj2_t ~= "UDim2" and obj2_t ~= "number") then
+            error("bad operand #2 to '+' (UDim2/number expected, got " ..obj2_t.. ")", 2);
         end
-
-        local func_f = func[key];
-        if (func_f) then
-            return (function(...) return func_f(obj, ...) end); -- might be able to do memoization here
-        end
+        
+        
+        return (obj1_t == "number") and new(obj1+obj2.x, obj1+obj2.y)
+        or (obj2_t == "number") and new(obj1.x+obj2, obj1.y+obj2)
+        or new(obj1.x+obj2.x, obj1.y+obj2.y);
     end,
     
-    __newindex = function(proxy, key)
-        error("attempt to modify a read-only key (" ..tostring(key).. ")", 2);
-    end,
-    
-    
-    __add = function(proxy1, proxy2)
-        local proxy1_t = type(proxy1);
-        
-        if (proxy1_t ~= "UDim2") then
-            error("bad operand #1 to '__add' (UDim2 expected, got " ..proxy1_t.. ")", 2);
+    __sub = function(obj1, obj2)
+        local obj1_t = type(obj1);
+        if (obj1_t ~= "UDim2" and obj1_t ~= "number") then
+            error("bad operand #1 to '-' (UDim2/number expected, got " ..obj1_t.. ")", 2);
         end
         
-        local proxy2_t = type(proxy2);
-        
-        if (proxy2_t ~= "UDim2") then
-            error("bad operand #2 to '__add' (UDim2 expected, got " ..proxy2_t.. ")", 2);
+        local obj2_t = type(obj2);
+        if (obj2_t ~= "UDim2" and obj2_t ~= "number") then
+            error("bad operand #2 to '-' (UDim2/number expected, got " ..obj2_t.. ")", 2);
         end
         
         
+        return (obj1_t == "number") and new(obj1-obj2.x, obj1-obj2.y)
+        or (obj2_t == "number") and new(obj1.x-obj2, obj1.y-obj2)
+        or new(obj1.x-obj2.x, obj1.y-obj2.y);
+    end,
+    
+    __mul = function(obj1, obj2)
+        local obj1_t = type(obj1);
+        if (obj1_t ~= "UDim2" and obj1_t ~= "number") then
+            error("bad operand #1 to '*' (UDim2/number expected, got " ..obj1_t.. ")", 2);
+        end
         
-        local obj1 = PROXY__OBJ[proxy1];
-        local obj2 = PROXY__OBJ[proxy2];
+        local obj2_t = type(obj2);
+        if (obj2_t ~= "UDim2" and obj2_t ~= "number") then
+            error("bad operand #2 to '*' (UDim2/number expected, got " ..obj2_t.. ")", 2);
+        end
         
-        local obj1ScaleX, obj1OffsetX, obj1ScaleY, obj1OffsetY = func.unpack(obj1);
-        local obj2ScaleX, obj2OffsetX, obj2ScaleY, obj2OffsetY = func.unpack(obj2);
         
-        return new(
-            obj1ScaleX  + obj2ScaleX,
-            obj1OffsetX + obj2OffsetX,
-            obj1ScaleY  + obj2ScaleY,
-            obj1OffsetY + obj2OffsetY
-        );
+        return (obj1_t == "number") and new(obj1*obj2.x, obj1*obj2.y)
+        or (obj2_t == "number") and new(obj1.x*obj2, obj1.y*obj2)
+        or new(obj1.x*obj2.x, obj1.y*obj2.y);
+    end,
+    
+    __div = function(obj1, obj2)
+        local obj1_t = type(obj1);
+        if (obj1_t ~= "UDim2" and obj1_t ~= "number") then
+            error("bad operand #1 to '/' (UDim2/number expected, got " ..obj1_t.. ")", 2);
+        end
+        
+        local obj2_t = type(obj2);
+        if (obj2_t ~= "UDim2" and obj2_t ~= "number") then
+            error("bad operand #2 to '/' (UDim2/number expected, got " ..obj2_t.. ")", 2);
+        end
+        
+        
+        return (obj1_t == "number") and new(obj1/obj2.x, obj1/obj2.y)
+        or (obj2_t == "number") and new(obj1.x/obj2, obj1.y/obj2)
+        or new(obj1.x/obj2.x, obj1.y/obj2.y);
     end,
     
     
-    __tostring = function(proxy)
-        local obj = PROXY__OBJ[proxy];
-        
+    __unm = function(obj)
+        return new(-obj.x, -obj.y);
+    end,
+    
+    
+    __tostring = function(obj)
         return "{" ..tostring(obj.x).. "}, {" ..tostring(obj.y).. "}";
     end,
-}
-
-
-
-local MEM_PROXIES = setmetatable({}, { __mode = "v" });
-
-
-
-function new(scaleX, offsetX, scaleY, offsetY)
-    if (scaleX ~= nil) then
-        local scaleX_t = type(scaleX);
-        
-        if (scaleX_t ~= "number") then
-            error("bad argument #1 to '" ..__func__.. "' (number expected, got " ..scaleX_t.. ")", 2);
-        end
-    else
-        scaleX = 0;
-    end
-    
-    if (offsetX ~= nil) then
-        local offsetX_t = type(offsetX);
-        
-        if (offsetX_t ~= "number") then
-            error("bad argument #2 to '" ..__func__.. "' (number expected, got " ..offsetX_t.. ")", 2);
-        end
-    else
-        offsetX = 0;
-    end
-    
-    if (scaleY ~= nil) then
-        local scaleY_t = type(scaleY);
-        
-        if (scaleY_t ~= "number") then
-            error("bad argument #3 to '" ..__func__.. "' (number expected, got " ..scaleY_t.. ")", 2);
-        end
-    else
-        scaleY = 0;
-    end
-    
-    if (offsetY ~= nil) then
-        local offsetY_t = type(offsetY);
-        
-        if (offsetY_t ~= "number") then
-            error("bad argument #4 to '" ..__func__.. "' (number expected, got " ..offsetY_t.. ")", 2);
-        end
-    else
-        offsetY = 0;
-    end
-    
-    
-    local memId = scaleX.. ":" ..offsetX.. ":" ..scaleY.. ":" ..offsetY;
-    
-    local proxy = MEM_PROXIES[memId];
-    
-    if (not proxy) then
-        local obj = {
-            type = name,
-            
-            
-            x = UDim.new(scaleX, offsetX),
-            y = UDim.new(scaleY, offsetY),
-        }
-        
-        proxy = setmetatable({}, meta);
-        
-        MEM_PROXIES[memId] = proxy;
-        
-        OBJ__PROXY[obj] = proxy;
-        PROXY__OBJ[proxy] = obj;
-    end
-    
-    return proxy;
-end
+}, super.meta);
 
 
 
@@ -146,37 +158,12 @@ end
 
 
 
-UDim2 = {
+class = {
     name = name,
+    func = func, get = get, set = set,
     
-    func = func,
-    
-    meta = meta,
-    
-    new = new,
+    new = new2, meta = meta,
 }
 
-
--- return setmetatable({}, {
-    -- __metatable = "UDim2",
-    
-    
-    -- __index = function(proxy, key)
-        -- return (key == "new") and new or nil;
-    -- end,
-    
-    -- __newindex = function(proxy, key)
-        -- error("attempt to modify a read-only key (" ..tostring(key).. ")", 2);
-    -- end,
-    
-    
-    -- __call = function(proxy, ...)
-        -- local success, result = pcall(new, ...);
-        
-        -- if (not success) then
-            -- error("call error", 2);
-        -- end
-        
-        -- return result;
-    -- end,
--- });
+_G[name] = class;
+classes[#classes+1] = class;

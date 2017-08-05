@@ -134,14 +134,6 @@ function print_table(t, f, tab, printed)
                 
                 print_table(v, f, tab+4, printed);
             else
-                if (OBJ__PROXY[k]) then
-                     k = OBJ__PROXY[k];
-                end
-                
-                if (OBJ__PROXY[v]) then
-                     v = OBJ__PROXY[v];
-                end
-                
                 f(string.rep(' ', tab), k, "->", v);
             end
         end

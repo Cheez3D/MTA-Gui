@@ -1,21 +1,19 @@
 local name = "RootGui";
 
+local class;
 local super = GuiBase2D;
 
 local func = inherit({}, super.func);
 local get  = inherit({}, super.get);
 local set  = inherit({}, super.set);
 
-local event = inherit({}, super.event);
-
-local private  = inherit({}, super.private);
-local readOnly = inherit({}, super.readOnly);
+local new, meta;
 
 
 
-local function new(obj)
-    local success, result = pcall(super.new, obj);
-    if (not success) then error(result, 2) end
+function new(class, meta)
+    local success, obj = pcall(super.new, class, meta);
+    if (not success) then error(obj, 2) end
     
     
     func.update_absSize(obj);
@@ -23,23 +21,23 @@ local function new(obj)
     
     func.update_containerPos(obj);
     func.update_containerSize(obj);
+    
+    
+    return obj;
 end
 
+meta = extend({}, super.meta);
 
 
-RootGui = inherit({
+
+class = {
     name = name,
     
     super = super,
     
-    func = func,
-    get  = get,
-    set  = set,
+    func = func, get = get, set = set,
     
-    event = event,
-    
-    private  = private,
-    readOnly = readOnly,
-    
-    new = new,
-}, super);
+    new = new, meta = meta,
+}
+
+_G[name] = class;

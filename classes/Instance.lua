@@ -1,117 +1,28 @@
-local name = "Instance";
+local super = Object;
 
-local func = {}
-local get  = {}
-local set  = {}
+local class = inherit({
+    name = "Instance",
 
-local event = {}
-
-local private = {
-    children       = true,
-    childrenByKey  = true,
-    childrenByName = true,
+    super = super,
     
-    index = true,
-}
-
-local readOnly = {
-    className = true,
-}
-
-local initializable = {}
-local privateClass  = {}
-
-local new;
-
-local objMeta = { __metatable = name }
-
-local proxyMeta = {
-    __metatable = name,
+    func = inherit({}, super.func),
+    get  = inherit({}, super.get),
+    set  = inherit({}, super.set),
     
-    
-    __index = function(proxy, key)
-        local obj = PROXY__OBJ[proxy];
-        
-        
-        local child = obj.childrenByName[key];
-        
-        if (obj.class.private[key]) then
-            if (child) then -- if key is private but a child with key name exists
-                return OBJ__PROXY[child];
-            else
-                return;
-            end
-        end
-        
-        local val = obj[key];
-        if (val ~= nil) then -- val might be false so compare against nil
-            if (OBJ__PROXY[val] and type(val) == "Instance") then -- convert object to proxy before returning (only for Instance objects)
-                val = OBJ__PROXY[val];
-            end
-            
-            return val;
-        end
-        
-        local func_f = obj.class.func[key];
-        if (func_f) then
-            return (function(...)
-                local success, result = pcall(func_f, obj, ...);
-                if (not success) then error(result, 2) end
-                
-                return result;
-            end);
-        end
-        
-        local get_f = obj.class.get[key];
-        if (get_f) then
-            return get_f(obj);
-        end
-        
-        if (child) then
-            return OBJ__PROXY[child];
-        end
-    end,
-    
-    __newindex = function(proxy, key, val)
-        local obj = PROXY__OBJ[proxy];
-        
-        -- convert proxy to object before continuing (only for Instance objects)
-        if (PROXY__OBJ[val] and type(val) == "Instance") then
-            val = PROXY__OBJ[val];
-        end
-        
-        local prev = obj[key];
-        if (val == prev) then return end -- if trying to set same val then return
-        
-        
-        local set_f = obj.class.set[key];
-        if (set_f) then
-            local success, result = pcall(set_f, obj, val, prev, 1);
-            if (not success) then error(result, 2) end
-            
-            return;
-        end
-        
-        error("attempt to modify an invalid key (" ..tostring(key).. ")", 2);
-    end,
-    
-    
-    __tostring = function(proxy)
-        local obj = PROXY__OBJ[proxy];
-        
-        return obj.className.. " " ..obj.name;
-    end,
-}
+    concrete = false,
+}, super);
+
+classes[class.name] = class;
 
 
 
-local function isCircularReference(obj, parent)
+function class.isCircularReference(obj, parent)
     if (obj.childrenByKey[parent]) then
         return true;
     end
     
     for i = 1, #obj.children do
-        if (isCircularReference(obj.children[i], parent)) then
+        if (class.isCircularReference(obj.children[i], parent)) then
             return true;
         end
     end
@@ -121,21 +32,9 @@ end
 
 
 
-function new(className)
-    local className_t = type(className);
-    
-    if (className_t ~= "string") then
-        error("bad argument #1 to '" ..__func__.. "' (string expected, got " ..className_t.. ")", 2);
-    end
-    
-    
-    local class = (not privateClass[className]) and initializable[className];
-    
-    if (not class) then
-        error("bad argument #1 to '" ..__func__.. "' (invalid class name)", 2);
-    end
-    
-    local obj = setmetatable({}, objMeta);
+function class.new(...)
+    local success, obj = pcall(super.new, ...);
+    if (not success) then error(obj, 2) end
     
     
     obj.index = nil; -- index in children array of parent
@@ -144,32 +43,53 @@ function new(className)
     obj.childrenByKey  = {}
     obj.childrenByName = {}
     
-    obj.depth = nil; -- depth in object tree
-    
-    obj.class     = class;
-    obj.className = className;
+    obj.depth = nil; -- depth in Instance tree
     
     
-    set.name(obj, className);
-    set.parent(obj, nil);
+    class.set.name(obj, obj.class.name);
+    class.set.parent(obj, nil);
     
     
-    local success, result = pcall(class.new, obj);
-    if (not success) then error(result, 2) end
-    
-    
-    local proxy = setmetatable({}, proxyMeta);
-    
-    
-    OBJ__PROXY[obj] = proxy;
-    PROXY__OBJ[proxy] = obj;
-    
-    return proxy, obj;
+    return obj;
 end
 
+class.meta = extend({
+    __metatable = class.name,
+    
+    --[[
+    TODO: add this code to a proxy_meta table to extend from when creating proxy classes in end.lua
+          instead of extending from meta
+    -- __index = function(proxy, key)
+        -- local obj = PROXY__OBJ[proxy];
+        
+        -- local child = obj.childrenByName[key];
+        
+        -- if (obj.class.private[key]) then
+            -- if (child) then -- if key is private but a child with key name exists
+                -- return OBJ__PROXY[child];
+            -- end
+            
+            -- return;
+        -- end
+        
+        -- if (child) then
+            -- return OBJ__PROXY[child];
+        -- end
+    -- end,
+    ]]
+    
+    __tostring = function(obj)
+        return obj.class.name.. " " ..obj.name;
+    end,
+}, super.meta);
 
 
-function func.update_depth(obj, descend)
+
+
+
+
+
+function class.func.update_depth(obj, descend)
     local depth = obj.parent and obj.parent.depth+1 or 1;
     
     if (depth ~= obj.depth) then
@@ -178,14 +98,14 @@ function func.update_depth(obj, descend)
         
         if (descend) then
             for i = 1, #obj.children do
-                func.update_depth(obj.children[i], true);
+                class.func.update_depth(obj.children[i], true);
             end
         end
     end
 end
 
 
-function func.isA(obj, className)
+function class.func.isA(obj, className)
     local className_t = type(className);
     
     if (className_t ~= "string") then
@@ -207,7 +127,7 @@ end
 
 
 
-function set.name(obj, name, prev)
+function class.set.name(obj, name, prev)
     local name_t = type(name);
     
     if (name_t ~= "string") then
@@ -243,7 +163,7 @@ function set.name(obj, name, prev)
 end
 
 
-function set.parent(obj, parent, prev)
+function class.set.parent(obj, parent, prev)
     if (parent ~= nil) then -- might be false so check against nil for assertion
         local parent_t = type(parent);
         
@@ -252,10 +172,10 @@ function set.parent(obj, parent, prev)
         end
         
         
-        -- if trying to loop objects
+        -- if trying to make circular references
         -- e.g. obj1.parent = obj2; obj2.parent = obj3; obj3.parent = obj1;
         
-        while (isCircularReference(obj, parent)) do
+        while (class.isCircularReference(obj, parent)) do
             error("bad argument #1 to 'parent' (circular reference)", 2);
         end
         
@@ -317,27 +237,5 @@ function set.parent(obj, parent, prev)
     obj.parent = parent;
     
     
-    func.update_depth(obj, true);
+    class.func.update_depth(obj, true);
 end
-
-
-
-Instance = {
-    name = name,
-    
-    func = func,
-    get  = get,
-    set  = set,
-    
-    event = event,
-    
-    private  = private,
-    readOnly = readOnly,
-    
-    initializable = initializable,
-    privateClass  = privateClass,
-    
-    proxyMeta = proxyMeta,
-    
-    new = new,
-}

@@ -1,53 +1,23 @@
 local name = "Color3";
 
-local func = {}
-local get  = {}
+local class;
+local super = Object;
 
-local meta = {
-    __metatable = name,
-    
-    
-    __index = function(proxy, key)
-        local obj = PROXY__OBJ[proxy];
-        
-        local val = obj[key];
-        if (val ~= nil) then -- val might be false so compare against nil
-            return val;
-        end
-    
-        local func_f = func[key];
-        if (func_f) then
-            return (function(...) return func_f(obj, ...) end); -- might be able to do memoization here
-        end
-        
-        local get_f = get[key];
-        if (get_f) then
-            return get_f(obj, key);
-        end
-    end,
-    
-    __newindex = function(proxy, key)
-        error("attempt to modify a read-only key (" ..tostring(key).. ")", 2);
-    end,
-    
-    
-    __tostring = function(proxy)
-        local obj = PROXY__OBJ[proxy];
-        
-        return obj.r..", "..obj.g..", "..obj.b;
-    end,
-}
+local func = inherit({}, super.func);
+local get  = inherit({}, super.get);
+local set  = inherit({}, super.set);
+
+local new, meta;
+
+local concrete = true;
 
 
 
-local MEM_PROXIES = setmetatable({}, { __mode = "v" });
-
-
+local cache = setmetatable({}, { __mode = "v" });
 
 function new(r, g, b)
     if (r ~= nil) then
         local r_t = type(r);
-        
         if (r_t ~= "number") then
             error("bad argument #1 to '" ..__func__.. "' (number expected, got " ..r_t.. ")", 2);
         elseif (r < 0) or (r > 255) then
@@ -59,7 +29,6 @@ function new(r, g, b)
     
     if (g ~= nil) then
         local g_t = type(g);
-        
         if (g_t ~= "number") then
             error("bad argument #2 to '" ..__func__.. "' (number expected, got " ..g_t.. ")", 2);
         elseif (g < 0) or (g > 255) then
@@ -71,7 +40,6 @@ function new(r, g, b)
     
     if (b ~= nil) then
         local b_t = type(b);
-        
         if (b_t ~= "number") then
             error("bad argument #3 to '" ..__func__.. "' (number expected, got " ..b_t.. ")", 2);
         elseif (b < 0) or (b > 255) then
@@ -82,30 +50,33 @@ function new(r, g, b)
     end
     
     
-    local memId = r.. ":" ..g.. ":" ..b;
+    local cacheId = r.. ":" ..g.. ":" ..b;
     
-    local proxy = MEM_PROXIES[memId];
-    
-    if (not proxy) then
-        local obj = {
-            type = name,
-            
-            
-            r = r,
-            g = g,
-            b = b,
-        }
+    local obj = cache[cacheId];
+    if (not obj) then
+        local success;
         
-        proxy = setmetatable({}, meta);
+        success, obj = pcall(super.new, class, meta);
+        if (not success) then error(obj, 2) end
         
-        MEM_PROXIES[memId] = proxy;
+        obj.r = r;
+        obj.g = g;
+        obj.b = b;
         
-        OBJ__PROXY[obj] = proxy;
-        PROXY__OBJ[proxy] = obj;
+        cache[cacheId] = obj;
     end
     
-    return proxy;
+    return obj;
 end
+
+meta = extend({
+    __metatable = name,
+    
+    
+    __tostring = function(obj)
+        return obj.r.. ", " ..obj.g.. ", " ..obj.b;
+    end,
+}, super.meta);
 
 
 
@@ -116,46 +87,25 @@ end
 
 
 function get.hex(obj)
-    obj.hex = 0x10000 * obj.b
-            + 0x100   * obj.g
-            +           obj.r;
+    if (not obj.hex) then
+        obj.hex = 0x10000 * obj.b
+                + 0x100   * obj.g
+                +           obj.r;
+    end
 
     return obj.hex;
 end
 
 
 
-Color3 = {
+class = {
     name = name,
+    func = func, get = get, set = set,
     
-    func = func,
-    get  = get,
+    new = new, meta = meta,
     
-    meta = meta,
-    
-    new = new,
+    concrete = concrete,
 }
 
--- Color3 = setmetatable({}, {
-    -- __metatable = "Color3",
-    
-    
-    -- __index = function(proxy, key)
-        -- return (key == "new") and new or nil;
-    -- end,
-    
-    -- __newindex = function(proxy, key)
-        -- error("attempt to modify a read-only key (" ..tostring(key).. ")", 2);
-    -- end,
-    
-    
-    -- __call = function(proxy, ...)
-        -- local success, result = pcall(new, ...);
-        
-        -- if (not success) then
-            -- error("call error", 2);
-        -- end
-        
-        -- return result;
-    -- end,
--- });
+_G[name] = class;
+classes[#classes+1] = class;

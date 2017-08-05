@@ -39,7 +39,6 @@ local function decodeCursor(path)
         
         if (success) then
             -- adapt returned table to render function
-            
             if (decoder == decode_ico) then
                 local type = data.type;
                 
@@ -107,6 +106,7 @@ local function new(obj)
     
     obj.viewSize = Vector2.new(GuiBase2D.SCREEN_WIDTH, GuiBase2D.SCREEN_HEIGHT);
     obj.viewPos  = Vector2.new();
+    obj.viewRect = { obj.viewPos, obj.viewPos+obj.viewSize }
     
     local x, y = getCursorPosition();
     
@@ -144,6 +144,8 @@ local function new(obj)
                                   -- will remain at 255 (probably because MTA's cursor showing code mistakenly thinks
                                   -- we are still inside the main menu)
     
+    obj.move = Signal.new();
+    
     
     set.cursor(obj, "arrow");
     
@@ -173,34 +175,32 @@ end
 
 
 function func.move(obj, x, y)
-    local flag = false; -- TODO: add this to obj as a member
+    local isOutOfView = x < obj.viewRect[1].x or x > obj.viewRect[2].x or y < obj.viewRect[1].y or y > obj.viewRect[2].y;
     
-    if (x < obj.viewPos.x) then
-        x = obj.viewPos.x;
+    if (isOutOfView) then
+        if (x < obj.viewRect[1].x) then
+            x = obj.viewRect[1].x;
+        elseif (x > obj.viewRect[2].x) then
+            x = obj.viewRect[2].x;
+        end
         
-        flag = true;
-    elseif (x > obj.viewPos.x+obj.viewSize.x) then -- TODO: add a viewVertex instead of viewPos+viewSize
-        x = obj.viewPos.x+obj.viewSize.x;
+        if (y < obj.viewRect[1].y) then
+            y = obj.viewRect[1].y;
+        elseif (y > obj.viewRect[2].y) then
+            y = obj.viewRect[2].y;
+        end
         
-        flag = true;
+        setCursorPosition(x, y); -- stop cursor from escaping viewRect
     end
     
-    if (y < obj.viewPos.y) then
-        y = obj.viewPos.y;
-        
-        flag = true;
-    elseif (y > obj.viewPos.y+obj.viewSize.y) then
-        y = obj.viewPos.y+obj.viewSize.y;
-        
-        flag = true;
-    end    
-    
-    if (flag) then
-        setCursorPosition(x, y);
-    end
+    local hasMoved = x ~= obj.x or y ~= obj.y;
     
     obj.x = x;
     obj.y = y;
+    
+    if (hasMoved) then
+        Signal.func.trigger(PROXY__OBJ[obj.move], x, y);
+    end
 end
 
 

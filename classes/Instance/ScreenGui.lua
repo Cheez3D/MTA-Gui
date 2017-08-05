@@ -1,30 +1,34 @@
 local name = "ScreenGui";
 
+local class;
 local super = RootGui;
 
 local func = inherit({}, super.func);
 local get  = inherit({}, super.get);
 local set  = inherit({}, super.set);
 
-local event = inherit({}, super.event);
+local new, meta;
 
-local private  = inherit({}, super.private);
-local readOnly = inherit({}, super.readOnly);
-
+local concrete = true;
 
 
-local function new(obj)
-    local success, result = pcall(super.new, obj);
-    if (not success) then error(result, 2) end
+
+function new()
+    local success, obj = pcall(super.new, class, meta);
+    if (not success) then error(obj, 2) end
     
     
     function obj.draw_wrapper()
         func.draw(obj);
     end
     
-    
     addEventHandler("onClientRender", root, obj.draw_wrapper, false);
+    
+    
+    return obj;
 end
+
+meta = extend({}, super.meta);
 
 
 
@@ -36,28 +40,24 @@ function func.draw(obj)
             
             obj.container,
             
-            nil, nil, nil, GuiBase2D.DRAW_POST_GUI -- 13th argument instead of 14th when leaving rotation params nil
+            nil, nil, nil, GuiBase2D.DRAW_POST_GUI -- somehow its the 13th argument instead of 14th when leaving rotation nil
         );
     end
 end
 
 
 
-ScreenGui = inherit({
+class = {
     name = name,
     
     super = super,
     
-    func = func,
-    get  = get,
-    set  = set,
+    func = func, get = get, set = set,
     
-    event = event,
+    new = new, meta = meta,
     
-    private  = private,
-    readOnly = readOnly,
-    
-    new = new,
-}, super);
+    concrete = concrete,
+}
 
-Instance.initializable.ScreenGui = ScreenGui;
+_G[name] = class;
+classes[#classes+1] = class;

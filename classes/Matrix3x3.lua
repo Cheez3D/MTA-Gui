@@ -1,376 +1,218 @@
 local name = "Matrix3x3";
 
-local func = {}
-local get  = {}
+local class;
+local super = Object;
 
-local new;
+local func = inherit({}, super.func);
+local get  = inherit({}, super.get);
+local set  = inherit({}, super.set);
 
-local meta = {
-    __metatable = name,
-    
-    
-    __index = function(proxy, key)
-        local obj = PROXY__OBJ[proxy];
-        
-        local val = obj[key];
-        if (val ~= nil) then -- val might be false so compare against nil
-            return val;
-        end
-    
-        local func_f = func[key];
-        if (func_f) then
-            return (function(...) return func_f(obj, ...) end); -- might be able to do memoization here
-        end
-        
-        local get_f = get[key];
-        if (get_f) then
-            return get_f(obj, key);
-        end
-    end,
-    
-    __newindex = function(proxy, key)
-        error("attempt to modify a read-only key (" ..tostring(key).. ")", 2);
-    end,
-    
-    
-    __add = function(proxy1, proxy2)
-        local proxy1_t = type(proxy1);
-        
-        if (proxy1_t ~= "Matrix3x3" and proxy1_t ~= "number") then
-            error("bad operand #1 to '__add' (Matrix3x3/number expected, got " ..proxy1_t.. ")", 2);
-        end
-        
-        local proxy2_t = type(proxy2);
-        
-        if (proxy2_t ~= "Matrix3x3" and proxy2_t ~= "number") then
-            error("bad operand #2 to '__add' (Matrix3x3/number expected, got " ..proxy2_t.. ")", 2);
-        end
-        
-        
-        if (proxy1_t == "number") then
-            local obj2 = PROXY__OBJ[proxy2];
-            
-            return new(
-                proxy1 + obj2.m00, proxy1 + obj2.m01, proxy1 + obj2.m02,
-                proxy1 + obj2.m10, proxy1 + obj2.m11, proxy1 + obj2.m12,
-                proxy1 + obj2.m20, proxy1 + obj2.m21, proxy1 + obj2.m22
-            );
-        end
-        
-        local obj1 = PROXY__OBJ[proxy1];
-        
-        if (proxy2_t == "number") then
-            return new(
-                obj1.m00 + proxy2, obj1.m01 + proxy2, obj1.m02 + proxy2,
-                obj1.m10 + proxy2, obj1.m11 + proxy2, obj1.m12 + proxy2,
-                obj1.m20 + proxy2, obj1.m21 + proxy2, obj1.m22 + proxy2
-            );
-        end
-        
-        local obj2 = PROXY__OBJ[proxy2];
-        
-        return new(
-            obj1.m00 + obj2.m00, obj1.m01 + obj2.m01, obj1.m02 + obj2.m02,
-            obj1.m10 + obj2.m10, obj1.m11 + obj2.m11, obj1.m12 + obj2.m12,
-            obj1.m20 + obj2.m20, obj1.m21 + obj2.m21, obj1.m22 + obj2.m22
-        );
-    end,
-    
-    __sub = function(proxy1, proxy2)
-        local proxy1_t = type(proxy1);
-        
-        if (proxy1_t ~= "Matrix3x3" and proxy1_t ~= "number") then
-            error("bad operand #1 to '__sub' (Matrix3x3/number expected, got " ..proxy1_t.. ")", 2);
-        end
-        
-        local proxy2_t = type(proxy2);
-        
-        if (proxy2_t ~= "Matrix3x3" and proxy2_t ~= "number") then
-            error("bad operand #2 to '__sub' (Matrix3x3/number expected, got " ..proxy2_t.. ")", 2);
-        end
-        
-        
-        if (proxy1_t == "number") then
-            local obj2 = PROXY__OBJ[proxy2];
-            
-            return new(
-                proxy1 - obj2.m00, proxy1 - obj2.m01, proxy1 - obj2.m02,
-                proxy1 - obj2.m10, proxy1 - obj2.m11, proxy1 - obj2.m12,
-                proxy1 - obj2.m20, proxy1 - obj2.m21, proxy1 - obj2.m22
-            );
-        end
-        
-        local obj1 = PROXY__OBJ[proxy1];
-        
-        if (proxy2_t == "number") then
-            return new(
-                obj1.m00 - proxy2, obj1.m01 - proxy2, obj1.m02 - proxy2,
-                obj1.m10 - proxy2, obj1.m11 - proxy2, obj1.m12 - proxy2,
-                obj1.m20 - proxy2, obj1.m21 - proxy2, obj1.m22 - proxy2
-            );
-        end
-        
-        local obj2 = PROXY__OBJ[proxy2];
-        
-        return new(
-            obj1.m00 - obj2.m00, obj1.m01 - obj2.m01, obj1.m02 - obj2.m02,
-            obj1.m10 - obj2.m10, obj1.m11 - obj2.m11, obj1.m12 - obj2.m12,
-            obj1.m20 - obj2.m20, obj1.m21 - obj2.m21, obj1.m22 - obj2.m22
-        );
-    end,
-    
-    __mul = function(proxy1, proxy2)
-        local proxy1_t = type(proxy1);
-        
-        if (proxy1_t ~= "Matrix3x3" and proxy1_t ~= "number") then
-            error("bad operand #1 to '__mul' (Matrix3x3/number expected, got " ..proxy1_t.. ")", 2);
-        end
-        
-        local proxy2_t = type(proxy2);
-        
-        if (proxy2_t ~= "Matrix3x3" and proxy2_t ~= "Vector3" and proxy2_t ~= "number") then
-            error("bad operand #2 to '__mul' (Matrix3x3/Vector3/number expected, got " ..proxy2_t.. ")", 2);
-        end
-        
-        
-        if (proxy1_t == "number") then
-            local obj2 = PROXY__OBJ[proxy2];
-            
-            return new(
-                proxy1 * obj2.m00, proxy1 * obj2.m01, proxy1 * obj2.m02,
-                proxy1 * obj2.m10, proxy1 * obj2.m11, proxy1 * obj2.m12,
-                proxy1 * obj2.m20, proxy1 * obj2.m21, proxy1 * obj2.m22
-            );
-        end
-        
-        local obj1 = PROXY__OBJ[proxy1];
-        
-        if (proxy2_t == "number") then
-            return new(
-                obj1.m00 * proxy2, obj1.m01 * proxy2, obj1.m02 * proxy2,
-                obj1.m10 * proxy2, obj1.m11 * proxy2, obj1.m12 * proxy2,
-                obj1.m20 * proxy2, obj1.m21 * proxy2, obj1.m22 * proxy2
-            );
-        end
-        
-        local obj2 = PROXY__OBJ[proxy2];
-        
-        if (proxy2_t == "Vector3") then
-            return Vector3.new(
-                obj1.m00*obj2.x + obj1.m01*obj2.y + obj1.m02*obj2.z,
-                obj1.m10*obj2.x + obj1.m11*obj2.y + obj1.m12*obj2.z,
-                obj1.m20*obj2.x + obj1.m21*obj2.y + obj1.m22*obj2.z
-            );
-        end
-        
-        return new(
-            obj1.m00*obj2.m00 + obj1.m01*obj2.m10 + obj1.m02*obj2.m20,
-            obj1.m00*obj2.m01 + obj1.m01*obj2.m11 + obj1.m02*obj2.m21,
-            obj1.m00*obj2.m02 + obj1.m01*obj2.m12 + obj1.m02*obj2.m22,
-            
-            obj1.m10*obj2.m00 + obj1.m11*obj2.m10 + obj1.m12*obj2.m20,
-            obj1.m10*obj2.m01 + obj1.m11*obj2.m11 + obj1.m12*obj2.m21,
-            obj1.m10*obj2.m02 + obj1.m11*obj2.m12 + obj1.m12*obj2.m22,
-            
-            obj1.m20*obj2.m00 + obj1.m21*obj2.m10 + obj1.m22*obj2.m20,
-            obj1.m20*obj2.m01 + obj1.m21*obj2.m11 + obj1.m22*obj2.m21,
-            obj1.m20*obj2.m02 + obj1.m21*obj2.m12 + obj1.m22*obj2.m22
-        );
-    end,
-    
-    
-    __unm = function(proxy)
-        local obj = PROXY__OBJ[proxy];
-        
-        return new(
-            -obj.m00, -obj.m01, -obj.m02,
-            -obj.m10, -obj.m11, -obj.m12,
-            -obj.m20, -obj.m21, -obj.m22
-        );
-    end,
-    
-    
-    -- __eq, -- memoization takes care of it
-    
-    
-    __tostring = function(proxy)
-        local obj = PROXY__OBJ[proxy];
-        
-        return obj.m00.. ", " ..obj.m01.. ", " ..obj.m02.. "\n"
-             ..obj.m10.. ", " ..obj.m11.. ", " ..obj.m12.. "\n"
-             ..obj.m20.. ", " ..obj.m21.. ", " ..obj.m22;
-    end,
-}
+local new, meta;
+
+local concrete = true;
 
 
 
-local MEM_PROXIES = setmetatable({}, { __mode = "v" });
+local cache = setmetatable({}, { __mode = "v" });
 
-
-
-function new(m00, m01, m02, m10, m11, m12, m20, m21, m22)
+function new(...)
+    local arg = { ... }
     
-    if (m00 ~= nil) then
-        local m00_t = type(m00);
-        
-        if (m00_t ~= "number") then
-            error("bad argument #2 to '" ..__func__.. "' (number expected, got " ..m00_t.. ")", 2);
+    for i = 1, 9 do
+        if (arg[i] ~= nil) then
+            local arg_t = type(arg[i]);
+            if (arg_t ~= "number") then
+                error("bad argument #" ..i.. " to '" ..__func__.. "' (number expected, got " ..arg_t.. ")", 2);
+            end
+        else
+            arg[i] = 0;
         end
-    else
-        m00 = 0;
-    end
-    
-    if (m01 ~= nil) then
-        local m01_t = type(m01);
-        
-        if (m01_t ~= "number") then
-            error("bad argument #2 to '" ..__func__.. "' (number expected, got " ..m01_t.. ")", 2);
-        end
-    else
-        m01 = 0;
-    end
-    
-    if (m02 ~= nil) then
-        local m02_t = type(m02);
-        
-        if (m02_t ~= "number") then
-            error("bad argument #2 to '" ..__func__.. "' (number expected, got " ..m02_t.. ")", 2);
-        end
-    else
-        m02 = 0;
-    end
-    
-    if (m10 ~= nil) then
-        local m10_t = type(m10);
-        
-        if (m10_t ~= "number") then
-            error("bad argument #2 to '" ..__func__.. "' (number expected, got " ..m10_t.. ")", 2);
-        end
-    else
-        m10 = 0;
-    end
-    
-    if (m11 ~= nil) then
-        local m11_t = type(m11);
-        
-        if (m11_t ~= "number") then
-            error("bad argument #2 to '" ..__func__.. "' (number expected, got " ..m11_t.. ")", 2);
-        end
-    else
-        m11 = 0;
-    end
-    
-    if (m12 ~= nil) then
-        local m12_t = type(m12);
-        
-        if (m12_t ~= "number") then
-            error("bad argument #2 to '" ..__func__.. "' (number expected, got " ..m12_t.. ")", 2);
-        end
-    else
-        m12 = 0;
-    end
-    
-    if (m20 ~= nil) then
-        local m20_t = type(m20);
-        
-        if (m20_t ~= "number") then
-            error("bad argument #2 to '" ..__func__.. "' (number expected, got " ..m20_t.. ")", 2);
-        end
-    else
-        m20 = 0;
-    end
-    
-    if (m21 ~= nil) then
-        local m21_t = type(m21);
-        
-        if (m21_t ~= "number") then
-            error("bad argument #2 to '" ..__func__.. "' (number expected, got " ..m21_t.. ")", 2);
-        end
-    else
-        m21 = 0;
-    end
-    
-    if (m22 ~= nil) then
-        local m22_t = type(m22);
-        
-        if (m22_t ~= "number") then
-            error("bad argument #2 to '" ..__func__.. "' (number expected, got " ..m22_t.. ")", 2);
-        end
-    else
-        m22 = 0;
     end
     
     
-    local memId = m00.. ":" ..m01.. ":" ..m02.. ":"
-                ..m10.. ":" ..m11.. ":" ..m12.. ":"
-                ..m20.. ":" ..m21.. ":" ..m22;
+    local cacheId = table.concat(arg, ":");
     
-    local proxy = MEM_PROXIES[memId];
-    
-    if (not proxy) then
-        local obj = {
-            type = name,
-            
-            
-            m00 = m00, m01 = m01, m02 = m02,
-            m10 = m10, m11 = m11, m12 = m12,
-            m20 = m20, m21 = m21, m22 = m22,
-        }
+    local obj = cache[cacheId];
+    if (not obj) then
+        local success;
         
-        proxy = setmetatable({}, meta);
+        success, obj = pcall(super.new, class, meta);
+        if (not success) then error(obj, 2) end
         
-        MEM_PROXIES[memId] = proxy;
+        obj[00] = arg[1]; obj[01] = arg[2]; obj[02] = arg[3];
+        obj[10] = arg[4]; obj[11] = arg[5]; obj[12] = arg[6];
+        obj[20] = arg[7]; obj[21] = arg[8]; obj[22] = arg[9];
         
-        OBJ__PROXY[obj] = proxy;
-        PROXY__OBJ[proxy] = obj;
+        cache[cacheId] = obj;
     end
     
-    return proxy;
+    return obj;
 end
 
 
 
+meta = extend({
+    __metatable = name,
+    
+    
+    __add = function(obj1, obj2)
+        local obj1_t = type(obj1);
+        if (obj1_t ~= "Matrix3x3" and obj1_t ~= "number") then
+            error("bad operand #1 to '+' (Matrix3x3/number expected, got " ..obj1_t.. ")", 2);
+        end
+        
+        local obj2_t = type(obj2);
+        if (obj2_t ~= "Matrix3x3" and obj2_t ~= "number") then
+            error("bad operand #2 to '+' (Matrix3x3/number expected, got " ..obj2_t.. ")", 2);
+        end
+        
+        
+        return (obj1_t == "number") and new(
+            obj1+obj2[00], obj1+obj2[01], obj1+obj2[02],
+            obj1+obj2[10], obj1+obj2[11], obj1+obj2[12],
+            obj1+obj2[20], obj1+obj2[21], obj1+obj2[22]
+        )
+        or (obj2_t == "number") and new(
+            obj1[00]+obj2, obj1[01]+obj2, obj1[02]+obj2,
+            obj1[10]+obj2, obj1[11]+obj2, obj1[12]+obj2,
+            obj1[20]+obj2, obj1[21]+obj2, obj1[22]+obj2
+        )
+        or new(
+            obj1[00]+obj2[00], obj1[01]+obj2[01], obj1[02]+obj2[02],
+            obj1[10]+obj2[10], obj1[11]+obj2[11], obj1[12]+obj2[12],
+            obj1[20]+obj2[20], obj1[21]+obj2[21], obj1[22]+obj2[22]
+        );
+    end,
+    
+    __sub = function(obj1, obj2)
+        local obj1_t = type(obj1);
+        if (obj1_t ~= "Matrix3x3" and obj1_t ~= "number") then
+            error("bad operand #1 to '-' (Matrix3x3/number expected, got " ..obj1_t.. ")", 2);
+        end
+        
+        local obj2_t = type(obj2);
+        if (obj2_t ~= "Matrix3x3" and obj2_t ~= "number") then
+            error("bad operand #2 to '-' (Matrix3x3/number expected, got " ..obj2_t.. ")", 2);
+        end
+        
+        
+        return (obj1_t == "number") and new(
+            obj1-obj2[00], obj1-obj2[01], obj1-obj2[02],
+            obj1-obj2[10], obj1-obj2[11], obj1-obj2[12],
+            obj1-obj2[20], obj1-obj2[21], obj1-obj2[22]
+        )
+        or (obj2_t == "number") and new(
+            obj1[00]-obj2, obj1[01]-obj2, obj1[02]-obj2,
+            obj1[10]-obj2, obj1[11]-obj2, obj1[12]-obj2,
+            obj1[20]-obj2, obj1[21]-obj2, obj1[22]-obj2
+        )
+        or new(
+            obj1[00]-obj2[00], obj1[01]-obj2[01], obj1[02]-obj2[02],
+            obj1[10]-obj2[10], obj1[11]-obj2[11], obj1[12]-obj2[12],
+            obj1[20]-obj2[20], obj1[21]-obj2[21], obj1[22]-obj2[22]
+        );
+    end,
+    
+    __mul = function(obj1, obj2)
+        local obj1_t = type(obj1);
+        if (obj1_t ~= "Matrix3x3" and obj1_t ~= "number") then
+            error("bad operand #1 to '*' (Matrix3x3/number expected, got " ..obj1_t.. ")", 2);
+        end
+        
+        local obj2_t = type(obj2);
+        if (obj2_t ~= "Matrix3x3" and obj2_t ~= "Vector3" and obj2_t ~= "number") then
+            error("bad operand #2 to '*' (Matrix3x3/Vector3/number expected, got " ..obj2_t.. ")", 2);
+        end
+        
+        
+        return (obj1_t == "number") and new(
+            obj1*obj2[00], obj1*obj2[01], obj1*obj2[02],
+            obj1*obj2[10], obj1*obj2[11], obj1*obj2[12],
+            obj1*obj2[20], obj1*obj2[21], obj1*obj2[22]
+        )
+        or (obj2_t == "Vector3") and Vector3.new(
+            obj1[00]*obj2.x + obj1[01]*obj2.y + obj1[02]*obj2.z,
+            obj1[10]*obj2.x + obj1[11]*obj2.y + obj1[12]*obj2.z,
+            obj1[20]*obj2.x + obj1[21]*obj2.y + obj1[22]*obj2.z
+        )
+        or (obj2_t == "number") and new(
+            obj1[00]*obj2, obj1[01]*obj2, obj1[02]*obj2,
+            obj1[10]*obj2, obj1[11]*obj2, obj1[12]*obj2,
+            obj1[20]*obj2, obj1[21]*obj2, obj1[22]*obj2
+        )
+        or new(
+            obj1[00]*obj2[00] + obj1[01]*obj2[10] + obj1[02]*obj2[20],
+            obj1[00]*obj2[01] + obj1[01]*obj2[11] + obj1[02]*obj2[21],
+            obj1[00]*obj2[02] + obj1[01]*obj2[12] + obj1[02]*obj2[22],
+            
+            obj1[10]*obj2[00] + obj1[11]*obj2[10] + obj1[12]*obj2[20],
+            obj1[10]*obj2[01] + obj1[11]*obj2[11] + obj1[12]*obj2[21],
+            obj1[10]*obj2[02] + obj1[11]*obj2[12] + obj1[12]*obj2[22],
+            
+            obj1[20]*obj2[00] + obj1[21]*obj2[10] + obj1[22]*obj2[20],
+            obj1[20]*obj2[01] + obj1[21]*obj2[11] + obj1[22]*obj2[21],
+            obj1[20]*obj2[02] + obj1[21]*obj2[12] + obj1[22]*obj2[22]
+        );
+    end,
+    
+    
+    __unm = function(obj)
+        return new(
+            -obj[00], -obj[01], -obj[02],
+            -obj[10], -obj[11], -obj[12],
+            -obj[20], -obj[21], -obj[22]
+        );
+    end,
+    
+    
+    __tostring = function(obj)
+        return obj[00].. ", " ..obj[01].. ", " ..obj[02].. "\n"
+             ..obj[10].. ", " ..obj[11].. ", " ..obj[12].. "\n"
+             ..obj[20].. ", " ..obj[21].. ", " ..obj[22];
+    end,
+}, super.meta);
+
+
+
 function func.unpack(obj)
-    return obj.m00, obj.m01, obj.m02,
-           obj.m10, obj.m11, obj.m12,
-           obj.m20, obj.m21, obj.m22;
+    return obj[00], obj[01], obj[02],
+           obj[10], obj[11], obj[12],
+           obj[20], obj[21], obj[22];
 end
 
 
 
 function get.det(obj)
-    obj.det = obj.m00*obj.m11*obj.m22 + obj.m02*obj.m10*obj.m21 + obj.m01*obj.m12*obj.m20
-            - obj.m02*obj.m11*obj.m20 - obj.m00*obj.m12*obj.m21 - obj.m01*obj.m10*obj.m22;
+    if (not obj.det) then
+        obj.det = obj[00]*obj[11]*obj[22] + obj[02]*obj[10]*obj[21] + obj[01]*obj[12]*obj[20]
+                - obj[02]*obj[11]*obj[20] - obj[00]*obj[12]*obj[21] - obj[01]*obj[10]*obj[22];
+    end
     
     return obj.det;
 end
 
 function get.transpose(obj)
-    obj.transpose = new(
-        obj.m00, obj.m10, obj.m20,
-        obj.m01, obj.m11, obj.m21,
-        obj.m02, obj.m12, obj.m22
-    );
+    if (not obj.transpose) then
+        obj.transpose = new(
+            obj[00], obj[10], obj[20],
+            obj[01], obj[11], obj[21],
+            obj[02], obj[12], obj[22]
+        );
+    end
     
     return obj.transpose;
 end
 
 
 
-Matrix3x3 = {
+class = {
     name = name,
+    func = func, get = get, set = set,
     
-    func = func,
-    get  = get,
+    new = new, meta = meta,
     
-    meta = meta,
-    
-    new = new,
-    
-    ZERO     = new(),
-    IDENTITY = new(
-        1, 0, 0,
-        0, 1, 0,
-        0, 0, 1
-    ),
+    concrete = concrete,
 }
+
+_G[name] = class;
+classes[#classes+1] = class;
