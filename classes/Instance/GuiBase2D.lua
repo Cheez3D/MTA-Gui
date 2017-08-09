@@ -1,48 +1,53 @@
-local name = "GuiBase2D";
-
-local class;
 local super = classes.Instance;
 
-local func = inherit({}, super.func);
-local get  = inherit({}, super.get);
-local set  = inherit({}, super.set);
+local class = inherit({
+    name = "GuiBase2D",
 
-local new, meta;
+    super = super,
+    
+    func = inherit({}, super.func),
+    get  = inherit({}, super.get),
+    set  = inherit({}, super.set),
+    
+    concrete = false,
+}, super);
 
-
-
-local SCREEN_WIDTH, SCREEN_HEIGHT = guiGetScreenSize();
-
-local RT_SIZE_STEP = 25;
-
-local DEBUG_CONTAINER_COLOR = tocolor(0, 255, 0, 127.5);
-
-local DRAW_POST_GUI = false;
+classes[class.name] = class;
 
 
 
-function new(class, meta)
-    local success, obj = pcall(super.new, class, meta);
+class.SCREEN_WIDTH, class.SCREEN_HEIGHT = guiGetScreenSize();
+
+class.RT_SIZE_STEP = 25;
+
+class.DEBUG_CONTAINER_COLOR = tocolor(0, 255, 0, 127.5);
+
+class.DRAW_POST_GUI = false;
+
+
+
+function class.new(...)
+    local success, obj = pcall(super.new, ...);
     if (not success) then error(obj, 2) end
     
     obj.guiChildren = {}
     
-    set.debug(obj, false);
+    class.set.debug(obj, false);
     
     return obj;
 end
 
-meta = extend({}, super.meta);
+class.meta = extend({}, super.meta);
 
 
 
-function func.update_absSize(obj, descend)
+function class.func.update_absSize(obj, descend)
     local absSize = (
-        func.isA(obj, "RootGui") and (
-            func.isA(obj, "ScreenGui") and Vector2.new(SCREEN_WIDTH, SCREEN_HEIGHT)
+        obj.func.isA(obj, "RootGui") and (
+            obj.func.isA(obj, "ScreenGui") and Vector2.new(class.SCREEN_WIDTH, class.SCREEN_HEIGHT)
             or Vector2.new()
         )
-        or func.isA(obj, "GuiObject") and obj.rootGui and Vector2.new(
+        or obj.func.isA(obj, "GuiObject") and obj.rootGui and Vector2.new(
             math.floor(obj.size.x.offset + obj.parent.absSize.x*obj.size.x.scale),
             math.floor(obj.size.y.offset + obj.parent.absSize.y*obj.size.y.scale)
         )
@@ -56,18 +61,19 @@ function func.update_absSize(obj, descend)
     
     if (descend) then
         for i = 1, #obj.guiChildren do
-            func.update_absSize(obj.guiChildren[i], true);
+            local child = obj.guiChildren[i];
+            child.func.update_absSize(child, true);
         end
     end
 end
 
-function func.update_absPos(obj, descend)
+function class.func.update_absPos(obj, descend)
     local absPos = (
-        func.isA(obj, "RootGui") and (
-            func.isA(obj, "ScreenGui") and Vector2.new()
+        obj.func.isA(obj, "RootGui") and (
+            obj.func.isA(obj, "ScreenGui") and Vector2.new()
             or Vector2.new()
         )
-        or func.isA(obj, "GuiObject") and obj.rootGui and Vector2.new(
+        or obj.func.isA(obj, "GuiObject") and obj.rootGui and Vector2.new(
             math.floor(
                 obj.parent.absPos.x + (obj.pos.x.offset + obj.parent.absSize.x*obj.pos.x.scale)
                 - (obj.posOrigin.x.offset + obj.absSize.x*obj.posOrigin.x.scale)
@@ -87,35 +93,17 @@ function func.update_absPos(obj, descend)
     
     if (descend) then
         for i = 1, #obj.guiChildren do
-            func.update_absPos(obj.guiChildren[i], true);
+            local child = obj.guiChildren[i];
+            child.func.update_absPos(child, true);
         end
     end
 end
 
 
-function func.update_containerPos(obj, descend)
-    local containerPos = #obj.guiChildren > 0 and (
-        func.isA(obj, "RootGui") and obj.absPos
-        or func.isA(obj, "GuiObject") and obj.rootGui and obj.clipperGui.absPos
-    )
-    or nil;
-    
-    if (containerPos ~= obj.containerPos) then
-        obj.containerPos = containerPos;
-    end
-    
-    
-    if (descend) then
-        for i = 1, #obj.guiChildren do
-            func.update_containerPos(obj.guiChildren[i], true);
-        end
-    end
-end
-
-function func.update_containerSize(obj, descend)
-    local containerSize = #obj.guiChildren > 0 and (
-        func.isA(obj, "RootGui") and obj.absSize
-        or func.isA(obj, "GuiObject") and obj.rootGui and obj.clipperGui.absSize
+function class.func.update_containerSize(obj, descend)
+    local containerSize = (#obj.guiChildren > 0) and (
+        obj.func.isA(obj, "RootGui") and obj.absSize
+        or obj.func.isA(obj, "GuiObject") and obj.rootGui and obj.clipperGui.absSize
     )
     or nil;
     
@@ -123,10 +111,10 @@ function func.update_containerSize(obj, descend)
         obj.containerSize = containerSize;
         
         local containerActualSize = containerSize and (
-            func.isA(obj, "RootGui") and containerSize
-            or func.isA(obj, "GuiObject") and Vector2.new(
-                math.ceil(containerSize.x/RT_SIZE_STEP)*RT_SIZE_STEP,
-                math.ceil(containerSize.y/RT_SIZE_STEP)*RT_SIZE_STEP
+            obj.func.isA(obj, "RootGui") and containerSize
+            or obj.func.isA(obj, "GuiObject") and Vector2.new(
+                math.ceil(containerSize.x/class.RT_SIZE_STEP)*class.RT_SIZE_STEP,
+                math.ceil(containerSize.y/class.RT_SIZE_STEP)*class.RT_SIZE_STEP
             )
         )
         or nil;
@@ -146,19 +134,39 @@ function func.update_containerSize(obj, descend)
     
     if (descend) then
         for i = 1, #obj.guiChildren do
-            func.update_containerSize(obj.guiChildren[i], true);
+            local child = obj.guiChildren[i];
+            child.func.update_containerSize(child, true);
+        end
+    end
+end
+
+function class.func.update_containerPos(obj, descend)
+    local containerPos = (#obj.guiChildren > 0) and (
+        obj.func.isA(obj, "RootGui") and obj.absPos
+        or obj.func.isA(obj, "GuiObject") and obj.rootGui and obj.clipperGui.absPos
+    )
+    or nil;
+    
+    if (containerPos ~= obj.containerPos) then
+        obj.containerPos = containerPos;
+    end
+    
+    
+    if (descend) then
+        for i = 1, #obj.guiChildren do
+            local child = obj.guiChildren[i];
+            child.func.update_containerPos(child, true);
         end
     end
 end
 
 
-function func.update(obj, descend)
+function class.func.update(obj, descend)
     if (obj.container) then
         if (descend) then
             for i = 1, #obj.guiChildren do
                 local child = obj.guiChildren[i];
-                
-                child.class.func.update(child, true); -- TODO: investigate if class is necessary
+                child.func.update(child, true);
             end
         end
         
@@ -168,7 +176,7 @@ function func.update(obj, descend)
         dxSetBlendMode("add");
         
         if (obj.debug) then
-            dxDrawRectangle(0, 0, obj.containerSize.x, obj.containerSize.y, DEBUG_CONTAINER_COLOR);
+            dxDrawRectangle(0, 0, obj.containerSize.x, obj.containerSize.y, class.DEBUG_CONTAINER_COLOR);
         end
         
         -- children
@@ -176,11 +184,11 @@ function func.update(obj, descend)
             local child = obj.guiChildren[i];
             
             if (child.visible) then
-                if (func.isA(child, "GuiObject") and child.canvas) then
+                if (child.func.isA(child, "GuiObject") and child.canvas) then
                     if (child.isRotated) then
                         if (child.isRotated3D) then
                             dxSetShaderTransform(
-                                GuiObject.SHADER,
+                                child.class.SHADER,
                                 
                                 child.rot.y, child.rot.x, child.rot.z,
                                 child.canvasRotPivot.x, child.canvasRotPivot.y, child.canvasRotPivot.z, false,
@@ -188,7 +196,7 @@ function func.update(obj, descend)
                             );
                         else
                             dxSetShaderTransform(
-                                GuiObject.SHADER,
+                                child.class.SHADER,
                                 
                                 child.rot.y, child.rot.x, child.rot.z,
                                 child.canvasRotPivot.x, child.canvasRotPivot.y, child.canvasRotPivot.z, false,
@@ -196,23 +204,23 @@ function func.update(obj, descend)
                             );
                         end
                         
-                        dxSetShaderValue(GuiObject.SHADER, "image", child.canvas);
+                        dxSetShaderValue(child.class.SHADER, "image", child.canvas);
                     end
                     
                     dxDrawImage(
                         child.canvasPos.x-obj.containerPos.x, child.canvasPos.y-obj.containerPos.y,
                         child.canvasActualSize.x, child.canvasActualSize.y,
                         
-                        child.isRotated and GuiObject.SHADER or child.canvas
+                        child.isRotated and child.class.SHADER or child.canvas
                     );
                 end
                 
                 if (child.container) then
-                    if (func.isA(child, "GuiObject")) then
+                    if (child.func.isA(child, "GuiObject")) then
                         if (child.isRotated) then
                             if (child.isRotated3D) then
                                 dxSetShaderTransform(
-                                    GuiObject.SHADER,
+                                    child.class.SHADER,
                                     
                                     child.rot.y, child.rot.x, child.rot.z,
                                     child.containerRotPivot.x, child.containerRotPivot.y, child.containerRotPivot.z, false,
@@ -220,7 +228,7 @@ function func.update(obj, descend)
                                 );
                             else
                                 dxSetShaderTransform(
-                                    GuiObject.SHADER,
+                                    child.class.SHADER,
                                     
                                     child.rot.y, child.rot.x, child.rot.z,
                                     child.containerRotPivot.x, child.containerRotPivot.y, child.containerRotPivot.z, false,
@@ -228,7 +236,7 @@ function func.update(obj, descend)
                                 );
                             end
                             
-                            dxSetShaderValue(GuiObject.SHADER, "image", child.container);
+                            dxSetShaderValue(child.class.SHADER, "image", child.container);
                         end
                     
                         dxDrawImageSection(
@@ -237,7 +245,7 @@ function func.update(obj, descend)
                             
                             0, 0, child.containerSize.x, child.containerSize.y,
                             
-                            child.isRotated and GuiObject.SHADER or child.container
+                            child.isRotated and child.class.SHADER or child.container
                         );
                     end
                 end
@@ -251,19 +259,21 @@ function func.update(obj, descend)
 end
 
 
-function func.propagate(obj)
-    if (func.isA(obj, "RootGui")) then
+function class.func.propagate(obj)
+    if (obj.func.isA(obj, "RootGui")) then
         -- do nothing
-    elseif (func.isA(obj, "GuiObject") and obj.rootGui) then
-        obj.parent.class.func.update(obj.parent);
+    elseif (obj.func.isA(obj, "GuiObject") and obj.rootGui) then
+        local parent = obj.parent;
         
-        obj.parent.class.func.propagate(obj.parent);
+        parent.func.update(parent);
+        
+        parent.func.propagate(parent);
     end
 end
 
 
 
-function set.debug(obj, debug, prev)
+function class.set.debug(obj, debug, prev)
     local debug_t = type(debug);
     
     if (debug_t ~= "boolean") then
@@ -274,31 +284,13 @@ function set.debug(obj, debug, prev)
     obj.debug = debug;
     
     
-    func.update(obj);
+    obj.func.update(obj);
     
-    func.propagate(obj);
+    obj.func.propagate(obj);
 end
 
 
 
-class = {
-    name = name,
-    
-    super = super,
-    
-    func = func, get = get, set = set,
-    
-    new = new, meta = meta,
-    
-    
-    SCREEN_WIDTH, SCREEN_HEIGHT = SCREEN_WIDTH, SCREEN_HEIGHT,
-    
-    RT_SIZE_STEP = RT_SIZE_STEP,
-    
-    DRAW_POST_GUI = DRAW_POST_GUI,
-}
-
-_G[name] = class;
 
 
 

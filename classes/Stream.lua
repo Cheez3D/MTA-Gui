@@ -1,7 +1,7 @@
 local name = "Stream";
 
 local class;
-local super = Object;
+local super = classes.Object;
 
 local func = inherit({}, super.func);
 local get  = inherit({}, super.get);

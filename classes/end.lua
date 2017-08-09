@@ -3,10 +3,7 @@ local proxy__obj = {}
 
 
 
-for i = 1, #classes do
-    local class = classes[i];
-    
-    
+for className, class in pairs(classes) do
     if (class.concrete) then
         local proxy_new, proxy_meta;
         

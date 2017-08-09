@@ -1,37 +1,46 @@
-local name = "GuiObject";
+local super = classes.GuiBase2D;
 
-local class;
-local super = GuiBase2D;
+local class = inherit({
+    name = "GuiObject",
 
-local func = inherit({}, super.func);
-local get  = inherit({}, super.get);
-local set  = inherit({}, super.set);
+    super = super,
+    
+    func = inherit({}, super.func),
+    get  = inherit({}, super.get),
+    set  = inherit({}, super.set),
+    
+    concrete = false,
+}, super);
 
-local new, meta;
+classes[class.name] = class;
 
-
-
-local CANVAS_ADDITIONAL_MARGIN = 1; -- added so that canvas can be properly anti-aliased when rotated
-
-local MAX_BORDER_SIZE = 100;
-
-local ROT_NEAR_Z_PLANE        = -1000;
-local ROT_ACTUAL_NEAR_Z_PLANE = -900;
-local ROT_FAR_Z_PLANE         =  9000;
-
-local ROT_PIVOT_DEPTH_UNIT = 1000;
-
-local SHADER = dxCreateShader("shaders/nothing.fx"); -- TODO: add check for successful creation (dxSetTestMode)
-
-local DEBUG_CANVAS_COLOR = tocolor(255, 0, 255, 127.5);
-
-local DEBUG_VERTEX_LINE_COLOR = tocolor(255, 0, 0, 200);
-local DEBUG_VERTEX_LINE_THICKNESS = 2;
+local func = class.func;
+local get  = class.get;
+local set  = class.set;
 
 
 
-function new(class, meta)
-    local success, obj = pcall(super.new, class, meta);
+class.DEBUG_CANVAS_COLOR = tocolor(255, 0, 255, 127.5);
+
+class.DEBUG_VERTEX_LINE_COLOR = tocolor(255, 0, 0, 200);
+class.DEBUG_VERTEX_LINE_THICKNESS = 2;
+
+class.CANVAS_ADDITIONAL_MARGIN = 1; -- added so that canvas can be properly anti-aliased when rotated
+
+class.MAX_BORDER_SIZE = 100;
+
+class.ROT_NEAR_Z_PLANE        = -1000;
+class.ROT_ACTUAL_NEAR_Z_PLANE = -900;
+class.ROT_FAR_Z_PLANE         =  9000;
+
+class.ROT_PIVOT_DEPTH_UNIT = 1000;
+
+class.SHADER = dxCreateShader("shaders/nothing.fx"); -- TODO: add check for successful creation (dxSetTestMode)
+
+
+
+function class.new(...)
+    local success, obj = pcall(super.new, ...);
     if (not success) then error(obj, 2) end
     
     
@@ -40,29 +49,28 @@ function new(class, meta)
     obj.quad = {}
     
     
-    set.debug(obj, false);
+    class.set.debug(obj, false);
     
     
-    -- TODO: investigate prev and k arguments in set functions
-    set.clipsDescendants(obj, true);
+    class.set.clipsDescendants(obj, true);
     
-    set.bgColor(obj, Color3.new(255, 255, 255));
-    set.bgTransparency(obj, 0);
+    class.set.bgColor(obj, Color3.new(255, 255, 255));
+    class.set.bgTransparency(obj, 0);
     
-    set.borderColor(obj, Color3.new(27, 42, 53));
-    set.borderSize(obj, 1);
-    set.borderTransparency(obj, 0);
+    class.set.borderColor(obj, Color3.new(27, 42, 53));
+    class.set.borderSize(obj, 1);
+    class.set.borderTransparency(obj, 0);
     
-    set.size(obj, UDim2.new(0, 100, 0, 100));
-    set.pos(obj, UDim2.new());
-    set.posOrigin(obj, UDim2.new());
+    class.set.size(obj, UDim2.new(0, 100, 0, 100));
+    class.set.pos(obj, UDim2.new());
+    class.set.posOrigin(obj, UDim2.new());
     
-    set.rot(obj, Vector3.new());
-    set.rotPivot(obj, UDim2.new(0.5, 0, 0.5, 0));
-    set.rotPivotDepth(obj, 0);
-    set.rotPerspective(obj, obj.rotPivot);
+    class.set.rot(obj, Vector3.new());
+    class.set.rotPivot(obj, UDim2.new(0.5, 0, 0.5, 0));
+    class.set.rotPivotDepth(obj, 0);
+    class.set.rotPerspective(obj, obj.rotPivot);
     
-    set.visible(obj, true);
+    class.set.visible(obj, true);
     
     
     return obj;
@@ -72,10 +80,10 @@ meta = extend({}, super.meta);
 
 
 
-function func.update_rootGui(obj, descend)
-    local rootGui = obj.parent and func.isA(obj.parent, "GuiBase2D") and (
-        func.isA(obj.parent, "RootGui") and obj.parent
-        or func.isA(obj.parent, "GuiObject") and obj.parent.rootGui
+function class.func.update_rootGui(obj, descend)
+    local rootGui = obj.parent and obj.parent:isA("GuiBase2D") and (
+        obj.parent:isA("RootGui") and obj.parent
+        or obj.parent:isA("GuiObject") and obj.parent.rootGui
     )
     or nil;
     
@@ -85,17 +93,17 @@ function func.update_rootGui(obj, descend)
         
         if (descend) then
             for i = 1, #obj.guiChildren do
-                func.update_rootGui(obj.guiChildren[i], true);
+                obj.guiChildren[i]:update_rootGui(true);
             end
         end
     end
 end
 
 
-function func.update_clipperGui(obj, descend)
+function class.func.update_clipperGui(obj, descend)
     local clipperGui = obj.rootGui and (
         obj.clipsDescendants and obj
-        or func.isA(obj.parent, "RootGui") and obj.parent
+        or obj.parent:isA("RootGui") and obj.parent
         or obj.parent.clipperGui
     )
     or nil;
@@ -107,13 +115,13 @@ function func.update_clipperGui(obj, descend)
     
     if (descend) then
         for i = 1, #obj.guiChildren do
-            func.update_clipperGui(obj.guiChildren[i], true);
+            obj.guiChildren[i]:update_clipperGui(true);
         end
     end
 end
 
 
-function func.update_isRotated(obj)
+function class.func.update_isRotated(obj)
     if (obj.rot.x%180 == 0 and (obj.rot.x == obj.rot.y and obj.rot.y == obj.rot.z)) then
         obj.isRotated = false;
     elseif (obj.rot.x%360 == 0 and obj.rot.y%360 == 0 and obj.rot.z%360 == 0) then
@@ -123,7 +131,7 @@ function func.update_isRotated(obj)
     end
 end
 
-function func.update_isRotated3D(obj)
+function class.func.update_isRotated3D(obj)
     if (not obj.isRotated) then
         obj.isRotated3D = false;
     elseif ((obj.rot.x%180 == 0 and obj.rot.y%180 == 0) and obj.rotPivotDepth == 0) then
@@ -135,43 +143,45 @@ function func.update_isRotated3D(obj)
     end
 end
 
-function func.update_rotMatrix(obj)
+function class.func.update_rotMatrix(obj)
     local rotMatrix;
     
     if (obj.isRotated) then
         -- calculate rotation matrices for each plane
         local ax = math.rad(obj.rot.x);
+        local ay = math.rad(obj.rot.y);
+        local az = math.rad(obj.rot.z);
+        
         local sx, cx = math.sin(ax), math.cos(ax);
+        local sy, cy = math.sin(ay), math.cos(ay);
+        local sz, cz = math.sin(az), math.cos(az);
+        
         local rx = Matrix3x3.new(
             1, 0,  0,
             0, cx, -sx,
             0, sx, cx
         );
         
-        local ay = math.rad(obj.rot.y);
-        local sy, cy = math.sin(ay), math.cos(ay);
         local ry = Matrix3x3.new(
             cy,  0, sy,
             0,   1, 0,
             -sy, 0, cy
         );
         
-        local az = math.rad(obj.rot.z);
-        local sz, cz = math.sin(az), math.cos(az);
         local rz = Matrix3x3.new(
             cz, -sz, 0,
             sz, cz,  0,
             0,  0,   1
         );
         
-        rotMatrix = ry*rx*rz; -- get the final rotation matrix
+        rotMatrix = ry*rx*rz; -- get final rotation matrix
     end
     
     obj.rotMatrix = rotMatrix;
 end
 
 
-function func.update_absRotPivot(obj, descend)
+function class.func.update_absRotPivot(obj, descend)
     local absRotPivot = obj.rootGui and Vector3.new(
         math.floor(obj.absPos.x + (obj.rotPivot.x.offset + obj.absSize.x*obj.rotPivot.x.scale)),
         math.floor(obj.absPos.y + (obj.rotPivot.y.offset + obj.absSize.y*obj.rotPivot.y.scale)),
@@ -187,12 +197,12 @@ function func.update_absRotPivot(obj, descend)
     
     if (descend) then
         for i = 1, #obj.guiChildren do
-            func.update_absRotPivot(obj.guiChildren[i], true);
+            obj.guiChildren[i]:update_absRotPivot(true);
         end
     end
 end
 
-function func.update_absRotPerspective(obj, descend)
+function class.func.update_absRotPerspective(obj, descend)
     local absRotPerspective = obj.rootGui and Vector2.new(
         math.floor(obj.absPos.x + (obj.rotPerspective.x.offset + obj.absSize.x*obj.rotPerspective.x.scale)),
         math.floor(obj.absPos.y + (obj.rotPerspective.y.offset + obj.absSize.y*obj.rotPerspective.y.scale))
@@ -206,14 +216,14 @@ function func.update_absRotPerspective(obj, descend)
     
     if (descend) then
         for i = 1, #obj.guiChildren do
-            func.update_absRotPerspective(obj.guiChildren[i], true);
+            obj.guiChildren[i]:update_absRotPerspective(true);
         end
     end
 end
 
 
 
-function func.update_vertices(obj, descend)
+function class.func.update_vertices(obj, descend)
     -- REFERENCES:
     -- http://www.scratchapixel.com/lessons/mathematics-physics-for-computer-graphics/geometry/how-does-matrix-work-part-1
     -- https://www.siggraph.org/education/materials/HyperGraph/modeling/mod_tran/3drota.htm
@@ -225,9 +235,7 @@ function func.update_vertices(obj, descend)
         obj.quad[3] = Vector3.new(obj.absPos.x+obj.absSize.x, obj.absPos.y+obj.absSize.y, 0);
         obj.quad[4] = Vector3.new(obj.absPos.x, obj.absPos.y+obj.absSize.y, 0);
         
-        
         local asc = obj;
-        
         while (asc ~= obj.rootGui) do
             if (asc.isRotated) then
                 for i = 1, #obj.quad do
@@ -237,10 +245,10 @@ function func.update_vertices(obj, descend)
                     v = asc.rotMatrix*v; -- apply rotation through rotMatrix
                     v = v+asc.absRotPivot; -- translate back by +absRotPivot
                     
-                    local projMatrix = 1/(v.z-ROT_NEAR_Z_PLANE) * Matrix3x3.new(
-                        -ROT_NEAR_Z_PLANE, 0,                 asc.absRotPerspective.x,
-                        0,                 -ROT_NEAR_Z_PLANE, asc.absRotPerspective.y,
-                        0,                 0,                 0
+                    local projMatrix = 1/(v.z-class.ROT_NEAR_Z_PLANE) * Matrix3x3.new(
+                        -class.ROT_NEAR_Z_PLANE, 0,                       asc.absRotPerspective.x,
+                        0,                       -class.ROT_NEAR_Z_PLANE, asc.absRotPerspective.y,
+                        0,                       0,                       0
                     );
                     
                     v = projMatrix*v;
@@ -315,20 +323,20 @@ function func.update_vertices(obj, descend)
     
     if (descend) then
         for i = 1, #obj.guiChildren do
-            func.update_vertices(obj.guiChildren[i], true);
+            obj.guiChildren[i]:update_vertices(true);
         end
     end
 end
 
 
-function func.update_containerRotPivot(obj, descend)
-    local containerRotPivot = #obj.guiChildren > 0 and (
+function class.func.update_containerRotPivot(obj, descend)
+    local containerRotPivot = (#obj.guiChildren > 0) and (
         obj.rootGui and obj.isRotated and Vector3.new(
             2*(-obj.containerSize.x/2 + obj.absRotPivot.x-obj.containerPos.x), -- use containerSize and not containerActualSize
             2*(-obj.containerSize.y/2 + obj.absRotPivot.y-obj.containerPos.y), -- because we draw container using dxDrawImageSection in GuiBase2D
             
-            2*(obj.absRotPivot.z/ROT_PIVOT_DEPTH_UNIT)
-        )/obj.parent.containerActualSize.vec31
+            2*(obj.absRotPivot.z/class.ROT_PIVOT_DEPTH_UNIT)
+        )/obj.parent.containerActualSize:get_vec31()
     )
     or nil;
     
@@ -337,14 +345,14 @@ function func.update_containerRotPivot(obj, descend)
     end
     
     
-     if (descend) then
+    if (descend) then
         for i = 1, #obj.guiChildren do
-            func.update_containerRotPivot(obj.guiChildren[i], true);
+            obj.guiChildren[i]:update_containerRotPivot(true);
         end
     end
 end
 
-function func.update_containerRotPerspective(obj, descend)
+function class.func.update_containerRotPerspective(obj, descend)
     local containerRotPerspective = #obj.guiChildren > 0 and (
         obj.rootGui and obj.isRotated3D and Vector2.new(
             2*(-obj.containerSize.x/2 + obj.absRotPerspective.x-obj.containerPos.x),
@@ -360,35 +368,16 @@ function func.update_containerRotPerspective(obj, descend)
     
     if (descend) then
         for i = 1, #obj.guiChildren do
-            func.update_containerRotPerspective(obj.guiChildren[i], true);
+            obj.guiChildren[i]:update_containerRotPerspective(true);
         end
     end
 end
 
 
-function func.update_canvasPos(obj, descend)
-    local canvasPos = obj.rootGui and Vector2.new(
-        obj.absPos.x - (CANVAS_ADDITIONAL_MARGIN + obj.borderSize),
-        obj.absPos.y - (CANVAS_ADDITIONAL_MARGIN + obj.borderSize)
-    )
-    or nil;
-    
-    if (canvasPos ~= obj.canvasPos) then
-        obj.canvasPos = canvasPos;
-    end
-    
-    
-    if (descend) then
-        for i = 1, #obj.guiChildren do
-            func.update_canvasPos(obj.guiChildren[i], true);
-        end
-    end
-end
-
-function func.update_canvasSize(obj, descend)
+function class.func.update_canvasSize(obj, descend)
     local canvasSize = obj.rootGui and Vector2.new(
-        CANVAS_ADDITIONAL_MARGIN + obj.borderSize + obj.absSize.x + obj.borderSize + CANVAS_ADDITIONAL_MARGIN,
-        CANVAS_ADDITIONAL_MARGIN + obj.borderSize + obj.absSize.y + obj.borderSize + CANVAS_ADDITIONAL_MARGIN
+        class.CANVAS_ADDITIONAL_MARGIN+obj.borderSize + obj.absSize.x + obj.borderSize+class.CANVAS_ADDITIONAL_MARGIN,
+        class.CANVAS_ADDITIONAL_MARGIN+obj.borderSize + obj.absSize.y + obj.borderSize+class.CANVAS_ADDITIONAL_MARGIN
     )
     or nil;
     
@@ -416,18 +405,37 @@ function func.update_canvasSize(obj, descend)
     
     if (descend) then
         for i = 1, #obj.guiChildren do
-            func.update_canvasSize(obj.guiChildren[i], true);
+            obj.guiChildren[i]:update_canvasSize(true);
         end
     end
 end
 
-function func.update_canvasRotPivot(obj, descend)
+function class.func.update_canvasPos(obj, descend)
+    local canvasPos = obj.rootGui and Vector2.new(
+        obj.absPos.x - (class.CANVAS_ADDITIONAL_MARGIN+obj.borderSize),
+        obj.absPos.y - (class.CANVAS_ADDITIONAL_MARGIN+obj.borderSize)
+    )
+    or nil;
+    
+    if (canvasPos ~= obj.canvasPos) then
+        obj.canvasPos = canvasPos;
+    end
+    
+    
+    if (descend) then
+        for i = 1, #obj.guiChildren do
+            obj.guiChildren[i]:update_canvasPos(true);
+        end
+    end
+end
+
+function class.func.update_canvasRotPivot(obj, descend)
     local canvasRotPivot = obj.rootGui and obj.isRotated and Vector3.new(
         2*(-obj.canvasActualSize.x/2 + obj.absRotPivot.x-obj.canvasPos.x), -- use canvasActualSize and not canvasSize
         2*(-obj.canvasActualSize.y/2 + obj.absRotPivot.y-obj.canvasPos.y), -- because we draw canvas using dxDrawImage in GuiBase2D
         
-        2*(obj.absRotPivot.z/ROT_PIVOT_DEPTH_UNIT)
-    )/obj.parent.containerActualSize.vec31
+        2*(obj.absRotPivot.z/class.ROT_PIVOT_DEPTH_UNIT)
+    )/obj.parent.containerActualSize:get_vec31()
     or nil;
     
     if (canvasRotPivot ~= obj.canvasRotPivot) then
@@ -437,12 +445,12 @@ function func.update_canvasRotPivot(obj, descend)
     
     if (descend) then
         for i = 1, #obj.guiChildren do
-            func.update_canvasRotPivot(obj.guiChildren[i], true);
+            obj.guiChildren[i]:update_canvasRotPivot(true);
         end
     end
 end
 
-function func.update_canvasRotPerspective(obj, descend)
+function class.func.update_canvasRotPerspective(obj, descend)
     local canvasRotPerspective = obj.rootGui and obj.isRotated3D and Vector2.new(
         2*(-obj.canvasActualSize.x/2 + obj.absRotPerspective.x-obj.canvasPos.x),
         2*(-obj.canvasActualSize.y/2 + obj.absRotPerspective.y-obj.canvasPos.y)
@@ -456,13 +464,13 @@ function func.update_canvasRotPerspective(obj, descend)
     
     if (descend) then
         for i = 1, #obj.guiChildren do
-            func.update_canvasRotPerspective(obj.guiChildren[i], true);
+            obj.guiChildren[i]:update_canvasRotPerspective(true);
         end
     end
 end
 
 
-function func.update(obj, descend)
+function class.func.update(obj, descend)
     local success, result = pcall(super.func.update, obj, descend);
     if (not success) then error(result, 2) end
     
@@ -473,12 +481,12 @@ function func.update(obj, descend)
         dxSetBlendMode("add");
         
         if (obj.debug) then
-            dxDrawRectangle(0, 0, obj.canvasActualSize.x, obj.canvasActualSize.y, DEBUG_CANVAS_COLOR);
+            dxDrawRectangle(0, 0, obj.canvasActualSize.x, obj.canvasActualSize.y, class.DEBUG_CANVAS_COLOR);
         end
         
         -- border
         dxDrawRectangle(
-            CANVAS_ADDITIONAL_MARGIN, CANVAS_ADDITIONAL_MARGIN,
+            class.CANVAS_ADDITIONAL_MARGIN, class.CANVAS_ADDITIONAL_MARGIN,
             
             obj.absSize.x+2*obj.borderSize,
             obj.absSize.y+2*obj.borderSize,
@@ -490,8 +498,8 @@ function func.update(obj, descend)
         dxSetBlendMode("overwrite");
         
         dxDrawRectangle(
-            CANVAS_ADDITIONAL_MARGIN+obj.borderSize,
-            CANVAS_ADDITIONAL_MARGIN+obj.borderSize,
+            class.CANVAS_ADDITIONAL_MARGIN+obj.borderSize,
+            class.CANVAS_ADDITIONAL_MARGIN+obj.borderSize,
             
             obj.absSize.x, obj.absSize.y,
             
@@ -505,27 +513,27 @@ function func.update(obj, descend)
 end
 
 
-function func.drawVertices(obj)
+function class.func.drawVertices(obj)
     for i = 1, #obj.quad do
         dxDrawLine(
             obj.absRotPivot.x, obj.absRotPivot.y,
             obj.quad[i].x, obj.quad[i].y,
             
-            DEBUG_VERTEX_LINE_COLOR, DEBUG_VERTEX_LINE_THICKNESS,
+            class.DEBUG_VERTEX_LINE_COLOR, class.DEBUG_VERTEX_LINE_THICKNESS,
             
-            GuiBase2D.DRAW_POST_GUI
+            class.DRAW_POST_GUI
         );
     end
 end
 
 
 
-function set.parent(obj, parent, prev)
+function class.set.parent(obj, parent, prev)
     local success, result = pcall(super.set.parent, obj, parent, prev);
     if (not success) then error(result, 2) end
     
     
-    if (prev and func.isA(prev, "GuiBase2D")) then
+    if (prev and prev:isA("GuiBase2D")) then
         local childrenCount = #prev.guiChildren;
         
         for i = obj.guiIndex+1, childrenCount do
@@ -540,67 +548,67 @@ function set.parent(obj, parent, prev)
         obj.guiIndex = nil;
         
         
-        prev.class.func.update_containerPos(prev);
-        prev.class.func.update_containerSize(prev);
+        prev:update_containerSize();
+        prev:update_containerPos();
         
+        prev:update();
         
-        prev.class.func.update(prev);
-        prev.class.func.propagate(prev);
+        prev:propagate();
     end
     
     
-    if (parent and func.isA(parent, "GuiBase2D")) then
+    if (parent and parent:isA("GuiBase2D")) then
         obj.guiIndex = #parent.guiChildren+1;
         parent.guiChildren[obj.guiIndex] = obj;
         
         
-        parent.class.func.update_containerPos(parent);
-        parent.class.func.update_containerSize(parent);
+        parent:update_containerSize();
+        parent:update_containerPos();
     end
     
+    -- "func\.([A-Za-z_]+)\(([A-Za-z_]*),?\ ? -> obj:\1\(""
+    obj:update_rootGui(true);
     
-    func.update_rootGui(obj, true);
+    obj:update_clipperGui(true);
     
-    func.update_clipperGui(obj, true);
+    obj:update_absSize(true);
+    obj:update_absPos(true);
     
-    func.update_absSize(obj, true);
-    func.update_absPos(obj, true);
+    obj:update_absRotPivot(true);
+    obj:update_absRotPerspective(true);
     
-    func.update_absRotPivot(obj, true);
-    func.update_absRotPerspective(obj, true);
+    obj:update_vertices(true);
     
-    func.update_vertices(obj, true);
+    obj:update_containerPos(true);
+    obj:update_containerSize(true);
+    obj:update_containerRotPivot(true);
+    obj:update_containerRotPerspective(true);
     
-    func.update_containerPos(obj, true);
-    func.update_containerSize(obj, true);
-    func.update_containerRotPivot(obj, true);
-    func.update_containerRotPerspective(obj, true);
+    obj:update_canvasPos(true);
+    obj:update_canvasSize(true);
+    obj:update_canvasRotPivot(true);
+    obj:update_canvasRotPerspective(true);
     
-    func.update_canvasPos(obj, true);
-    func.update_canvasSize(obj, true);
-    func.update_canvasRotPivot(obj, true);
-    func.update_canvasRotPerspective(obj, true);
+    obj:update(true);
     
-    func.update(obj, true);
-    
-    func.propagate(obj);
+    obj:propagate();
 end
 
 
-function set.debug(obj, debug, prev)
+function class.set.debug(obj, debug, prev)
     local success, result = pcall(super.set.debug, obj, debug, prev);
     if (not success) then error(result, 2) end
     
     
-    func.update(obj);
+    obj:update();
     
-    func.propagate(obj);
+    obj:propagate();
     
     
     if (obj.rootGui) then
         if (debug) then
             function obj.drawVertices_wrapper()
-                func.drawVertices(obj);
+                obj:drawVertices();
             end
             
             addEventHandler("onClientRender", root, obj.drawVertices_wrapper, false, "low");
@@ -613,7 +621,7 @@ function set.debug(obj, debug, prev)
 end
 
 
-function set.clipsDescendants(obj, clipsDescendants)
+function class.set.clipsDescendants(obj, clipsDescendants)
     local clipsDescendants_t = type(clipsDescendants);
     
     if (clipsDescendants_t ~= "boolean") then
@@ -645,7 +653,7 @@ function set.clipsDescendants(obj, clipsDescendants)
 end
 
 
-function set.bgColor(obj, bgColor)
+function class.set.bgColor(obj, bgColor)
     local bgColor_t = type(bgColor);
     
     if (bgColor_t ~= "Color3") then
@@ -661,7 +669,7 @@ function set.bgColor(obj, bgColor)
     func.propagate(obj);
 end
 
-function set.bgTransparency(obj, bgTransparency)
+function class.set.bgTransparency(obj, bgTransparency)
     local bgTransparency_t = type(bgTransparency);
     
     if (bgTransparency_t ~= "number") then
@@ -680,7 +688,7 @@ function set.bgTransparency(obj, bgTransparency)
 end
 
 
-function set.borderColor(obj, borderColor)
+function class.set.borderColor(obj, borderColor)
     local borderColor_t = type(borderColor);
     
     if (borderColor_t ~= "Color3") then
@@ -696,12 +704,12 @@ function set.borderColor(obj, borderColor)
     func.propagate(obj);
 end
 
-function set.borderSize(obj, borderSize)
+function class.set.borderSize(obj, borderSize)
     local borderSize_t = type(borderSize);
     
     if (borderSize_t ~= "number") then
         error("bad argument #1 to 'borderSize' (number expected, got " ..borderSize_t.. ")", 2);
-    elseif (borderSize < 0) or (borderSize > MAX_BORDER_SIZE) then
+    elseif (borderSize < 0) or (borderSize > class.MAX_BORDER_SIZE) then
         error("bad argument #1 to 'borderSize' (value out of bounds)", 2);
     end
     
@@ -719,7 +727,7 @@ function set.borderSize(obj, borderSize)
     func.propagate(obj);
 end
 
-function set.borderTransparency(obj, borderTransparency)
+function class.set.borderTransparency(obj, borderTransparency)
     local borderTransparency_t = type(borderTransparency);
     
     if (borderTransparency_t ~= "number") then
@@ -738,7 +746,7 @@ function set.borderTransparency(obj, borderTransparency)
 end
 
 
-function set.size(obj, size)
+function class.set.size(obj, size)
     local size_t = type(size);
     
     if (size_t ~= "UDim2") then
@@ -773,7 +781,7 @@ function set.size(obj, size)
 end
 
 
-function set.pos(obj, pos)
+function class.set.pos(obj, pos)
     local pos_t = type(pos);
     
     if (pos_t ~= "UDim2") then
@@ -804,7 +812,7 @@ function set.pos(obj, pos)
     func.propagate(obj);
 end
 
-function set.posOrigin(obj, posOrigin)
+function class.set.posOrigin(obj, posOrigin)
     local posOrigin_t = type(posOrigin);
     
     if (posOrigin_t ~= "UDim2") then
@@ -836,7 +844,7 @@ function set.posOrigin(obj, posOrigin)
 end
 
 
-function set.rot(obj, rot)
+function class.set.rot(obj, rot)
     local rot_t = type(rot);
     
     if (rot_t ~= "Vector3") then
@@ -864,7 +872,7 @@ function set.rot(obj, rot)
     func.propagate(obj);
 end
 
-function set.rotPivot(obj, rotPivot)
+function class.set.rotPivot(obj, rotPivot)
     local rotPivot_t = type(rotPivot);
     
     if (rotPivot_t ~= "UDim2") then
@@ -887,12 +895,12 @@ function set.rotPivot(obj, rotPivot)
     func.propagate(obj);
 end
 
-function set.rotPivotDepth(obj, rotPivotDepth)
+function class.set.rotPivotDepth(obj, rotPivotDepth)
     local rotPivotDepth_t = type(rotPivotDepth);
     
     if (rotPivotDepth_t ~= "number") then
         error("bad argument #1 to 'rotPivotDepth' (number expected, got " ..rotPivotDepth_t.. ")", 2);
-    elseif (rotPivotDepth <= ROT_ACTUAL_NEAR_Z_PLANE/2 or rotPivotDepth > ROT_FAR_Z_PLANE/2) then
+    elseif (rotPivotDepth <= class.ROT_ACTUAL_NEAR_Z_PLANE/2 or rotPivotDepth > class.ROT_FAR_Z_PLANE/2) then
         error("bad argument #1 to 'rotPivotDepth' (value out of bounds)", 2);
     end
     
@@ -914,7 +922,7 @@ function set.rotPivotDepth(obj, rotPivotDepth)
     func.propagate(obj);
 end
 
-function set.rotPerspective(obj, rotPerspective)
+function class.set.rotPerspective(obj, rotPerspective)
     local rotPerspective_t = type(rotPerspective);
     
     if (rotPerspective_t ~= "UDim2") then
@@ -939,7 +947,7 @@ function set.rotPerspective(obj, rotPerspective)
 end
 
 
-function set.visible(obj, visible)
+function class.set.visible(obj, visible)
     local visible_t = type(visible);
     
     if (visible_t ~= "boolean") then
@@ -951,23 +959,3 @@ function set.visible(obj, visible)
     
     func.propagate(obj);
 end
-
-
-
-class = inherit({
-    name = name,
-    
-    super = super,
-    
-    func = func, get = get, set = set,
-    
-    new = new, meta = meta,
-    
-    
-    SHADER = SHADER,
-    
-    DEBUG_VERTEX_LINE_COLOR     = DEBUG_VERTEX_LINE_COLOR,
-    DEBUG_VERTEX_LINE_THICKNESS = DEBUG_VERTEX_LINE_THICKNESS,
-}, super);
-
-_G[name] = class;

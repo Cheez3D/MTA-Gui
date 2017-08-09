@@ -1,19 +1,18 @@
-local name = "Object";
+local class = {
+    name = "Object",
+    
+    func = {},
+    get  = {},
+    set  = {},
+    
+    concrete = false,
+}
 
-local class;
-local super = nil;
-
-local func = {}
-local get  = {}
-local set  = {}
-
-
-
-local new, meta;
-
+classes[class.name] = class;
 
 
-function new(class, meta)
+
+function class.new(class, meta)
     local obj = {
         class = class,
         
@@ -25,25 +24,20 @@ function new(class, meta)
     return setmetatable(obj, meta);
 end
 
-meta = {
+class.meta = {
     __metatable = name,
+    
+    
+    -- for colon function call support
+    __index = function(obj, key)
+        return obj.func[key]
+        or obj.get[string.match(key, "^get_([%w_]-)$")]
+        or obj.set[string.match(key, "^set_([%w_]-)$")]
+        or nil;
+    end,
     
     
     __tostring = function(obj)
         return obj.class.name;
     end,
 }
-
-
-
-class = {
-    name = name,
-    
-    super = super,
-    
-    func = func, get = get, set = set,
-    
-    new = new, meta = meta,
-}
-
-_G[name] = class;

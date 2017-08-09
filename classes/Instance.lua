@@ -1,4 +1,4 @@
-local super = Object;
+local super = classes.Object;
 
 local class = inherit({
     name = "Instance",
