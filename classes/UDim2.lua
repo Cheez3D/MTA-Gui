@@ -5,7 +5,7 @@ local UDim = UDim;
 local name = "UDim2";
 
 local class;
-local super = Object;
+local super = classes.Object;
 
 local func = inherit({}, super.func);
 local get  = inherit({}, super.get);

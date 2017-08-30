@@ -1,7 +1,7 @@
 local name = "Matrix3x3";
 
 local class;
-local super = Object;
+local super = classes.Object;
 
 local func = inherit({}, super.func);
 local get  = inherit({}, super.get);

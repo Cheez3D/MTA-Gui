@@ -1,7 +1,7 @@
 local name = "Frame";
 
 local class;
-local super = GuiObject;
+local super = classes.GuiObject;
 
 local func = inherit({}, super.func);
 local get  = inherit({}, super.get);
@@ -25,7 +25,7 @@ meta = extend({}, super.meta);
 
 
 
-class = {
+class = inherit({
     name = name,
     
     super = super,
@@ -35,7 +35,7 @@ class = {
     new = new, meta = meta,
     
     concrete = concrete,
-}
+}, super);
 
 _G[name] = class;
 classes[#classes+1] = class;

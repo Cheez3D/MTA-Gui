@@ -1,7 +1,7 @@
 local name = "RootGui";
 
 local class;
-local super = GuiBase2D;
+local super = classes.GuiBase2D;
 
 local func = inherit({}, super.func);
 local get  = inherit({}, super.get);
@@ -19,8 +19,8 @@ function new(class, meta)
     func.update_absSize(obj);
     func.update_absPos(obj);
     
-    func.update_containerPos(obj);
     func.update_containerSize(obj);
+    func.update_containerPos(obj);
     
     
     return obj;
@@ -30,7 +30,7 @@ meta = extend({}, super.meta);
 
 
 
-class = {
+class = inherit({
     name = name,
     
     super = super,
@@ -38,6 +38,6 @@ class = {
     func = func, get = get, set = set,
     
     new = new, meta = meta,
-}
+}, super);
 
 _G[name] = class;

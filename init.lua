@@ -12,10 +12,10 @@ if (not IS_CLIENT) then return end
 
 setmetatable(_G, {
     __index = function(tbl, key)
-        if     (key == "__FILE__") then return debug.getinfo(2, 'S').short_src;
-        elseif (key == "__func__") then return debug.getinfo(2, 'n').name or '?';
-        elseif (key == "__LINE__") then return debug.getinfo(2, 'l').currentline;
-        end
+        return (key == "__FILE__") and debug.getinfo(2, "S").short_src
+        or (key == "__func__") and (debug.getinfo(2, "n").name or "?")
+        or (key == "__LINE__") and debug.getinfo(2, "l").currentline
+        or nil;
     end
 });
 

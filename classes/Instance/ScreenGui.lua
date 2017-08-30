@@ -40,14 +40,14 @@ function func.draw(obj)
             
             obj.container,
             
-            nil, nil, nil, GuiBase2D.DRAW_POST_GUI -- somehow its the 13th argument instead of 14th when leaving rotation nil
+            nil, nil, nil, class.DRAW_POST_GUI -- somehow its the 13th argument instead of 14th when leaving rotation nil
         );
     end
 end
 
 
 
-class = {
+class = inherit({
     name = name,
     
     super = super,
@@ -57,7 +57,7 @@ class = {
     new = new, meta = meta,
     
     concrete = concrete,
-}
+}, super);
 
 _G[name] = class;
 classes[#classes+1] = class;
