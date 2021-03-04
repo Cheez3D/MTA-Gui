@@ -1,20 +1,25 @@
-local name = "Mouse";
+local classes = classes;
 
-local super = Instance;
+local super = classes.Instance;
 
-local func = inherit({}, super.func);
-local get  = inherit({}, super.get);
-local set  = inherit({}, super.set);
+local class = inherit({
+    name = "Mouse",
 
-local event = inherit({}, super.event);
+    super = super,
+    
+    func = inherit({}, super.func),
+    get  = inherit({}, super.get),
+    set  = inherit({}, super.set),
+    
+    concrete = true,
+}, super);
 
-local private  = inherit({}, super.private);
-local readOnly = inherit({}, super.readOnly);
+classes[class.name] = class;
 
 
 
-local DEFAULT_CURSORS = {
-    ["arrow"]       = "cursors/arrow.png", -- "cursors/PulseGlass/arrow.ani",
+class.DEFAULT_CURSORS = {
+    ["arrow"]       = "cursors/PulseGlass/arrow.ani",
     ["beam"]        = "cursors/PulseGlass/beam.cur",
     ["busy"]        = "cursors/PulseGlass/busy.ani",
     ["help"]        = "cursors/PulseGlass/help.cur",
@@ -28,12 +33,12 @@ local DEFAULT_CURSORS = {
     ["unavailable"] = "cursors/PulseGlass/unavailable.cur",
 }
 
-local DECODERS = { decode_ico, decode_ani, decode_gif, decode_jpg, decode_png }
+class.DECODERS = { decode_ico, decode_ani, decode_gif, decode_jpg, decode_png }
 
 
-local function decodeCursor(path)
-    for i = 1, #DECODERS do
-        local decoder = DECODERS[i];
+function class.decodeCursor(path)
+    for i = 1, #class.DECODERS do
+        local decoder = class.DECODERS[i];
         
         local success, data = pcall(decoder, path);
         
@@ -91,7 +96,12 @@ end
 
 
 
-local function new(obj)
+function class.new()
+    local success, obj = pcall(super.new, class);
+    if (not success) then error(obj, 2) end
+    
+    
+    
     local prevCursorAlpha = getCursorAlpha();
 
     addEventHandler("onClientResourceStop", resourceRoot, function()
@@ -104,15 +114,15 @@ local function new(obj)
     
     
     
-    obj.viewSize = Vector2.new(GuiBase2D.SCREEN_WIDTH, GuiBase2D.SCREEN_HEIGHT);
-    obj.viewPos  = Vector2.new();
+    obj.viewSize = classes.Vector2.new(classes.GuiBase2D.SCREEN_WIDTH, classes.GuiBase2D.SCREEN_HEIGHT);
+    obj.viewPos  = classes.Vector2.new();
     obj.viewRect = { obj.viewPos, obj.viewPos+obj.viewSize }
     
     local x, y = getCursorPosition();
     
     if (x and y) then
-        obj.x = math.floor(x*GuiBase2D.SCREEN_WIDTH);
-        obj.y = math.floor(y*GuiBase2D.SCREEN_HEIGHT);
+        obj.x = math.floor(x*classes.GuiBase2D.SCREEN_WIDTH);
+        obj.y = math.floor(y*classes.GuiBase2D.SCREEN_HEIGHT);
     else
         obj.x = math.floor(obj.viewSize.x/2);
         obj.y = math.floor(obj.viewSize.y/2);
@@ -120,8 +130,8 @@ local function new(obj)
     
     obj.cursorContainer = {}
     
-    for cursor, path in pairs(DEFAULT_CURSORS) do
-       local data = decodeCursor(path);
+    for cursor, path in pairs(class.DEFAULT_CURSORS) do
+       local data = class.decodeCursor(path);
         
         if (not data) then
             error("could not decode " ..path, 2); -- TODO: handle this in Instance.new
@@ -144,37 +154,50 @@ local function new(obj)
                                   -- will remain at 255 (probably because MTA's cursor showing code mistakenly thinks
                                   -- we are still inside the main menu)
     
-    obj.move = Signal.new();
+    obj.onMove = classes.Signal.new();
     
     
-    set.cursor(obj, "arrow");
+    class.set.cursor(obj, "arrow");
     
-    set.shadow(obj, false);
-    set.shadowOffset(obj, Vector2.new(2, 2));
+    class.set.shadow(obj, false);
+    class.set.shadowOffset(obj, classes.Vector2.new(2, 2));
     
     
-    function obj.draw_wrapper(dt)
-        func.draw(obj, dt);
+    do
+        local prev = getTickCount();
+        
+        function obj.draw_wrapper()
+            local now = getTickCount();
+            
+            obj:draw(now-prev);
+            
+            prev = now;
+        end
     end
     
     function obj.move_wrapper(relX, relY, absX, absY)
-        func.move(obj, absX, absY);
+        obj:move(absX, absY);
     end
     
     
     addEventHandler("onClientRender", root, obj.draw_wrapper, false, "low-1");
     
     addEventHandler("onClientCursorMove", root, obj.move_wrapper, false, "high");
+    
+    
+    return obj;
 end
 
+class.meta = super.meta;
 
 
-function func.update_cursorData(obj)
+
+function class.func.update_cursorData(obj)
     obj.cursorData = obj.cursorContainer[obj.cursor];
 end
 
 
-function func.move(obj, x, y)
+function class.func.move(obj, x, y)
     local isOutOfView = x < obj.viewRect[1].x or x > obj.viewRect[2].x or y < obj.viewRect[1].y or y > obj.viewRect[2].y;
     
     if (isOutOfView) then
@@ -195,16 +218,16 @@ function func.move(obj, x, y)
     
     local hasMoved = x ~= obj.x or y ~= obj.y;
     
-    obj.x = x;
-    obj.y = y;
-    
     if (hasMoved) then
-        Signal.func.trigger(PROXY__OBJ[obj.move], x, y);
+        obj.x = x;
+        obj.y = y;
+        
+        obj.onMove:trigger(x, y);
     end
 end
 
 
-function func.draw(obj, dt)
+function class.func.draw(obj, dt)
     local isConsoleActive  = isConsoleActive();
     local isMainMenuActive = isMainMenuActive();
     
@@ -294,7 +317,7 @@ function func.draw(obj, dt)
 end
 
 
-function set.cursor(obj, cursor)
+function class.set.cursor(obj, cursor)
     local cursor_t = type(cursor);
     
     if (cursor_t ~= "string") then
@@ -307,11 +330,11 @@ function set.cursor(obj, cursor)
     obj.cursor = cursor;
     
     
-    func.update_cursorData(obj);
+    obj:update_cursorData();
 end
 
 
-function set.shadow(obj, shadow)
+function class.set.shadow(obj, shadow)
     local shadow_t = type(shadow);
     
     if (shadow_t ~= "boolean") then
@@ -322,7 +345,7 @@ function set.shadow(obj, shadow)
     obj.shadow = shadow;
 end
 
-function set.shadowOffset(obj, shadowOffset)
+function class.set.shadowOffset(obj, shadowOffset)
     local shadowOffset_t = type(shadowOffset);
     
     if (shadowOffset_t ~= "Vector2") then
@@ -332,28 +355,3 @@ function set.shadowOffset(obj, shadowOffset)
     
     obj.shadowOffset = shadowOffset;
 end
-
-
-
-Mouse = inherit({
-    name = name,
-    
-    super = super,
-    
-    func = func,
-    get  = get,
-    set  = set,
-    
-    event = event,
-    
-    private  = private,
-    readOnly = readOnly,
-    
-    new = new,
-}, super);
-
-Instance.initializable.Mouse = Mouse;
-
-mouse = Instance.new("Mouse");
-
-Instance.privateClass.Mouse = true;

@@ -1,21 +1,26 @@
-local name = "Vector3";
+local classes = classes;
 
-local class;
 local super = classes.Object;
 
-local func = inherit({}, super.func);
-local get  = inherit({}, super.get);
-local set  = inherit({}, super.set);
+local class = inherit({
+    name = "Vector3",
 
-local new, meta;
+    super = super,
+    
+    func = inherit({}, super.func),
+    get  = inherit({}, super.get),
+    set  = inherit({}, super.set),
+    
+    concrete = true,
+}, super);
 
-local concrete = true;
+classes[class.name] = class;
 
 
 
 local cache = setmetatable({}, { __mode = "v" });
 
-function new(x, y, z)
+function class.new(x, y, z)
     if (x ~= nil) then
         local x_t = type(x);
         if (x_t ~= "number") then
@@ -50,7 +55,7 @@ function new(x, y, z)
     if (not obj) then
         local success;
         
-        success, obj = pcall(super.new, class, meta);
+        success, obj = pcall(super.new, class);
         if (not success) then error(obj, 2) end
         
         obj.x = x;
@@ -63,8 +68,8 @@ function new(x, y, z)
     return obj;
 end
 
-meta = extend({
-    __metatable = name,
+class.meta = extend({
+    __metatable = super.name.. ":" ..class.name,
     
     
     __add = function(obj1, obj2)
@@ -79,9 +84,9 @@ meta = extend({
         end
         
         
-        return (obj1_t == "number") and new(obj1+obj2.x, obj1+obj2.y, obj1+obj2.z)
-        or (obj2_t == "number") and new(obj1.x+obj2, obj1.y+obj2, obj1.z+obj2)
-        or new(obj1.x+obj2.x, obj1.y+obj2.y, obj1.z+obj2.z);
+        return (obj1_t == "number") and class.new(obj1+obj2.x, obj1+obj2.y, obj1+obj2.z)
+        or (obj2_t == "number") and class.new(obj1.x+obj2, obj1.y+obj2, obj1.z+obj2)
+        or class.new(obj1.x+obj2.x, obj1.y+obj2.y, obj1.z+obj2.z);
     end,
     
     __sub = function(obj1, obj2)
@@ -96,9 +101,9 @@ meta = extend({
         end
         
         
-        return (obj1_t == "number") and new(obj1-obj2.x, obj1-obj2.y, obj1-obj2.z)
-        or (obj2_t == "number") and new(obj1.x-obj2, obj1.y-obj2, obj1.z-obj2)
-        or new(obj1.x-obj2.x, obj1.y-obj2.y, obj1.z-obj2.z);
+        return (obj1_t == "number") and class.new(obj1-obj2.x, obj1-obj2.y, obj1-obj2.z)
+        or (obj2_t == "number") and class.new(obj1.x-obj2, obj1.y-obj2, obj1.z-obj2)
+        or class.new(obj1.x-obj2.x, obj1.y-obj2.y, obj1.z-obj2.z);
     end,
     
     __mul = function(obj1, obj2)
@@ -113,14 +118,14 @@ meta = extend({
         end
         
         
-        return (obj1_t == "number") and new(obj1*obj2.x, obj1*obj2.y, obj1*obj2.z)
-        or (obj2_t == "Matrix3x3") and new(
+        return (obj1_t == "number") and class.new(obj1*obj2.x, obj1*obj2.y, obj1*obj2.z)
+        or (obj2_t == "Matrix3x3") and class.new(
             obj1.x*obj2.m00 + obj1.y*obj2.m10 + obj1.z*obj2.m20,
             obj1.x*obj2.m01 + obj1.y*obj2.m11 + obj1.z*obj2.m21,
             obj1.x*obj2.m02 + obj1.y*obj2.m12 + obj1.z*obj2.m22
         )
-        or (obj2_t == "number") and new(obj1.x*obj2, obj1.y*obj2, obj1.z*obj2)
-        or new(obj1.x*obj2.x, obj1.y*obj2.y, obj1.z*obj2.z);
+        or (obj2_t == "number") and class.new(obj1.x*obj2, obj1.y*obj2, obj1.z*obj2)
+        or class.new(obj1.x*obj2.x, obj1.y*obj2.y, obj1.z*obj2.z);
     end,
     
     __div = function(obj1, obj2)
@@ -135,14 +140,14 @@ meta = extend({
         end
         
         
-        return (obj1_t == "number") and new(obj1/obj2.x, obj1/obj2.y, obj1/obj2.z)
-        or (obj2_t == "number") and new(obj1.x/obj2, obj1.y/obj2, obj1.z/obj2)
-        or new(obj1.x/obj2.x, obj1.y/obj2.y, obj1.z/obj2.z);
+        return (obj1_t == "number") and class.new(obj1/obj2.x, obj1/obj2.y, obj1/obj2.z)
+        or (obj2_t == "number") and class.new(obj1.x/obj2, obj1.y/obj2, obj1.z/obj2)
+        or class.new(obj1.x/obj2.x, obj1.y/obj2.y, obj1.z/obj2.z);
     end,
     
     
     __unm = function(obj)
-        return new(-obj.x, -obj.y, -obj.z);
+        return class.new(-obj.x, -obj.y, -obj.z);
     end,
     
     
@@ -153,13 +158,13 @@ meta = extend({
 
 
 
-function func.unpack(obj)
+function class.func.unpack(obj)
     return obj.x, obj.y, obj.z;
 end
 
 
 
-function get.mag(obj)
+function class.get.mag(obj)
     if (not obj.mag) then
         obj.mag = math.sqrt(obj.x^2 + obj.y^2 + obj.z^2);
     end
@@ -167,8 +172,8 @@ function get.mag(obj)
     return obj.mag;
 end
 
-function get.unit(obj)
-    local mag = obj.get.mag(obj);
+function class.get.unit(obj)
+    local mag = obj:get_mag();
     
     if (mag == 0) then
         error("attempt to get unit of 0 magnitude vector", 2);
@@ -183,24 +188,10 @@ function get.unit(obj)
 end
 
 
-function get.vec2(obj)
+function class.get.vec2(obj)
     if (not obj.vec2) then
-        obj.vec2 = Vector2.new(obj.x, obj.y);
+        obj.vec2 = classes.Vector2.new(obj.x, obj.y);
     end
     
     return obj.vec2;
 end
-
-
-
-class = {
-    name = name,
-    func = func, get = get, set = set,
-    
-    new = new, meta = meta,
-    
-    concrete = concrete,
-}
-
-_G[name] = class;
-classes[#classes+1] = class;

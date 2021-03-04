@@ -1,5 +1,4 @@
 -- this file is for testing implemented functionality
-
 scrGui = ScreenGui.new();
 scrGui.name = "scrGui";
 

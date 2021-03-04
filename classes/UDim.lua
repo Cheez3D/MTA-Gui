@@ -1,21 +1,26 @@
-local name = "UDim";
+local classes = classes;
 
-local class;
 local super = classes.Object;
 
-local func = inherit({}, super.func);
-local get  = inherit({}, super.get);
-local set  = inherit({}, super.set);
+local class = inherit({
+    name = "UDim",
 
-local new, meta;
+    super = super,
+    
+    func = inherit({}, super.func),
+    get  = inherit({}, super.get),
+    set  = inherit({}, super.set),
+    
+    concrete = true,
+}, super);
 
-local concrete = true;
+classes[class.name] = class;
 
 
 
 local cache = setmetatable({}, { __mode = "v" });
 
-function new(scale, offset)
+function class.new(scale, offset)
     if (scale ~= nil) then
         local scale_t = type(scale);
         if (scale_t ~= "number") then
@@ -41,7 +46,7 @@ function new(scale, offset)
     if (not obj) then
         local success;
         
-        success, obj = pcall(super.new, class, meta);
+        success, obj = pcall(super.new, class);
         if (not success) then error(obj, 2) end
         
         obj.scale  = scale;
@@ -53,8 +58,8 @@ function new(scale, offset)
     return obj;
 end
 
-meta = extend({
-    __metatable = name,
+class.meta = extend({
+    __metatable = super.name.. ":" ..class.name,
     
     
     __add = function(obj1, obj2)
@@ -69,9 +74,9 @@ meta = extend({
         end
         
         
-        return (obj1_t == "number") and new(obj1+obj2.scale, obj1+obj2.offset)
-        or (obj2_t == "number") and new(obj1.scale+obj2, obj1.offset+obj2)
-        or new(obj1.scale+obj2.scale, obj1.offset+obj2.offset);
+        return (obj1_t == "number") and class.new(obj1+obj2.scale, obj1+obj2.offset)
+        or (obj2_t == "number") and class.new(obj1.scale+obj2, obj1.offset+obj2)
+        or class.new(obj1.scale+obj2.scale, obj1.offset+obj2.offset);
     end,
     
     __sub = function(obj1, obj2)
@@ -86,9 +91,9 @@ meta = extend({
         end
         
         
-        return (obj1_t == "number") and new(obj1-obj2.scale, obj1-obj2.offset)
-        or (obj2_t == "number") and new(obj1.scale-obj2, obj1.offset-obj2)
-        or new(obj1.scale-obj2.scale, obj1.offset-obj2.offset);
+        return (obj1_t == "number") and class.new(obj1-obj2.scale, obj1-obj2.offset)
+        or (obj2_t == "number") and class.new(obj1.scale-obj2, obj1.offset-obj2)
+        or class.new(obj1.scale-obj2.scale, obj1.offset-obj2.offset);
     end,
     
     __mul = function(obj1, obj2)
@@ -103,9 +108,9 @@ meta = extend({
         end
         
         
-        return (obj1_t == "number") and new(obj1*obj2.scale, obj1*obj2.offset)
-        or (obj2_t == "number") and new(obj1.scale*obj2, obj1.offset*obj2)
-        or new(obj1.scale*obj2.scale, obj1.offset*obj2.offset);
+        return (obj1_t == "number") and class.new(obj1*obj2.scale, obj1*obj2.offset)
+        or (obj2_t == "number") and class.new(obj1.scale*obj2, obj1.offset*obj2)
+        or class.new(obj1.scale*obj2.scale, obj1.offset*obj2.offset);
     end,
     
     __div = function(obj1, obj2)
@@ -120,14 +125,14 @@ meta = extend({
         end
         
         
-        return (obj1_t == "number") and new(obj1/obj2.scale, obj1/obj2.offset)
-        or (obj2_t == "number") and new(obj1.scale/obj2, obj1.offset/obj2)
-        or new(obj1.scale/obj2.scale, obj1.offset/obj2.offset);
+        return (obj1_t == "number") and class.new(obj1/obj2.scale, obj1/obj2.offset)
+        or (obj2_t == "number") and class.new(obj1.scale/obj2, obj1.offset/obj2)
+        or class.new(obj1.scale/obj2.scale, obj1.offset/obj2.offset);
     end,
     
     
     __unm = function(obj)
-        return new(-obj.scale, -obj.offset);
+        return class.new(-obj.scale, -obj.offset);
     end,
     
     
@@ -138,20 +143,6 @@ meta = extend({
 
 
 
-function func.unpack(obj)
+function class.func.unpack(obj)
     return obj.scale, obj.offset;
 end
-
-
-
-class = {
-    name = name,
-    func = func, get = get, set = set,
-    
-    new = new, meta = meta,
-    
-    concrete = concrete,
-}
-
-_G[name] = class;
-classes[#classes+1] = class;

@@ -1,25 +1,28 @@
-local name = "ScreenGui";
+local super = classes.RootGui;
 
-local class;
-local super = RootGui;
+local class = inherit({
+    name = "ScreenGui",
 
-local func = inherit({}, super.func);
-local get  = inherit({}, super.get);
-local set  = inherit({}, super.set);
+    super = super,
+    
+    func = inherit({}, super.func),
+    get  = inherit({}, super.get),
+    set  = inherit({}, super.set),
+    
+    concrete = true,
+}, super);
 
-local new, meta;
-
-local concrete = true;
+classes[class.name] = class;
 
 
 
-function new()
-    local success, obj = pcall(super.new, class, meta);
+function class.new()
+    local success, obj = pcall(super.new, class);
     if (not success) then error(obj, 2) end
     
     
     function obj.draw_wrapper()
-        func.draw(obj);
+        obj:draw();
     end
     
     addEventHandler("onClientRender", root, obj.draw_wrapper, false);
@@ -28,11 +31,11 @@ function new()
     return obj;
 end
 
-meta = extend({}, super.meta);
+class.meta = super.meta;
 
 
 
-function func.draw(obj)
+function class.func.draw(obj)
     if (obj.container) then
         dxDrawImageSection(
             obj.containerPos.x, obj.containerPos.y, obj.containerSize.x, obj.containerSize.y,
@@ -44,20 +47,3 @@ function func.draw(obj)
         );
     end
 end
-
-
-
-class = inherit({
-    name = name,
-    
-    super = super,
-    
-    func = func, get = get, set = set,
-    
-    new = new, meta = meta,
-    
-    concrete = concrete,
-}, super);
-
-_G[name] = class;
-classes[#classes+1] = class;

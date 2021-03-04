@@ -1,43 +1,34 @@
-local name = "RootGui";
-
-local class;
 local super = classes.GuiBase2D;
 
-local func = inherit({}, super.func);
-local get  = inherit({}, super.get);
-local set  = inherit({}, super.set);
+local class = inherit({
+    name = "RootGui",
 
-local new, meta;
+    super = super,
+    
+    func = inherit({}, super.func),
+    get  = inherit({}, super.get),
+    set  = inherit({}, super.set),
+    
+    concrete = false,
+}, super);
+
+classes[class.name] = class;
 
 
 
-function new(class, meta)
-    local success, obj = pcall(super.new, class, meta);
+function class.new(...)
+    local success, obj = pcall(super.new, ...);
     if (not success) then error(obj, 2) end
     
     
-    func.update_absSize(obj);
-    func.update_absPos(obj);
+    class.func.update_absSize(obj);
+    class.func.update_absPos(obj);
     
-    func.update_containerSize(obj);
-    func.update_containerPos(obj);
+    class.func.update_containerSize(obj);
+    class.func.update_containerPos(obj);
     
     
     return obj;
 end
 
-meta = extend({}, super.meta);
-
-
-
-class = inherit({
-    name = name,
-    
-    super = super,
-    
-    func = func, get = get, set = set,
-    
-    new = new, meta = meta,
-}, super);
-
-_G[name] = class;
+class.meta = super.meta;

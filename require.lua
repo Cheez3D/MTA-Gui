@@ -3,8 +3,8 @@ local PATH = "?.lua;classes/?.lua;classes/Instance/?.lua;decoders/?.lua";
 local function find_full_path(name)
     if (fileExists(name)) then return name end
     
-    for path in string.gmatch(PATH, "[^;]+") do
-        path = string.gsub(path, "%?", name);
+    for path in PATH:gmatch("[^;]+") do
+        path = path:gsub("%?", name);
         
         if (fileExists(path)) then
             return path;

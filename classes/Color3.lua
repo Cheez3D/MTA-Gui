@@ -1,21 +1,26 @@
-local name = "Color3";
+local classes = classes;
 
-local class;
 local super = classes.Object;
 
-local func = inherit({}, super.func);
-local get  = inherit({}, super.get);
-local set  = inherit({}, super.set);
+local class = inherit({
+    name = "Color3",
 
-local new, meta;
+    super = super,
+    
+    func = inherit({}, super.func),
+    get  = inherit({}, super.get),
+    set  = inherit({}, super.set),
+    
+    concrete = true,
+}, super);
 
-local concrete = true;
+classes[class.name] = class;
 
 
 
 local cache = setmetatable({}, { __mode = "v" });
 
-function new(r, g, b)
+function class.new(r, g, b)
     if (r ~= nil) then
         local r_t = type(r);
         if (r_t ~= "number") then
@@ -56,7 +61,7 @@ function new(r, g, b)
     if (not obj) then
         local success;
         
-        success, obj = pcall(super.new, class, meta);
+        success, obj = pcall(super.new, class);
         if (not success) then error(obj, 2) end
         
         obj.r = r;
@@ -69,8 +74,8 @@ function new(r, g, b)
     return obj;
 end
 
-meta = extend({
-    __metatable = name,
+class.meta = extend({
+    __metatable = super.name.. ":" ..class.name;
     
     
     __tostring = function(obj)
@@ -80,13 +85,13 @@ meta = extend({
 
 
 
-function func.unpack(obj)
+function class.func.unpack(obj)
     return obj.r, obj.g, obj.b;
 end
 
 
 
-function get.hex(obj)
+function class.get.hex(obj)
     if (not obj.hex) then
         obj.hex = 0x10000 * obj.b
                 + 0x100   * obj.g
@@ -95,17 +100,3 @@ function get.hex(obj)
 
     return obj.hex;
 end
-
-
-
-class = {
-    name = name,
-    func = func, get = get, set = set,
-    
-    new = new, meta = meta,
-    
-    concrete = concrete,
-}
-
-_G[name] = class;
-classes[#classes+1] = class;

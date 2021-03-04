@@ -1,3 +1,5 @@
+local classes = classes;
+
 local super = classes.Object;
 
 local class = inherit({
@@ -54,10 +56,11 @@ function class.new(...)
 end
 
 class.meta = extend({
-    __metatable = class.name,
+    __metatable = super.name.. ":" ..class.name;
+    
     
     --[[
-    TODO: add this code to a proxy_meta table to extend from when creating proxy classes in end.lua
+    TODO: [Instance access children by name] add this code to a proxy_meta table to extend from when creating proxy classes in end.lua
           instead of extending from meta
     -- __index = function(proxy, key)
         -- local obj = PROXY__OBJ[proxy];
@@ -77,6 +80,7 @@ class.meta = extend({
         -- end
     -- end,
     ]]
+    
     
     __tostring = function(obj)
         return obj.class.name.. " " ..obj.name;
@@ -102,27 +106,6 @@ function class.func.update_depth(obj, descend)
             end
         end
     end
-end
-
-
-function class.func.isA(obj, className)
-    local className_t = type(className);
-    
-    if (className_t ~= "string") then
-        error("bad argument #1 to 'isA' (string expected, got " ..className_t.. ")", 2);
-    end
-    
-    
-    local class = obj.class;
-    while (class) do
-        if (class.name == className) then
-            return true;
-        end
-        
-        class = class.super;
-    end
-    
-    return false;
 end
 
 

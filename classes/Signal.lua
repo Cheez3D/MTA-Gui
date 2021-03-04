@@ -1,60 +1,39 @@
-local name = "Signal";
+local classes = classes;
 
-local func = {}
+local super = classes.Object;
 
-local meta = {
-    __metatable = name,
+local class = inherit({
+    name = "Signal",
+
+    super = super,
     
+    func = inherit({}, super.func),
+    get  = inherit({}, super.get),
+    set  = inherit({}, super.set),
     
-    __index = function(proxy, key)
-        local obj = PROXY__OBJ[proxy];
-        
-        local val = obj[key];
-        if (val ~= nil) then -- val might be false so compare against nil
-            return val;
-        end
-    
-        local func_f = func[key];
-        if (func_f) then
-            return (function(...)
-                local success, result = pcall(func_f, obj, ...);
-                if (not success) then error(result, 2) end
-                
-                return result;
-            end);
-        end
-    end,
-    
-    __newindex = function(proxy, key)
-        error("attempt to modify a read-only key (" ..tostring(key).. ")", 2);
-    end,
-    
-    
-    __tostring = function(proxy)
-        local obj = PROXY__OBJ[proxy];
-        
-        return name;
-    end,
-}
+    concrete = true,
+}, super);
+
+classes[class.name] = class;
 
 
 
-local function new()
-    local obj = {
-        listenersByKey = {},
-    }
+function class.new()
+    local success, obj = pcall(super.new, class);
+    if (not success) then error(obj, 2) end
     
-    local proxy = setmetatable({}, meta);
+    obj.listenersByKey = {}
     
-    OBJ__PROXY[obj] = proxy;
-    PROXY__OBJ[proxy] = obj;
-    
-    return proxy;
+    return obj;
 end
 
+class.meta = extend({
+    __metatable = super.name.. ":" ..class.name;
+}, super.meta);
 
 
-function func.connect(obj, listener)
+
+function class.func.connect(obj, listener)
     local listener_t = type(listener);
     
     if (listener_t ~= "function") then
@@ -67,7 +46,7 @@ function func.connect(obj, listener)
     obj.listenersByKey[listener] = true;
 end
 
-function func.disconnect(obj, listener)
+function class.func.disconnect(obj, listener)
     local listener_t = type(listener);
     
     if (listener_t ~= "function") then
@@ -81,20 +60,8 @@ function func.disconnect(obj, listener)
 end
 
 
-function func.trigger(obj, ...)
+function class.func.trigger(obj, ...)
     for listener in pairs(obj.listenersByKey) do
         listener(...);
     end
 end
-
-
-
-Signal = {
-    name = name,
-    
-    func = func,
-    
-    meta = meta,
-    
-    new = new,
-}

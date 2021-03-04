@@ -1,3 +1,5 @@
+local classes = classes;
+
 local super = classes.Instance;
 
 local class = inherit({
@@ -37,17 +39,17 @@ function class.new(...)
     return obj;
 end
 
-class.meta = extend({}, super.meta);
+class.meta = super.meta;
 
 
 
 function class.func.update_absSize(obj, descend)
     local absSize = (
-        obj.func.isA(obj, "RootGui") and (
-            obj.func.isA(obj, "ScreenGui") and Vector2.new(class.SCREEN_WIDTH, class.SCREEN_HEIGHT)
-            or Vector2.new()
+        obj:isA("RootGui") and (
+            obj:isA("ScreenGui") and classes.Vector2.new(class.SCREEN_WIDTH, class.SCREEN_HEIGHT)
+            or classes.Vector2.new()
         )
-        or obj.func.isA(obj, "GuiObject") and obj.rootGui and Vector2.new(
+        or obj:isA("GuiObject") and obj.rootGui and classes.Vector2.new(
             math.floor(obj.size.x.offset + obj.parent.absSize.x*obj.size.x.scale),
             math.floor(obj.size.y.offset + obj.parent.absSize.y*obj.size.y.scale)
         )
@@ -62,18 +64,18 @@ function class.func.update_absSize(obj, descend)
     if (descend) then
         for i = 1, #obj.guiChildren do
             local child = obj.guiChildren[i];
-            child.func.update_absSize(child, true);
+            child:update_absSize(true);
         end
     end
 end
 
 function class.func.update_absPos(obj, descend)
     local absPos = (
-        obj.func.isA(obj, "RootGui") and (
-            obj.func.isA(obj, "ScreenGui") and Vector2.new()
-            or Vector2.new()
+        obj:isA("RootGui") and (
+            obj:isA("ScreenGui") and classes.Vector2.new()
+            or classes.Vector2.new()
         )
-        or obj.func.isA(obj, "GuiObject") and obj.rootGui and Vector2.new(
+        or obj:isA("GuiObject") and obj.rootGui and classes.Vector2.new(
             math.floor(
                 obj.parent.absPos.x + (obj.pos.x.offset + obj.parent.absSize.x*obj.pos.x.scale)
                 - (obj.posOrigin.x.offset + obj.absSize.x*obj.posOrigin.x.scale)
@@ -94,7 +96,7 @@ function class.func.update_absPos(obj, descend)
     if (descend) then
         for i = 1, #obj.guiChildren do
             local child = obj.guiChildren[i];
-            child.func.update_absPos(child, true);
+            child:update_absPos(true);
         end
     end
 end
@@ -102,8 +104,8 @@ end
 
 function class.func.update_containerSize(obj, descend)
     local containerSize = (#obj.guiChildren > 0) and (
-        obj.func.isA(obj, "RootGui") and obj.absSize
-        or obj.func.isA(obj, "GuiObject") and obj.rootGui and obj.clipperGui.absSize
+        obj:isA("RootGui") and obj.absSize
+        or obj:isA("GuiObject") and obj.rootGui and obj.clipperGui.absSize
     )
     or nil;
     
@@ -111,8 +113,8 @@ function class.func.update_containerSize(obj, descend)
         obj.containerSize = containerSize;
         
         local containerActualSize = containerSize and (
-            obj.func.isA(obj, "RootGui") and containerSize
-            or obj.func.isA(obj, "GuiObject") and Vector2.new(
+            obj:isA("RootGui") and containerSize
+            or obj:isA("GuiObject") and classes.Vector2.new(
                 math.ceil(containerSize.x/class.RT_SIZE_STEP)*class.RT_SIZE_STEP,
                 math.ceil(containerSize.y/class.RT_SIZE_STEP)*class.RT_SIZE_STEP
             )
@@ -135,15 +137,15 @@ function class.func.update_containerSize(obj, descend)
     if (descend) then
         for i = 1, #obj.guiChildren do
             local child = obj.guiChildren[i];
-            child.func.update_containerSize(child, true);
+            child:update_containerSize(true);
         end
     end
 end
 
 function class.func.update_containerPos(obj, descend)
     local containerPos = (#obj.guiChildren > 0) and (
-        obj.func.isA(obj, "RootGui") and obj.absPos
-        or obj.func.isA(obj, "GuiObject") and obj.rootGui and obj.clipperGui.absPos
+        obj:isA("RootGui") and obj.absPos
+        or obj:isA("GuiObject") and obj.rootGui and obj.clipperGui.absPos
     )
     or nil;
     
@@ -155,7 +157,7 @@ function class.func.update_containerPos(obj, descend)
     if (descend) then
         for i = 1, #obj.guiChildren do
             local child = obj.guiChildren[i];
-            child.func.update_containerPos(child, true);
+            child:update_containerPos(true);
         end
     end
 end
@@ -166,7 +168,7 @@ function class.func.update(obj, descend)
         if (descend) then
             for i = 1, #obj.guiChildren do
                 local child = obj.guiChildren[i];
-                child.func.update(child, true);
+                child:update(true);
             end
         end
         
@@ -184,7 +186,7 @@ function class.func.update(obj, descend)
             local child = obj.guiChildren[i];
             
             if (child.visible) then
-                if (child.func.isA(child, "GuiObject") and child.canvas) then
+                if (child:isA("GuiObject") and child.canvas) then
                     if (child.isRotated) then
                         if (child.isRotated3D) then
                             dxSetShaderTransform(
@@ -216,7 +218,7 @@ function class.func.update(obj, descend)
                 end
                 
                 if (child.container) then
-                    if (child.func.isA(child, "GuiObject")) then
+                    if (child:isA("GuiObject")) then
                         if (child.isRotated) then
                             if (child.isRotated3D) then
                                 dxSetShaderTransform(
@@ -260,14 +262,14 @@ end
 
 
 function class.func.propagate(obj)
-    if (obj.func.isA(obj, "RootGui")) then
+    if (obj:isA("RootGui")) then
         -- do nothing
-    elseif (obj.func.isA(obj, "GuiObject") and obj.rootGui) then
+    elseif (obj:isA("GuiObject") and obj.rootGui) then
         local parent = obj.parent;
         
-        parent.func.update(parent);
+        parent:update();
         
-        parent.func.propagate(parent);
+        parent:propagate();
     end
 end
 
@@ -284,9 +286,9 @@ function class.set.debug(obj, debug, prev)
     obj.debug = debug;
     
     
-    obj.func.update(obj);
+    obj:update();
     
-    obj.func.propagate(obj);
+    obj:propagate();
 end
 
 

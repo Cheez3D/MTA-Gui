@@ -1,32 +1,35 @@
-local UDim = UDim;
+local classes = classes;
 
+local classes = classes;
 
-
-local name = "UDim2";
-
-local class;
 local super = classes.Object;
 
-local func = inherit({}, super.func);
-local get  = inherit({}, super.get);
-local set  = inherit({}, super.set);
+local class = inherit({
+    name = "UDim2",
 
-local new, new2, meta;
+    super = super,
+    
+    func = inherit({}, super.func),
+    get  = inherit({}, super.get),
+    set  = inherit({}, super.set),
+    
+    concrete = true,
+}, super);
 
-local concrete = true;
+classes[class.name] = class;
 
 
 
 local cache = setmetatable({}, { __mode = "v" });
 
-function new(x, y)
+function class.new_UDim(x, y)
     if (x ~= nil) then
         local x_t = type(x);
         if (x_t ~= "UDim") then
             error("bad argument #1 to '" ..__func__.. "' (UDim expected, got " ..x_t.. ")", 2);
         end
     else
-        x = UDim.new();
+        x = classes.UDim.new();
     end
     
     if (y ~= nil) then
@@ -35,7 +38,7 @@ function new(x, y)
             error("bad argument #2 to '" ..__func__.. "' (UDim expected, got " ..y_t.. ")", 2);
         end
     else
-        y = UDim.new();
+        y = classes.UDim.new();
     end
     
     
@@ -45,7 +48,7 @@ function new(x, y)
     if (not obj) then
         local success;
         
-        success, obj = pcall(super.new, class, meta);
+        success, obj = pcall(super.new, class);
         if (not success) then error(obj, 2) end
         
         obj.x = x;
@@ -57,18 +60,18 @@ function new(x, y)
     return obj;
 end
 
-function new2(scaleX, offsetX, scaleY, offsetY)
-    local success, x = pcall(UDim.new, scaleX, offsetX);
+function class.new(scaleX, offsetX, scaleY, offsetY)
+    local success, x = pcall(classes.UDim.new, scaleX, offsetX);
     if (not success) then error(x, 2) end
     
-    local success, y = pcall(UDim.new, scaleY, offsetY);
+    local success, y = pcall(classes.UDim.new, scaleY, offsetY);
     if (not success) then error(y, 2) end
     
-    return new(x, y);
+    return class.new_UDim(x, y);
 end
 
-meta = extend({
-    __metatable = name,
+class.meta = extend({
+    __metatable = super.name.. ":" ..class.name,
     
     
     __add = function(obj1, obj2)
@@ -83,9 +86,9 @@ meta = extend({
         end
         
         
-        return (obj1_t == "number") and new(obj1+obj2.x, obj1+obj2.y)
-        or (obj2_t == "number") and new(obj1.x+obj2, obj1.y+obj2)
-        or new(obj1.x+obj2.x, obj1.y+obj2.y);
+        return (obj1_t == "number") and class.new_UDim(obj1+obj2.x, obj1+obj2.y)
+        or (obj2_t == "number") and class.new_UDim(obj1.x+obj2, obj1.y+obj2)
+        or class.new_UDim(obj1.x+obj2.x, obj1.y+obj2.y);
     end,
     
     __sub = function(obj1, obj2)
@@ -100,9 +103,9 @@ meta = extend({
         end
         
         
-        return (obj1_t == "number") and new(obj1-obj2.x, obj1-obj2.y)
-        or (obj2_t == "number") and new(obj1.x-obj2, obj1.y-obj2)
-        or new(obj1.x-obj2.x, obj1.y-obj2.y);
+        return (obj1_t == "number") and class.new_UDim(obj1-obj2.x, obj1-obj2.y)
+        or (obj2_t == "number") and class.new_UDim(obj1.x-obj2, obj1.y-obj2)
+        or class.new_UDim(obj1.x-obj2.x, obj1.y-obj2.y);
     end,
     
     __mul = function(obj1, obj2)
@@ -117,9 +120,9 @@ meta = extend({
         end
         
         
-        return (obj1_t == "number") and new(obj1*obj2.x, obj1*obj2.y)
-        or (obj2_t == "number") and new(obj1.x*obj2, obj1.y*obj2)
-        or new(obj1.x*obj2.x, obj1.y*obj2.y);
+        return (obj1_t == "number") and class.new_UDim(obj1*obj2.x, obj1*obj2.y)
+        or (obj2_t == "number") and class.new_UDim(obj1.x*obj2, obj1.y*obj2)
+        or class.new_UDim(obj1.x*obj2.x, obj1.y*obj2.y);
     end,
     
     __div = function(obj1, obj2)
@@ -134,14 +137,14 @@ meta = extend({
         end
         
         
-        return (obj1_t == "number") and new(obj1/obj2.x, obj1/obj2.y)
-        or (obj2_t == "number") and new(obj1.x/obj2, obj1.y/obj2)
-        or new(obj1.x/obj2.x, obj1.y/obj2.y);
+        return (obj1_t == "number") and class.new_UDim(obj1/obj2.x, obj1/obj2.y)
+        or (obj2_t == "number") and class.new_UDim(obj1.x/obj2, obj1.y/obj2)
+        or class.new_UDim(obj1.x/obj2.x, obj1.y/obj2.y);
     end,
     
     
     __unm = function(obj)
-        return new(-obj.x, -obj.y);
+        return class.new_UDim(-obj.x, -obj.y);
     end,
     
     
@@ -152,18 +155,6 @@ meta = extend({
 
 
 
-function func.unpack(obj)
+function class.func.unpack(obj)
     return obj.x.scale, obj.x.offset, obj.y.scale, obj.y.offset;
 end
-
-
-
-class = {
-    name = name,
-    func = func, get = get, set = set,
-    
-    new = new2, meta = meta,
-}
-
-_G[name] = class;
-classes[#classes+1] = class;

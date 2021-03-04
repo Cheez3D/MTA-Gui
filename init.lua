@@ -154,7 +154,7 @@ addCommandHandler("r", function(cmd, ...)
     f();
 end);
 
-addCommandHandler("cls", function()
+addCommandHandler("clear", function()
     for i = 1, 256 do
         outputChatBox('');
     end

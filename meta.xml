@@ -17,6 +17,7 @@
     <file src="decoders/gif/delays/25-delay-100.gif"/>
     
     <file src="decoders/gif/jupiter.gif"/>
+    <file src="decoders/gif/gta5.gif"/>
     
     <file src="decoders/ico/chrome-png.ico"/>
     <file src="decoders/ico/windows-4bpp.ico"/>
@@ -59,13 +60,6 @@
     <file src="shaders/negative.fx"/>
     
     
-    <script src="decoders/gif.lua" type="client"/>
-    <script src="decoders/jpg.lua" type="client"/>
-    <script src="decoders/png.lua" type="client"/>
-    <script src="decoders/ico.lua" type="client"/>
-    <script src="decoders/ani.lua" type="client"/>
-    
-    
     <script src="classes/helper.lua" type="client"/>
     <script src="classes/init.lua"   type="client"/>
     
@@ -74,9 +68,16 @@
     <script src="classes/Matrix3x3.lua" type="client"/>
     <script src="classes/Vector2.lua"   type="client"/>
     <script src="classes/Vector3.lua"   type="client"/>
-    <script src="classes/Stream.lua"    type="client"/>
     <script src="classes/UDim.lua"      type="client"/>
     <script src="classes/UDim2.lua"     type="client"/>
+    <script src="classes/Stream.lua"    type="client"/>
+    <script src="classes/Signal.lua"    type="client"/>
+    
+    <script src="decoders/gif.lua" type="client"/>
+    <script src="decoders/jpg.lua" type="client"/>
+    <script src="decoders/png.lua" type="client"/>
+    <script src="decoders/ico.lua" type="client"/>
+    <script src="decoders/ani.lua" type="client"/>
     
     <script src="classes/Instance.lua" type="client"/>
     <script src="classes/Instance/GuiBase2D.lua" type="client"/>
@@ -84,15 +85,7 @@
     <script src="classes/Instance/ScreenGui.lua" type="client"/>
     <script src="classes/Instance/GuiObject.lua" type="client"/>
     <script src="classes/Instance/Frame.lua" type="client"/>
-    
-    <script src="classes/end.lua"  type ="client"/>
-    
-    
-    
-    <script src="classes/Signal.lua"    type="client"/>
-    
-    <!-- <script src="classes/Instance/Mouse.lua" type="client"/> -->
-    
+    <script src="classes/Instance/Mouse.lua" type="client"/>
     
     <script src="classes/test.lua" type ="client"/>
     

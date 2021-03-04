@@ -1,52 +1,61 @@
-local name = "Stream";
+local classes = classes;
 
-local class;
 local super = classes.Object;
 
-local func = inherit({}, super.func);
-local get  = inherit({}, super.get);
-local set  = inherit({}, super.set);
+local class = inherit({
+    name = "Stream",
 
-local new, meta;
+    super = super,
+    
+    func = inherit({}, super.func),
+    get  = inherit({}, super.get),
+    set  = inherit({}, super.set),
+    
+    concrete = true,
+}, super);
 
-local concrete = true;
+classes[class.name] = class;
 
 
 
-local CHAR_MASK  = 2^7;
-local SHORT_MASK = 2^15;
-local INT_MASK   = 2^31;
+class.CHAR_MASK  = 2^7;
+class.SHORT_MASK = 2^15;
+class.INT_MASK   = 2^31;
 
 
 
-function new(bytes)
+function class.new(bytes)
     local bytes_t = type(bytes);
     if (bytes_t ~= "string") then
         error("bad argument #1 to '" ..__func__.. "' (string expected, got " ..bytes_t.. ")", 2);
     end
     
     
-    local success, obj = pcall(super.new, class, meta);
+    local success, obj = pcall(super.new, class);
     if (not success) then error(obj, 2) end
     
     
-    obj.isFile = fileExists(bytes);
-    
-    if (obj.isFile) then
-        obj.fileName = bytes;
+    if (fileExists(bytes)) then
+        -- outputDebugString("creating stream from file found at " ..bytes);
+        
+        local f = fileOpen(bytes);
+        obj.bytes = fileRead(f, fileGetSize(f));
+        fileClose(f);
     else
+        -- outputDebugString("file not found at " ..bytes.. "; creating stream from string instead");
+        
         obj.bytes = bytes;
     end
     
-    
-    obj.func.open(obj);
+    obj.size = #obj.bytes;
+    obj.pos  = 0;
     
     
     return obj;
 end
 
-meta = extend({
-    __metatable = name,
+class.meta = extend({
+    __metatable = super.name.. ":" ..class.name,
     
     
     __tostring = function(obj)
@@ -56,48 +65,7 @@ meta = extend({
 
 
 
-function func.open(obj)
-    if (obj.isOpen) then
-        error("stream is already open", 2);
-    end
-    
-    
-    obj.isOpen = true;
-    
-    if (obj.isFile) then
-        obj.file = fileOpen(obj.fileName, true); -- TODO: add write support in the future
-        
-        obj.size = fileGetSize(obj.file);
-    else
-        obj.size = #obj.bytes;
-    end
-    
-    obj.pos = 0;
-end
-
-function func.close(obj)
-    if (not obj.isOpen) then
-        error("stream is already closed", 2);
-    end
-    
-    
-    obj.isOpen = false;
-    
-    if (obj.isFile) then
-        fileClose(obj.file);
-        obj.file = nil;
-    end
-    
-    obj.size = nil;
-    obj.pos  = nil;
-end
-
-
-function func.read(obj, count)
-    if (not obj.isOpen) then
-        error("stream is closed", 2);
-    end
-    
+function class.func.read(obj, count)
     if (count ~= nil) then
         local count_t = type(count);
         
@@ -118,20 +86,18 @@ function func.read(obj, count)
         newPos = obj.size;
     end
     
-    local ret = obj.isFile and fileRead(obj.file, count) or string.sub(obj.bytes, obj.pos+1, newPos);
+    local ret = obj.bytes:sub(obj.pos+1, newPos);
     
     obj.pos = newPos;
     
     return ret;
 end
 
-function func.read_uchar(obj)
-    local byte = obj.func.read(obj);
-    
-    return string.byte(byte);
+function class.func.read_uchar(obj)
+    return obj:read():byte();
 end
 
-function func.read_ushort(obj, bigEndian)
+function class.func.read_ushort(obj, bigEndian)
     if (bigEndian ~= nil) then
         local bigEndian_t = type(bigEndian);
         
@@ -143,8 +109,8 @@ function func.read_ushort(obj, bigEndian)
     end
     
     
-    local uchar1 = obj.func.read_uchar(obj);
-    local uchar2 = obj.func.read_uchar(obj);
+    local uchar1 = obj:read_uchar();
+    local uchar2 = obj:read_uchar();
     
     return (bigEndian) and 0x100 * uchar1
                          +         uchar2
@@ -153,7 +119,7 @@ function func.read_ushort(obj, bigEndian)
                          + 0x100 * uchar2;
 end
 
-function func.read_uint(obj, bigEndian)
+function class.func.read_uint(obj, bigEndian)
     if (bigEndian ~= nil) then
         local bigEndian_t = type(bigEndian);
         
@@ -165,8 +131,8 @@ function func.read_uint(obj, bigEndian)
     end
     
     
-    local ushort1 = obj.func.read_ushort(obj, bigEndian);
-    local ushort2 = obj.func.read_ushort(obj, bigEndian);
+    local ushort1 = obj:read_ushort(bigEndian);
+    local ushort2 = obj:read_ushort(bigEndian);
     
 
     return (bigEndian) and 0x10000 * ushort1
@@ -179,37 +145,37 @@ end
 
 -- convert unsigned to signed
 -- using masks to determine if MSB is 1 or 0
-function func.read_char(obj)
-    local uchar = obj.func.read_uchar(obj);
+function class.func.read_char(obj)
+    local uchar = obj:read_uchar();
     
-    return uchar-2*bitAnd(uchar, CHAR_MASK);
+    return uchar-2*bitAnd(uchar, class.CHAR_MASK);
 end
 
-function func.read_short(obj, bigEndian)
-    local ushort = obj.func.read_ushort(obj, bigEndian);
+function class.func.read_short(obj, bigEndian)
+    local ushort = obj:read_ushort(bigEndian);
     
-    return ushort-2*bitAnd(ushort, SHORT_MASK);
+    return ushort-2*bitAnd(ushort, class.SHORT_MASK);
 end
 
-function func.read_int(obj, bigEndian)
-    local uint = obj.func.read_uint(obj, bigEndian);
+function class.func.read_int(obj, bigEndian)
+    local uint = obj:read_uint(bigEndian);
     
-    return uint-2*bitAnd(uint, INT_MASK);
+    return uint-2*bitAnd(uint, class.INT_MASK);
 end
 
 
 
-function get.BOF(obj)
+function class.get.BOF(obj)
     return (obj.pos == 0);
 end
 
-function get.EOF(obj)
+function class.get.EOF(obj)
     return (obj.pos >= obj.size);
 end
 
 
 
-function set.pos(obj, pos)
+function class.set.pos(obj, pos)
     local pos_t = type(pos);
     if (pos_t ~= "number") then
         error("bad argument #1 to 'pos' (number expected, got " ..pos_t.. ")", 2);
@@ -222,23 +188,5 @@ function set.pos(obj, pos)
     end
     
     
-    if (obj.isFile) then
-        fileSetPos(obj.file, pos);
-    end
-    
     obj.pos = pos;
 end
-
-
-
-class = {
-    name = name,
-    func = func, get = get, set = set,
-    
-    new = new, meta = meta,
-    
-    concrete = concrete,
-}
-
-_G[name] = class;
-classes[#classes+1] = class;

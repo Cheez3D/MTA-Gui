@@ -1,21 +1,26 @@
-local name = "Matrix3x3";
+local classes = classes;
 
-local class;
 local super = classes.Object;
 
-local func = inherit({}, super.func);
-local get  = inherit({}, super.get);
-local set  = inherit({}, super.set);
+local class = inherit({
+    name = "Matrix3x3",
 
-local new, meta;
+    super = super,
+    
+    func = inherit({}, super.func),
+    get  = inherit({}, super.get),
+    set  = inherit({}, super.set),
+    
+    concrete = true,
+}, super);
 
-local concrete = true;
+classes[class.name] = class;
 
 
 
 local cache = setmetatable({}, { __mode = "v" });
 
-function new(...)
+function class.new(...)
     local arg = { ... }
     
     for i = 1, 9 do
@@ -36,7 +41,7 @@ function new(...)
     if (not obj) then
         local success;
         
-        success, obj = pcall(super.new, class, meta);
+        success, obj = pcall(super.new, class);
         if (not success) then error(obj, 2) end
         
         obj[00] = arg[1]; obj[01] = arg[2]; obj[02] = arg[3];
@@ -51,8 +56,8 @@ end
 
 
 
-meta = extend({
-    __metatable = name,
+class.meta = extend({
+    __metatable = super.name.. ":" ..class.name,
     
     
     __add = function(obj1, obj2)
@@ -67,12 +72,12 @@ meta = extend({
         end
         
         
-        return (obj1_t == "number") and new(
+        return (obj1_t == "number") and class.new(
             obj1+obj2[00], obj1+obj2[01], obj1+obj2[02],
             obj1+obj2[10], obj1+obj2[11], obj1+obj2[12],
             obj1+obj2[20], obj1+obj2[21], obj1+obj2[22]
         )
-        or (obj2_t == "number") and new(
+        or (obj2_t == "number") and class.new(
             obj1[00]+obj2, obj1[01]+obj2, obj1[02]+obj2,
             obj1[10]+obj2, obj1[11]+obj2, obj1[12]+obj2,
             obj1[20]+obj2, obj1[21]+obj2, obj1[22]+obj2
@@ -96,17 +101,17 @@ meta = extend({
         end
         
         
-        return (obj1_t == "number") and new(
+        return (obj1_t == "number") and class.new(
             obj1-obj2[00], obj1-obj2[01], obj1-obj2[02],
             obj1-obj2[10], obj1-obj2[11], obj1-obj2[12],
             obj1-obj2[20], obj1-obj2[21], obj1-obj2[22]
         )
-        or (obj2_t == "number") and new(
+        or (obj2_t == "number") and class.new(
             obj1[00]-obj2, obj1[01]-obj2, obj1[02]-obj2,
             obj1[10]-obj2, obj1[11]-obj2, obj1[12]-obj2,
             obj1[20]-obj2, obj1[21]-obj2, obj1[22]-obj2
         )
-        or new(
+        or class.new(
             obj1[00]-obj2[00], obj1[01]-obj2[01], obj1[02]-obj2[02],
             obj1[10]-obj2[10], obj1[11]-obj2[11], obj1[12]-obj2[12],
             obj1[20]-obj2[20], obj1[21]-obj2[21], obj1[22]-obj2[22]
@@ -125,22 +130,22 @@ meta = extend({
         end
         
         
-        return (obj1_t == "number") and new(
+        return (obj1_t == "number") and class.new(
             obj1*obj2[00], obj1*obj2[01], obj1*obj2[02],
             obj1*obj2[10], obj1*obj2[11], obj1*obj2[12],
             obj1*obj2[20], obj1*obj2[21], obj1*obj2[22]
         )
-        or (obj2_t == "Vector3") and Vector3.new(
+        or (obj2_t == "Vector3") and classes.Vector3.new(
             obj1[00]*obj2.x + obj1[01]*obj2.y + obj1[02]*obj2.z,
             obj1[10]*obj2.x + obj1[11]*obj2.y + obj1[12]*obj2.z,
             obj1[20]*obj2.x + obj1[21]*obj2.y + obj1[22]*obj2.z
         )
-        or (obj2_t == "number") and new(
+        or (obj2_t == "number") and class.new(
             obj1[00]*obj2, obj1[01]*obj2, obj1[02]*obj2,
             obj1[10]*obj2, obj1[11]*obj2, obj1[12]*obj2,
             obj1[20]*obj2, obj1[21]*obj2, obj1[22]*obj2
         )
-        or new(
+        or class.new(
             obj1[00]*obj2[00] + obj1[01]*obj2[10] + obj1[02]*obj2[20],
             obj1[00]*obj2[01] + obj1[01]*obj2[11] + obj1[02]*obj2[21],
             obj1[00]*obj2[02] + obj1[01]*obj2[12] + obj1[02]*obj2[22],
@@ -157,7 +162,7 @@ meta = extend({
     
     
     __unm = function(obj)
-        return new(
+        return class.new(
             -obj[00], -obj[01], -obj[02],
             -obj[10], -obj[11], -obj[12],
             -obj[20], -obj[21], -obj[22]
@@ -174,7 +179,7 @@ meta = extend({
 
 
 
-function func.unpack(obj)
+function class.func.unpack(obj)
     return obj[00], obj[01], obj[02],
            obj[10], obj[11], obj[12],
            obj[20], obj[21], obj[22];
@@ -182,7 +187,7 @@ end
 
 
 
-function get.det(obj)
+function class.get.det(obj)
     if (not obj.det) then
         obj.det = obj[00]*obj[11]*obj[22] + obj[02]*obj[10]*obj[21] + obj[01]*obj[12]*obj[20]
                 - obj[02]*obj[11]*obj[20] - obj[00]*obj[12]*obj[21] - obj[01]*obj[10]*obj[22];
@@ -191,9 +196,9 @@ function get.det(obj)
     return obj.det;
 end
 
-function get.transpose(obj)
+function class.get.transpose(obj)
     if (not obj.transpose) then
-        obj.transpose = new(
+        obj.transpose = class.new(
             obj[00], obj[10], obj[20],
             obj[01], obj[11], obj[21],
             obj[02], obj[12], obj[22]
@@ -202,17 +207,3 @@ function get.transpose(obj)
     
     return obj.transpose;
 end
-
-
-
-class = {
-    name = name,
-    func = func, get = get, set = set,
-    
-    new = new, meta = meta,
-    
-    concrete = concrete,
-}
-
-_G[name] = class;
-classes[#classes+1] = class;

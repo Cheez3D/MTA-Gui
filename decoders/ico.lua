@@ -46,11 +46,11 @@
     
 --[ ============================================================================================================================================= ]]
 
--- local Stream = require("Stream");
 
 
+local classes = classes;
 
-local math   = math;
+local math = math;
 local string = string;
 
 local LOG2 = math.log(2);
@@ -81,7 +81,7 @@ function decode_ico(bytes)
         error("bad argument #1 to '" ..__func__.. "' (string expected, got " ..bytesType.. ")", 2);
     end
     
-    local success, stream = pcall(Stream.new, bytes);
+    local success, stream = pcall(classes.Stream.new, bytes);
     
     if (not success) then
         error("bad argument #1 to '" ..__func__.. "' (could not create stream)\n-> " ..stream, 2);
@@ -90,11 +90,11 @@ function decode_ico(bytes)
     
     
     local ICONDIR = {
-        idReserved = stream.read_ushort(),
+        idReserved = stream:read_ushort(),
         
-        idType = stream.read_ushort(),
+        idType = stream:read_ushort(),
         
-        idCount   = stream.read_ushort(),
+        idCount   = stream:read_ushort(),
         idEntries = {}
     }
     
@@ -112,18 +112,18 @@ function decode_ico(bytes)
     
     for i = 1, ICONDIR.idCount do 
         local ICONDIRENTRY = {
-            bWidth  = stream.read_uchar(),
-            bHeight = stream.read_uchar(),
+            bWidth  = stream:read_uchar(),
+            bHeight = stream:read_uchar(),
             
-            bColorCount = stream.read_uchar(),
+            bColorCount = stream:read_uchar(),
             
-            bReserved = stream.read_uchar(),
+            bReserved = stream:read_uchar(),
             
-            wPlanes   = stream.read_ushort(),
-            wBitCount = stream.read_ushort(),
+            wPlanes   = stream:read_ushort(),
+            wBitCount = stream:read_ushort(),
             
-            dwBytesInRes  = stream.read_uint(), -- bytes in resource
-            dwImageOffset = stream.read_uint(), -- offset to image data
+            dwBytesInRes  = stream:read_uint(), -- bytes in resource
+            dwImageOffset = stream:read_uint(), -- offset to image data
         }
         
         if (ICONDIRENTRY.bReserved ~= 0) then
@@ -148,12 +148,12 @@ function decode_ico(bytes)
         stream.pos = ICONDIRENTRY.dwImageOffset; -- set read position to image data start
         
         
-        local isPNG = (stream.read(8) == PNG_SIGNATURE); stream.pos = stream.pos-8;
+        local isPNG = (stream:read(8) == PNG_SIGNATURE); stream.pos = stream.pos-8;
         
         local image, width, height;
         
         if (isPNG) then
-            local data = decode_png(stream.read(ICONDIRENTRY.dwBytesInRes));
+            local data = decode_png(stream:read(ICONDIRENTRY.dwBytesInRes));
             
             image = data.image;
             
@@ -189,8 +189,6 @@ function decode_ico(bytes)
         }
     end
     
-    stream.close();
-    
     -- sorting icos by size
     -- if (#icoVariants > 1) then
         -- table.sort(icoVariants, function(first, second)
@@ -208,22 +206,22 @@ end
 function decode_bitmap(stream, ICONDIRENTRY)
     
     local BITMAPINFOHEADER = {
-        biSize = stream.read_uint(),
+        biSize = stream:read_uint(),
         
-        biWidth  = stream.read_uint(),
-        biHeight = stream.read_int(),
+        biWidth  = stream:read_uint(),
+        biHeight = stream:read_int(),
         
-        biPlanes   = stream.read_ushort(),
-        biBitCount = stream.read_ushort(),
+        biPlanes   = stream:read_ushort(),
+        biBitCount = stream:read_ushort(),
         
-        biCompression = stream.read_uint(),
-        biSizeImage   = stream.read_uint(),
+        biCompression = stream:read_uint(),
+        biSizeImage   = stream:read_uint(),
         
-        biXPelsPerMeter = stream.read_uint(), -- preferred resolution in pixels per meter
-        biYPelsPerMeter = stream.read_uint(),
+        biXPelsPerMeter = stream:read_uint(), -- preferred resolution in pixels per meter
+        biYPelsPerMeter = stream:read_uint(),
         
-        biClrUsed      = stream.read_uint(), -- number color map entries that are actually used
-        biClrImportant = stream.read_uint(), -- number of significant colors
+        biClrUsed      = stream:read_uint(), -- number color map entries that are actually used
+        biClrImportant = stream:read_uint(), -- number of significant colors
     }
     
     
@@ -282,7 +280,7 @@ function decode_bitmap(stream, ICONDIRENTRY)
         local colorTable = {}
         
         for i = 1, 2^bitsPerPixel do
-            colorTable[i] = stream.read(3) .. ALPHA255_BYTE;
+            colorTable[i] = stream:read(3) .. ALPHA255_BYTE;
             
             stream.pos = stream.pos+1; -- skip icReserved
         end
@@ -295,7 +293,7 @@ function decode_bitmap(stream, ICONDIRENTRY)
                 local bitOffset = x%pixelsPerByte;
                 
                 if (bitOffset == 0) then
-                    byte = stream.read_uchar();
+                    byte = stream:read_uchar();
                 end
                 
                 local index = bitExtract(byte, ((pixelsPerByte-1)-bitOffset)*bitsPerPixel, bitsPerPixel);
@@ -307,7 +305,7 @@ function decode_bitmap(stream, ICONDIRENTRY)
             end
             
             -- pad remaining row space horizontally with transparent pixels
-            pixelData[y*(width+1) + (width+1)] = string.rep(TRANSPARENT_PIXEL, textureWidth-width);
+            pixelData[y*(width+1) + (width+1)] = TRANSPARENT_PIXEL:rep(textureWidth-width);
             
             stream.pos = stream.pos+PADDING;
         end
@@ -328,10 +326,10 @@ function decode_bitmap(stream, ICONDIRENTRY)
     
         for y = startRow, endRow, step do
             for x = 0, width-1 do
-                pixelData[y*(width+1) + (x+1)] = stream.read(3) .. ALPHA255_BYTE;
+                pixelData[y*(width+1) + (x+1)] = stream:read(3) .. ALPHA255_BYTE;
             end
             
-            pixelData[y*(width+1) + (width+1)] = string.rep(TRANSPARENT_PIXEL, textureWidth-width);
+            pixelData[y*(width+1) + (width+1)] = TRANSPARENT_PIXEL:rep(textureWidth-width);
             
             stream.pos = stream.pos+PADDING;
         end
@@ -340,10 +338,10 @@ function decode_bitmap(stream, ICONDIRENTRY)
     
         for y = startRow, endRow, step do
             for x = 0, width-1 do
-                pixelData[y*(width+1) + (x+1)] = stream.read(4);
+                pixelData[y*(width+1) + (x+1)] = stream:read(4);
             end
             
-            pixelData[y*(width+1) + (width+1)] = string.rep(TRANSPARENT_PIXEL, textureWidth-width);
+            pixelData[y*(width+1) + (width+1)] = TRANSPARENT_PIXEL:rep(textureWidth-width);
             
             stream.pos = stream.pos+PADDING;
         end
@@ -369,7 +367,7 @@ function decode_bitmap(stream, ICONDIRENTRY)
                 local bitOffset = x%8;
                 
                 if (bitOffset == 0) then
-                    byte = stream.read_uchar();
+                    byte = stream:read_uchar();
                 end
                 
                 if (bitExtract(byte, 7-bitOffset) == 1) then
@@ -383,7 +381,7 @@ function decode_bitmap(stream, ICONDIRENTRY)
     end
     
     -- pad remaining bottom area with transparent pixels
-    pixelData[#pixelData+1] = string.rep(TRANSPARENT_PIXEL, (textureHeight-height)*textureWidth);
+    pixelData[#pixelData+1] = TRANSPARENT_PIXEL:rep((textureHeight-height)*textureWidth);
     
     -- append size to accomodate MTA pixel data format
     pixelData[#pixelData+1] = string.char(
